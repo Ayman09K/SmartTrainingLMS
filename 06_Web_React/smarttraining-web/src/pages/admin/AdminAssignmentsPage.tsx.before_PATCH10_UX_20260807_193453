@@ -1,0 +1,332 @@
+import { useEffect, useState } from "react";
+import type { FormEvent } from "react";
+import {
+  approveAccessRequestAsAdmin,
+  assignLearnersAsAdmin,
+  createInvitationAsAdmin,
+  getAdminTrainingsSafe,
+  getEnrollmentsByTrainingSafe,
+  getPendingAccessRequestsSafe,
+  getTrainingInvitationsSafe,
+  rejectAccessRequestAsAdmin,
+} from "../../api/adminApi";
+import { getApiErrorMessage } from "../../api/apiClient";
+import { ErrorMessage } from "../../components/ui/ErrorMessage";
+import { LoadingState } from "../../components/ui/LoadingState";
+import type {
+  EnrollmentResponse,
+  TrainingAccessRequestResponse,
+  TrainingInvitationResponse,
+  TrainingResponse,
+} from "../../types/admin";
+import "../../components/admin/Admin.css";
+
+export function AdminAssignmentsPage() {
+  const [trainings, setTrainings] = useState<TrainingResponse[]>([]);
+  const [selectedTrainingId, setSelectedTrainingId] = useState<number>(0);
+  const [learnerIdsText, setLearnerIdsText] = useState("");
+  const [assignedBy, setAssignedBy] = useState(1);
+  const [inviteLearnerId, setInviteLearnerId] = useState("");
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [enrollments, setEnrollments] = useState<EnrollmentResponse[]>([]);
+  const [accessRequests, setAccessRequests] = useState<TrainingAccessRequestResponse[]>([]);
+  const [invitations, setInvitations] = useState<TrainingInvitationResponse[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  async function loadAll(trainingId?: number) {
+    setLoading(true);
+    setError("");
+
+    try {
+      const loadedTrainings = await getAdminTrainingsSafe();
+      setTrainings(loadedTrainings);
+
+      const currentTrainingId = trainingId || selectedTrainingId || loadedTrainings[0]?.id || 0;
+      setSelectedTrainingId(currentTrainingId);
+
+      if (currentTrainingId) {
+        const [loadedEnrollments, loadedRequests, loadedInvitations] = await Promise.all([
+          getEnrollmentsByTrainingSafe(currentTrainingId),
+          getPendingAccessRequestsSafe(),
+          getTrainingInvitationsSafe(currentTrainingId),
+        ]);
+
+        setEnrollments(loadedEnrollments);
+        setAccessRequests(loadedRequests);
+        setInvitations(loadedInvitations);
+      }
+    } catch (err) {
+      setError(getApiErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void loadAll();
+  }, []);
+
+  function parseLearnerIds(): number[] {
+    return learnerIdsText
+      .split(/[,\s;]+/)
+      .map((value) => Number(value.trim()))
+      .filter((value) => Number.isInteger(value) && value > 0);
+  }
+
+  async function handleAssign(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    setSuccess("");
+
+    const learnerIds = parseLearnerIds();
+
+    if (!selectedTrainingId || !learnerIds.length) {
+      setError("Sélectionne une formation et au moins un learnerId.");
+      return;
+    }
+
+    try {
+      await assignLearnersAsAdmin({
+        trainingId: selectedTrainingId,
+        learnerIds,
+        assignedBy,
+        source: "ADMIN_ASSIGNMENT",
+      });
+
+      setLearnerIdsText("");
+      setSuccess("Affectation créée.");
+      await loadAll(selectedTrainingId);
+    } catch (err) {
+      setError(getApiErrorMessage(err));
+    }
+  }
+
+  async function handleAccessDecision(requestId: number, decision: "APPROVE" | "REJECT") {
+    setError("");
+    setSuccess("");
+
+    try {
+      if (decision === "APPROVE") {
+        await approveAccessRequestAsAdmin(requestId, {
+          decidedBy: assignedBy,
+          decisionComment: "Accès approuvé depuis la console admin.",
+        });
+        setSuccess("Demande d’accès approuvée.");
+      } else {
+        await rejectAccessRequestAsAdmin(requestId, {
+          decidedBy: assignedBy,
+          decisionComment: "Accès refusé depuis la console admin.",
+        });
+        setSuccess("Demande d’accès refusée.");
+      }
+
+      await loadAll(selectedTrainingId);
+    } catch (err) {
+      setError(getApiErrorMessage(err));
+    }
+  }
+
+  async function handleCreateInvitation(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    setSuccess("");
+
+    if (!selectedTrainingId) {
+      setError("Sélectionne une formation.");
+      return;
+    }
+
+    const learnerId = inviteLearnerId ? Number(inviteLearnerId) : undefined;
+
+    if (!learnerId && !inviteEmail) {
+      setError("Indique un learnerId ou un email.");
+      return;
+    }
+
+    try {
+      await createInvitationAsAdmin({
+        trainingId: selectedTrainingId,
+        learnerId,
+        learnerEmail: inviteEmail || undefined,
+        invitedBy: assignedBy,
+        message: "Invitation envoyée depuis la console admin.",
+        validityDays: 7,
+      });
+
+      setInviteLearnerId("");
+      setInviteEmail("");
+      setSuccess("Invitation créée.");
+      await loadAll(selectedTrainingId);
+    } catch (err) {
+      setError(getApiErrorMessage(err));
+    }
+  }
+
+  if (loading) {
+    return <LoadingState message="Chargement affectations..." />;
+  }
+
+  return (
+    <div className="page">
+      <div className="page-header">
+        <h1 className="page-title">Affectations et accès</h1>
+        <p className="page-subtitle">
+          Affectations, demandes d’accès et invitations pour les formations.
+        </p>
+      </div>
+
+      {error ? <ErrorMessage message={error} /> : null}
+      {success ? <div className="admin-success">{success}</div> : null}
+
+      <div className="admin-toolbar">
+        <select
+          value={selectedTrainingId}
+          onChange={(event) => void loadAll(Number(event.target.value))}
+        >
+          {trainings.map((training) => (
+            <option key={training.id} value={training.id}>
+              #{training.id} — {training.title}
+            </option>
+          ))}
+        </select>
+        <input
+          type="number"
+          value={assignedBy}
+          onChange={(event) => setAssignedBy(Number(event.target.value))}
+          min={1}
+          placeholder="Admin ID"
+        />
+      </div>
+
+      <form className="admin-form-grid" onSubmit={handleAssign}>
+        <input
+          value={learnerIdsText}
+          onChange={(event) => setLearnerIdsText(event.target.value)}
+          placeholder="learnerIds : 101, 102, 103"
+        />
+        <button className="admin-button" type="submit">
+          Affecter
+        </button>
+      </form>
+
+      <form className="admin-form-grid" onSubmit={handleCreateInvitation}>
+        <input
+          value={inviteLearnerId}
+          onChange={(event) => setInviteLearnerId(event.target.value)}
+          placeholder="learnerId invitation"
+        />
+        <input
+          value={inviteEmail}
+          onChange={(event) => setInviteEmail(event.target.value)}
+          placeholder="email invitation"
+        />
+        <button className="admin-button" type="submit">
+          Créer invitation
+        </button>
+      </form>
+
+      <h2 className="admin-section-title">Inscriptions formation sélectionnée</h2>
+      <div className="admin-table-wrapper">
+        <table className="admin-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Apprenant</th>
+              <th>Formation</th>
+              <th>Source</th>
+              <th>Statut</th>
+              <th>Progression</th>
+            </tr>
+          </thead>
+          <tbody>
+            {enrollments.map((enrollment) => (
+              <tr key={enrollment.id}>
+                <td>#{enrollment.id}</td>
+                <td>{enrollment.learnerId}</td>
+                <td>{enrollment.trainingTitle || enrollment.trainingId}</td>
+                <td>{enrollment.source || "-"}</td>
+                <td>{enrollment.status || "-"}</td>
+                <td>{enrollment.progressPercentage ?? 0}%</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <h2 className="admin-section-title">Demandes d’accès en attente</h2>
+      <div className="admin-table-wrapper">
+        <table className="admin-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Apprenant</th>
+              <th>Formation</th>
+              <th>Message</th>
+              <th>Statut</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {accessRequests.map((request) => (
+              <tr key={request.id}>
+                <td>#{request.id}</td>
+                <td>{request.learnerId}</td>
+                <td>{request.trainingTitle || request.trainingId}</td>
+                <td className="admin-long-cell">{request.learnerMessage || "-"}</td>
+                <td>{request.status}</td>
+                <td>
+                  <div className="admin-inline-actions">
+                    <button
+                      className="admin-button"
+                      type="button"
+                      onClick={() => void handleAccessDecision(request.id, "APPROVE")}
+                    >
+                      Approuver
+                    </button>
+                    <button
+                      className="admin-button secondary"
+                      type="button"
+                      onClick={() => void handleAccessDecision(request.id, "REJECT")}
+                    >
+                      Refuser
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <h2 className="admin-section-title">Invitations formation sélectionnée</h2>
+      <div className="admin-table-wrapper">
+        <table className="admin-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Apprenant</th>
+              <th>Email</th>
+              <th>Statut</th>
+              <th>Expire le</th>
+              <th>Token test</th>
+            </tr>
+          </thead>
+          <tbody>
+            {invitations.map((invitation) => (
+              <tr key={invitation.id}>
+                <td>#{invitation.id}</td>
+                <td>{invitation.learnerId || "-"}</td>
+                <td>{invitation.learnerEmail || "-"}</td>
+                <td>{invitation.status}</td>
+                <td>{invitation.expiresAt || "-"}</td>
+                <td className="admin-token-cell">{invitation.token || "-"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}

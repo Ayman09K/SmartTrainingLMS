@@ -1,0 +1,115 @@
+name: Backend CI
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "04_Backend_microservices/**"
+      - ".github/workflows/backend-ci.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "04_Backend_microservices/**"
+      - ".github/workflows/backend-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Java 17 / Spring Boot / MySQL
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ci_root_password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -pci_root_password"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      AUTH_DB_PASSWORD: ci_password
+      TRAINING_DB_PASSWORD: ci_password
+      EVALUATION_DB_PASSWORD: ci_password
+      ANALYTICS_DB_PASSWORD: ci_password
+
+      APP_JWT_SECRET: smarttraining-ci-only-jwt-secret-0123456789-abcdefghijklmnopqrstuvwxyz-ABCDEFGHIJKLMNOPQRSTUVWXYZ
+      JWT_SECRET: smarttraining-ci-only-jwt-secret-0123456789-abcdefghijklmnopqrstuvwxyz-ABCDEFGHIJKLMNOPQRSTUVWXYZ
+
+      SPRING_MAIL_USERNAME: ""
+      SPRING_MAIL_PASSWORD: ""
+
+      EUREKA_CLIENT_ENABLED: "false"
+      AI_SERVICE_URL: http://127.0.0.1:8000
+      ANALYTICS_SERVICE_URL: http://127.0.0.1:8084
+      SMARTTRAINING_AUTH_INTERNAL_URL: http://127.0.0.1:8081
+      SMARTTRAINING_UPLOAD_DIR: ${{ runner.temp }}/smarttraining-uploads
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+          cache-dependency-path: "04_Backend_microservices/**/pom.xml"
+
+      - name: Prepare MySQL databases
+        shell: bash
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq mysql-client
+          mysql -h 127.0.0.1 -uroot -pci_root_password <<'SQL'
+          CREATE DATABASE IF NOT EXISTS smarttraining_auth_db;
+          CREATE DATABASE IF NOT EXISTS smarttraining_training_db;
+          CREATE DATABASE IF NOT EXISTS smarttraining_evaluation_db;
+          CREATE DATABASE IF NOT EXISTS smarttraining_analytics_db;
+          CREATE USER IF NOT EXISTS 'smarttraining_user'@'%' IDENTIFIED BY 'ci_password';
+          ALTER USER 'smarttraining_user'@'%' IDENTIFIED BY 'ci_password';
+          GRANT ALL PRIVILEGES ON smarttraining_auth_db.* TO 'smarttraining_user'@'%';
+          GRANT ALL PRIVILEGES ON smarttraining_training_db.* TO 'smarttraining_user'@'%';
+          GRANT ALL PRIVILEGES ON smarttraining_evaluation_db.* TO 'smarttraining_user'@'%';
+          GRANT ALL PRIVILEGES ON smarttraining_analytics_db.* TO 'smarttraining_user'@'%';
+          FLUSH PRIVILEGES;
+          SQL
+
+      - name: Test discovery-service
+        working-directory: 04_Backend_microservices/discovery-service
+        run: mvn -B -ntp test
+
+      - name: Test api-gateway
+        working-directory: 04_Backend_microservices/api-gateway
+        run: mvn -B -ntp test
+
+      - name: Test auth-service
+        working-directory: 04_Backend_microservices/auth-service
+        run: mvn -B -ntp test
+
+      - name: Test training-service
+        working-directory: 04_Backend_microservices/training-service
+        run: mvn -B -ntp test
+
+      - name: Test evaluation-service
+        working-directory: 04_Backend_microservices/evaluation-service
+        run: mvn -B -ntp test
+
+      - name: Test analytics-service
+        working-directory: 04_Backend_microservices/analytics-service
+        run: mvn -B -ntp test

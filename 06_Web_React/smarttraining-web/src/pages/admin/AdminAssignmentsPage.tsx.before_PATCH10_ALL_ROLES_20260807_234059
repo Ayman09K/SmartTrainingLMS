@@ -1,0 +1,507 @@
+import { useEffect, useMemo, useState } from "react";
+import type { FormEvent } from "react";
+import {
+  approveAccessRequestAsAdmin,
+  assignLearnersAsAdmin,
+  createInvitationAsAdmin,
+  getAdminTrainingsSafe,
+  getAdminUsers,
+  getEnrollmentsByTrainingSafe,
+  getPendingAccessRequestsSafe,
+  getTrainingInvitationsSafe,
+  rejectAccessRequestAsAdmin,
+} from "../../api/adminApi";
+import { getApiErrorMessage } from "../../api/apiClient";
+import { ErrorMessage } from "../../components/ui/ErrorMessage";
+import { LoadingState } from "../../components/ui/LoadingState";
+import { useAuth } from "../../features/auth/AuthContext";
+import type {
+  AuthUser,
+  EnrollmentResponse,
+  TrainingAccessRequestResponse,
+  TrainingInvitationResponse,
+  TrainingResponse,
+} from "../../types/admin";
+import "../../components/admin/Admin.css";
+
+function userLabel(user: AuthUser): string {
+  const fullName =
+    user.fullName ||
+    `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim();
+
+  return fullName ? `${fullName} — ${user.email}` : user.email;
+}
+
+export function AdminAssignmentsPage() {
+  const { user } = useAuth();
+
+  const [trainings, setTrainings] = useState<TrainingResponse[]>([]);
+  const [learners, setLearners] = useState<AuthUser[]>([]);
+  const [selectedTrainingId, setSelectedTrainingId] = useState<number>(0);
+  const [selectedLearnerIds, setSelectedLearnerIds] = useState<number[]>([]);
+  const [learnerSearch, setLearnerSearch] = useState("");
+  const [inviteLearnerId, setInviteLearnerId] = useState("");
+  const [inviteEmail, setInviteEmail] = useState("");
+
+  const [enrollments, setEnrollments] = useState<EnrollmentResponse[]>([]);
+  const [accessRequests, setAccessRequests] = useState<TrainingAccessRequestResponse[]>([]);
+  const [invitations, setInvitations] = useState<TrainingInvitationResponse[]>([]);
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  const learnerById = useMemo(
+    () => new Map(learners.map((learner) => [learner.id, learner])),
+    [learners],
+  );
+
+  const enrolledLearnerIds = useMemo(
+    () => new Set(enrollments.map((enrollment) => enrollment.learnerId)),
+    [enrollments],
+  );
+
+  const filteredLearners = useMemo(() => {
+    const query = learnerSearch.trim().toLowerCase();
+
+    if (!query) {
+      return learners;
+    }
+
+    return learners.filter((learner) =>
+      userLabel(learner).toLowerCase().includes(query),
+    );
+  }, [learners, learnerSearch]);
+
+  const selectedTrainingRequests = useMemo(
+    () =>
+      accessRequests.filter(
+        (request) => !selectedTrainingId || request.trainingId === selectedTrainingId,
+      ),
+    [accessRequests, selectedTrainingId],
+  );
+
+  async function loadAll(trainingId?: number) {
+    setLoading(true);
+    setError("");
+
+    try {
+      const [loadedTrainings, loadedUsers] = await Promise.all([
+        getAdminTrainingsSafe(),
+        getAdminUsers(),
+      ]);
+
+      const loadedLearners = loadedUsers.filter((candidate) => candidate.role === "APPRENANT");
+
+      setTrainings(loadedTrainings);
+      setLearners(loadedLearners);
+
+      const currentTrainingId =
+        trainingId || selectedTrainingId || loadedTrainings[0]?.id || 0;
+
+      setSelectedTrainingId(currentTrainingId);
+
+      if (currentTrainingId) {
+        const [loadedEnrollments, loadedRequests, loadedInvitations] = await Promise.all([
+          getEnrollmentsByTrainingSafe(currentTrainingId),
+          getPendingAccessRequestsSafe(),
+          getTrainingInvitationsSafe(currentTrainingId),
+        ]);
+
+        setEnrollments(loadedEnrollments);
+        setAccessRequests(loadedRequests);
+        setInvitations(loadedInvitations);
+      } else {
+        setEnrollments([]);
+        setAccessRequests([]);
+        setInvitations([]);
+      }
+    } catch (err) {
+      setError(getApiErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void loadAll();
+  }, []);
+
+  function toggleLearner(learnerId: number) {
+    setSelectedLearnerIds((current) =>
+      current.includes(learnerId)
+        ? current.filter((id) => id !== learnerId)
+        : [...current, learnerId],
+    );
+  }
+
+  async function handleAssign(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    setSuccess("");
+
+    if (!user?.id) {
+      setError("Administrateur connecté introuvable.");
+      return;
+    }
+
+    if (!selectedTrainingId) {
+      setError("Sélectionne une formation.");
+      return;
+    }
+
+    if (!selectedLearnerIds.length) {
+      setError("Sélectionne au moins un apprenant.");
+      return;
+    }
+
+    try {
+      await assignLearnersAsAdmin({
+        trainingId: selectedTrainingId,
+        learnerIds: selectedLearnerIds,
+        assignedBy: user.id,
+        source: "ADMIN_ASSIGNMENT",
+      });
+
+      setSelectedLearnerIds([]);
+      setSuccess("Affectation créée.");
+      await loadAll(selectedTrainingId);
+    } catch (err) {
+      setError(getApiErrorMessage(err));
+    }
+  }
+
+  async function handleAccessDecision(
+    requestId: number,
+    decision: "APPROVE" | "REJECT",
+  ) {
+    setError("");
+    setSuccess("");
+
+    if (!user?.id) {
+      setError("Administrateur connecté introuvable.");
+      return;
+    }
+
+    try {
+      if (decision === "APPROVE") {
+        await approveAccessRequestAsAdmin(requestId, {
+          decidedBy: user.id,
+          decisionComment: "Accès approuvé depuis la console admin.",
+        });
+        setSuccess("Demande d’accès approuvée.");
+      } else {
+        await rejectAccessRequestAsAdmin(requestId, {
+          decidedBy: user.id,
+          decisionComment: "Accès refusé depuis la console admin.",
+        });
+        setSuccess("Demande d’accès refusée.");
+      }
+
+      await loadAll(selectedTrainingId);
+    } catch (err) {
+      setError(getApiErrorMessage(err));
+    }
+  }
+
+  async function handleCreateInvitation(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    setSuccess("");
+
+    if (!user?.id) {
+      setError("Administrateur connecté introuvable.");
+      return;
+    }
+
+    if (!selectedTrainingId) {
+      setError("Sélectionne une formation.");
+      return;
+    }
+
+    const selectedLearner = inviteLearnerId
+      ? learnerById.get(Number(inviteLearnerId))
+      : undefined;
+
+    const learnerEmail = inviteEmail.trim() || selectedLearner?.email;
+
+    if (!selectedLearner && !learnerEmail) {
+      setError("Choisis un apprenant ou indique un email.");
+      return;
+    }
+
+    try {
+      await createInvitationAsAdmin({
+        trainingId: selectedTrainingId,
+        learnerId: selectedLearner?.id,
+        learnerEmail,
+        invitedBy: user.id,
+        message: "Invitation envoyée depuis la console admin.",
+        validityDays: 7,
+      });
+
+      setInviteLearnerId("");
+      setInviteEmail("");
+      setSuccess("Invitation créée.");
+      await loadAll(selectedTrainingId);
+    } catch (err) {
+      setError(getApiErrorMessage(err));
+    }
+  }
+
+  if (loading) {
+    return <LoadingState message="Chargement affectations..." />;
+  }
+
+  return (
+    <div className="page">
+      <div className="page-header">
+        <h1 className="page-title">Affectations et accès</h1>
+        <p className="page-subtitle">
+          Affecter des apprenants par leur nom, traiter les demandes d’accès et gérer les invitations.
+        </p>
+      </div>
+
+      {error ? <ErrorMessage message={error} /> : null}
+      {success ? <div className="admin-success">{success}</div> : null}
+
+      <div className="admin-toolbar">
+        <label>
+          Formation
+          <select
+            value={selectedTrainingId}
+            onChange={(event) => void loadAll(Number(event.target.value))}
+          >
+            {trainings.map((training) => (
+              <option key={training.id} value={training.id}>
+                {training.title}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <h2 className="admin-section-title">Affecter des apprenants</h2>
+      <p className="page-subtitle">
+        Sélectionne les apprenants à affecter. Les identifiants techniques sont gérés automatiquement.
+      </p>
+
+      <form onSubmit={handleAssign}>
+        <div className="admin-toolbar">
+          <input
+            type="search"
+            value={learnerSearch}
+            onChange={(event) => setLearnerSearch(event.target.value)}
+            placeholder="Rechercher par nom ou email"
+            aria-label="Rechercher un apprenant"
+          />
+        </div>
+
+        <div className="admin-table-wrapper">
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Sélection</th>
+                <th>Apprenant</th>
+                <th>Email</th>
+                <th>État</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredLearners.map((learner) => (
+                <tr key={learner.id}>
+                  <td>
+                    <input
+                      type="checkbox"
+                      checked={selectedLearnerIds.includes(learner.id)}
+                      disabled={enrolledLearnerIds.has(learner.id)}
+                      onChange={() => toggleLearner(learner.id)}
+                      aria-label={`Sélectionner ${userLabel(learner)}`}
+                    />
+                  </td>
+                  <td>
+                    {learner.fullName ||
+                      `${learner.firstName ?? ""} ${learner.lastName ?? ""}`.trim() ||
+                      "Nom non indiqué"}
+                  </td>
+                  <td>{learner.email}</td>
+                  <td>{enrolledLearnerIds.has(learner.id) ? "Déjà inscrit" : "Disponible"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {!filteredLearners.length ? (
+          <p className="admin-empty">Aucun apprenant ne correspond à la recherche.</p>
+        ) : null}
+
+        <div className="admin-toolbar">
+          <button
+            className="admin-button"
+            type="submit"
+            disabled={!selectedLearnerIds.length}
+          >
+            Affecter les apprenants sélectionnés
+          </button>
+          <span>{selectedLearnerIds.length} apprenant(s) sélectionné(s)</span>
+        </div>
+      </form>
+
+      <h2 className="admin-section-title">Inscriptions formation sélectionnée</h2>
+      <div className="admin-table-wrapper">
+        <table className="admin-table">
+          <thead>
+            <tr>
+              <th>Apprenant</th>
+              <th>Email</th>
+              <th>Formation</th>
+              <th>Source</th>
+              <th>Statut</th>
+              <th>Progression</th>
+            </tr>
+          </thead>
+          <tbody>
+            {enrollments.map((enrollment) => {
+              const learner = learnerById.get(enrollment.learnerId);
+
+              return (
+                <tr key={enrollment.id}>
+                  <td>
+                    {learner?.fullName ||
+                      `${learner?.firstName ?? ""} ${learner?.lastName ?? ""}`.trim() ||
+                      `Apprenant #${enrollment.learnerId}`}
+                  </td>
+                  <td>{learner?.email || "-"}</td>
+                  <td>{enrollment.trainingTitle || enrollment.trainingId}</td>
+                  <td>{enrollment.source || "-"}</td>
+                  <td>{enrollment.status || "-"}</td>
+                  <td>{enrollment.progressPercentage ?? 0}%</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <h2 className="admin-section-title">Demandes d’accès en attente</h2>
+      <div className="admin-table-wrapper">
+        <table className="admin-table">
+          <thead>
+            <tr>
+              <th>Apprenant</th>
+              <th>Email</th>
+              <th>Formation</th>
+              <th>Message</th>
+              <th>Statut</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {selectedTrainingRequests.map((request) => {
+              const learner = learnerById.get(request.learnerId);
+
+              return (
+                <tr key={request.id}>
+                  <td>
+                    {learner?.fullName ||
+                      `${learner?.firstName ?? ""} ${learner?.lastName ?? ""}`.trim() ||
+                      `Apprenant #${request.learnerId}`}
+                  </td>
+                  <td>{learner?.email || "-"}</td>
+                  <td>{request.trainingTitle || request.trainingId}</td>
+                  <td className="admin-long-cell">{request.learnerMessage || "-"}</td>
+                  <td>{request.status}</td>
+                  <td>
+                    <div className="admin-inline-actions">
+                      <button
+                        className="admin-button"
+                        type="button"
+                        onClick={() => void handleAccessDecision(request.id, "APPROVE")}
+                      >
+                        Approuver
+                      </button>
+                      <button
+                        className="admin-button secondary"
+                        type="button"
+                        onClick={() => void handleAccessDecision(request.id, "REJECT")}
+                      >
+                        Refuser
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {!selectedTrainingRequests.length ? (
+        <p className="admin-empty">Aucune demande d’accès en attente pour cette formation.</p>
+      ) : null}
+
+      <h2 className="admin-section-title">Créer une invitation</h2>
+      <form className="admin-form-grid" onSubmit={handleCreateInvitation}>
+        <select
+          value={inviteLearnerId}
+          onChange={(event) => setInviteLearnerId(event.target.value)}
+        >
+          <option value="">Apprenant enregistré (optionnel)</option>
+          {learners.map((learner) => (
+            <option key={learner.id} value={learner.id}>
+              {userLabel(learner)}
+            </option>
+          ))}
+        </select>
+
+        <input
+          type="email"
+          value={inviteEmail}
+          onChange={(event) => setInviteEmail(event.target.value)}
+          placeholder="Email externe (optionnel)"
+        />
+
+        <button className="admin-button" type="submit">
+          Créer invitation
+        </button>
+      </form>
+
+      <h2 className="admin-section-title">Invitations formation sélectionnée</h2>
+      <div className="admin-table-wrapper">
+        <table className="admin-table">
+          <thead>
+            <tr>
+              <th>Apprenant</th>
+              <th>Email</th>
+              <th>Statut</th>
+              <th>Expire le</th>
+            </tr>
+          </thead>
+          <tbody>
+            {invitations.map((invitation) => {
+              const learner = invitation.learnerId
+                ? learnerById.get(invitation.learnerId)
+                : undefined;
+
+              return (
+                <tr key={invitation.id}>
+                  <td>
+                    {learner
+                      ? learner.fullName ||
+                        `${learner.firstName ?? ""} ${learner.lastName ?? ""}`.trim() ||
+                        learner.email
+                      : "-"}
+                  </td>
+                  <td>{invitation.learnerEmail || learner?.email || "-"}</td>
+                  <td>{invitation.status}</td>
+                  <td>{invitation.expiresAt || "-"}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}

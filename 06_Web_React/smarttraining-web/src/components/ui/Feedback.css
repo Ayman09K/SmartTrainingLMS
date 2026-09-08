@@ -1,0 +1,4 @@
+.feedback-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-card); padding: 22px; display: flex; align-items: center; gap: 14px; font-weight: 800; color: var(--color-text); }
+.loader { width: 22px; height: 22px; border: 3px solid #dbeafe; border-top-color: var(--color-primary); border-radius: 999px; animation: spin .8s linear infinite; }
+.error-message { background: #fef2f2; border: 1px solid #fecaca; color: var(--color-danger); border-radius: var(--radius-md); padding: 14px 16px; font-weight: 800; margin-bottom: 18px; }
+@keyframes spin { to { transform: rotate(360deg); } }

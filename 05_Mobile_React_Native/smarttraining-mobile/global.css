@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 248 250 252;
+    --surface: 255 255 255;
+    --surface-soft: 239 246 255;
+    --surface-elevated: 255 255 255;
+    --foreground: 15 23 42;
+    --secondary-foreground: 71 85 105;
+    --muted-foreground: 71 85 105;
+    --border: 226 232 240;
+    --accent: 37 99 235;
+    --accent-foreground: 255 255 255;
+    --success: 21 128 61;
+    --warning: 180 83 9;
+    --danger: 185 28 28;
+    --info: 3 105 161;
+    --focus-ring: 37 99 235;
+  }
+}

@@ -1,0 +1,53 @@
+name: Mobile CI
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "05_Mobile_React_Native/**"
+      - ".github/workflows/mobile-ci.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "05_Mobile_React_Native/**"
+      - ".github/workflows/mobile-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Expo / React Native / TypeScript
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    defaults:
+      run:
+        working-directory: 05_Mobile_React_Native/smarttraining-mobile
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: 05_Mobile_React_Native/smarttraining-mobile/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Lint
+        run: npm run lint
+
+      - name: TypeScript
+        run: npx tsc --noEmit

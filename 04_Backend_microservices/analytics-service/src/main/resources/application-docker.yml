@@ -1,0 +1,42 @@
+server:
+  port: 8084
+spring:
+  application:
+    name: analytics-service
+  datasource:
+    url: ${ANALYTICS_DB_URL:jdbc:mysql://mysql:3306/smarttraining_analytics_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true}
+    username: ${ANALYTICS_DB_USERNAME}
+    password: ${ANALYTICS_DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: false
+  jackson:
+    time-zone: UTC
+eureka:
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: ${EUREKA_DEFAULT_ZONE:http://discovery-service:8761/eureka/}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+info:
+  app:
+    name: analytics-service
+    description: Service progression et learning analytics SmartTraining AI
+    version: 1.0.0
+smarttraining:
+  ai-service:
+    url: ${AI_SERVICE_URL:http://ai-service:8000}

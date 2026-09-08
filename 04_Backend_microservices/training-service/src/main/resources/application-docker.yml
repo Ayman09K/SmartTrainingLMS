@@ -1,0 +1,87 @@
+server:
+  port: 8082
+
+spring:
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 500MB
+      max-request-size: 500MB
+  application:
+    name: training-service
+
+  datasource:
+    url: ${TRAINING_DB_URL:jdbc:mysql://mysql:3306/smarttraining_training_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true}
+    username: ${TRAINING_DB_USERNAME}
+    password: ${TRAINING_DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: false
+
+  jackson:
+    time-zone: UTC
+
+eureka:
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: ${EUREKA_DEFAULT_ZONE:http://discovery-service:8761/eureka/}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+info:
+  app:
+    name: training-service
+    description: Service de gestion des formations, modules, leçons, ressources et affectations SmartTraining AI
+    version: 1.0.0
+
+smarttraining:
+  pexels:
+    api-key: ${PEXELS_API_KEY:}
+    base-url: ${PEXELS_BASE_URL:https://api.pexels.com}
+  internal:
+    auth-url: ${SMARTTRAINING_AUTH_INTERNAL_URL:http://auth-service:8081}
+  upload:
+    base-directory: ${SMARTTRAINING_UPLOAD_DIR:/app/uploads}
+    public-base-url: ${SMARTTRAINING_PUBLIC_MEDIA_URL:https://api.smarttraininglms.com/api/media}
+    max-image-size-bytes: 10485760
+    max-pdf-size-bytes: 52428800
+    max-document-size-bytes: 52428800
+    max-video-size-bytes: 524288000
+    allowed-image-types:
+      - image/jpeg
+      - image/png
+      - image/webp
+    allowed-pdf-types:
+      - application/pdf
+    allowed-document-types:
+      - application/pdf
+      - text/plain
+      - application/msword
+      - application/vnd.openxmlformats-officedocument.wordprocessingml.document
+      - application/vnd.ms-powerpoint
+      - application/vnd.openxmlformats-officedocument.presentationml.presentation
+    allowed-video-types:
+      - video/mp4
+      - video/webm
+      - video/quicktime
+    max-scorm-size-bytes: 524288000
+    allowed-scorm-types:
+      - application/zip
+      - application/x-zip-compressed
+      - application/octet-stream

@@ -1,0 +1,62 @@
+{
+    "project": "SmartTraining AI",
+    "model_version": "1.0.0",
+    "model_name": "LogisticRegression",
+    "problem_type": "binary_classification",
+    "target": "at_risk",
+    "target_description": {
+        "0": "apprenant non à risque",
+        "1": "apprenant à risque"
+    },
+    "label_type": "weak_label",
+    "label_warning": "La cible at_risk est construite par règles pour le prototype PFE. Un modèle de production devra être réentraîné avec des résultats réels observés.",
+    "features": [
+        "progressPercentage",
+        "averageScore",
+        "completedLessons",
+        "totalLessons",
+        "completedQuizzes",
+        "totalQuizzes",
+        "totalEvents",
+        "totalTrainingsStarted",
+        "totalTrainingsCompleted",
+        "lessonCompletionRate",
+        "quizCompletionRate",
+        "scoreRatio",
+        "daysSinceLastActivity",
+        "avgEventsPerTraining"
+    ],
+    "identifier_columns_excluded": [
+        "learnerId",
+        "trainingId"
+    ],
+    "excluded_columns_to_avoid_target_leakage": [
+        "riskScore",
+        "riskLevel",
+        "riskFactors",
+        "recommendations",
+        "status",
+        "atRiskTrainings"
+    ],
+    "training_method": {
+        "train_test_split": "80/20",
+        "stratify": true,
+        "cross_validation": "StratifiedKFold n_splits=5",
+        "hyperparameter_search": "GridSearchCV",
+        "main_scoring": "f1",
+        "random_seed": 42
+    },
+    "best_params": {
+        "model__C": 1,
+        "model__class_weight": null
+    },
+    "best_cv_f1": 0.8557461257039503,
+    "test_metrics": {
+        "accuracy": 0.9416666666666667,
+        "precision_at_risk": 0.90625,
+        "recall_at_risk": 0.8787878787878788,
+        "f1_at_risk": 0.8923076923076924,
+        "roc_auc": 0.9470567746429817
+    },
+    "created_at": "2026-08-03T22:33:18.595204+00:00"
+}

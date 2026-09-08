@@ -1,0 +1,794 @@
+SMARTTRAINING AI — CODES PLANTUML DES DIAGRAMMES
+Version : 04/06/2026
+Utilisation : coller chaque bloc dans PlantUML Online Server ou dans un outil compatible PlantUML pour régénérer/modifier les images.
+
+================================================================================
+FIGURE 1 — ARCHITECTURE MICROSERVICES GLOBALE
+================================================================================
+
+@startuml
+title Architecture microservices - SmartTraining AI
+
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam componentStyle rectangle
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam ArrowColor #34495E
+skinparam ArrowThickness 1.3
+
+skinparam rectangle {
+  BorderColor #566573
+  RoundCorner 12
+}
+
+rectangle "Application mobile\nReact Native / Expo\n3 profils" as Mobile #D6EAF8
+rectangle "Interface web\nReact / Vite\n3 profils" as Web #D6EAF8
+
+rectangle "API Gateway\nSpring Cloud Gateway - Port 8080" as Gateway #FCF3CF
+rectangle "Eureka Discovery Server\nPort 8761" as Eureka #FCF3CF
+
+rectangle "auth-service\nUtilisateurs - JWT\nRôles" as Auth #D5F5E3
+rectangle "training-service\nFormations - Modules\nLeçons" as Training #D5F5E3
+rectangle "evaluation-service\nQuiz - Tentatives\nScores" as Evaluation #D5F5E3
+rectangle "analytics-service\nProgression - Feedbacks\nAlertes IA" as Analytics #D5F5E3
+
+rectangle "ai-service\nFastAPI / Python\nPrédiction du risque" as AI #FADBD8
+
+database "auth_db" as AuthDB #EBF5FB
+database "training_db" as TrainingDB #EBF5FB
+database "evaluation_db" as EvaluationDB #EBF5FB
+database "analytics_db" as AnalyticsDB #EBF5FB
+database "ai_db" as AIDB #EBF5FB
+
+Mobile -down-> Gateway : HTTPS / JSON / JWT
+Web -down-> Gateway : HTTPS / JSON / JWT
+
+Gateway -right-> Eureka : registre
+Gateway -down-> Auth
+Gateway -down-> Training
+Gateway -down-> Evaluation
+Gateway -down-> Analytics
+
+Auth -down-> AuthDB
+Training -down-> TrainingDB
+Evaluation -down-> EvaluationDB
+Analytics -down-> AnalyticsDB
+
+Analytics -right-> AI : POST /predict-risk
+AI -down-> AIDB
+
+@enduml
+
+================================================================================
+FIGURE 2 — DIAGRAMME DE CLASSES PRINCIPAL
+================================================================================
+
+@startuml
+title Diagramme de classes principal - SmartTraining AI
+
+left to right direction
+scale max 1400 width
+
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+
+skinparam class {
+  BackgroundColor #FDFEFE
+  BorderColor #5D6D7E
+  FontColor #1F2D3D
+}
+
+skinparam enum {
+  BackgroundColor #FEF9E7
+  BorderColor #B7950B
+  FontColor #1F2D3D
+}
+
+skinparam package {
+  BackgroundColor #FCFCFC
+  BorderColor #AAB7B8
+  FontColor #1F2D3D
+}
+
+package "auth-service" #EAF2F8 {
+  class User {
+    +Long id
+    +String firstName
+    +String lastName
+    +String email
+    +String password
+    +UserRole role
+    +Boolean enabled
+    +LocalDateTime createdAt
+  }
+  enum UserRole {
+    ADMIN
+    FORMATEUR
+    APPRENANT
+  }
+}
+
+package "training-service" #E8F8F5 {
+  class Training {
+    +Long id
+    +String title
+    +String description
+    +String objectives
+    +String level
+    +Integer estimatedDuration
+    +Long trainerId
+    +String status
+    +LocalDateTime createdAt
+  }
+  class Module {
+    +Long id
+    +Long trainingId
+    +String title
+    +String description
+    +Integer orderIndex
+    +Integer estimatedDuration
+    +String status
+  }
+  class Lesson {
+    +Long id
+    +Long moduleId
+    +String title
+    +String content
+    +Integer orderIndex
+    +Integer estimatedDuration
+    +Boolean required
+  }
+  class PedagogicalResource {
+    +Long id
+    +Long lessonId
+    +String title
+    +String type
+    +String url
+    +String filePath
+    +String description
+    +Integer orderIndex
+  }
+  class Enrollment {
+    +Long id
+    +Long learnerId
+    +Long trainingId
+    +LocalDate enrollmentDate
+    +String status
+    +Double completionRate
+    +LocalDateTime completedAt
+  }
+}
+
+package "evaluation-service" #FEF9E7 {
+  class Quiz {
+    +Long id
+    +Long moduleId
+    +Long lessonId
+    +String title
+    +String description
+    +String difficultyLevel
+    +Double passingScore
+    +Integer maxAttempts
+    +String status
+  }
+  class Question {
+    +Long id
+    +Long quizId
+    +String text
+    +String type
+    +Double points
+    +Integer orderIndex
+  }
+  class AnswerOption {
+    +Long id
+    +Long questionId
+    +String text
+    +Boolean correct
+  }
+  class QuizAttempt {
+    +Long id
+    +Long learnerId
+    +Long quizId
+    +Double score
+    +Boolean passed
+    +Integer attemptNumber
+    +LocalDateTime startedAt
+    +LocalDateTime submittedAt
+  }
+}
+
+package "analytics-service" #FDEDEC {
+  class Feedback {
+    +Long id
+    +Long learnerId
+    +Long trainingId
+    +Long moduleId
+    +Integer rating
+    +String difficultyLevel
+    +String comment
+    +LocalDateTime createdAt
+  }
+  class LearningProgress {
+    +Long id
+    +Long learnerId
+    +Long trainingId
+    +Long moduleId
+    +Long lessonId
+    +String status
+    +Double progressPercentage
+    +LocalDateTime startedAt
+    +LocalDateTime completedAt
+    +LocalDateTime lastActivityAt
+  }
+  class LearnerActivity {
+    +Long id
+    +Long learnerId
+    +Long trainingId
+    +Long moduleId
+    +String activityType
+    +LocalDateTime activityDate
+    +Integer durationSeconds
+    +String metadata
+  }
+  class RiskPrediction {
+    +Long id
+    +Long learnerId
+    +Long trainingId
+    +String riskLevel
+    +Double probability
+    +String mainFactors
+    +String modelName
+    +String status
+    +LocalDateTime createdAt
+  }
+  class Recommendation {
+    +Long id
+    +Long predictionId
+    +Long learnerId
+    +Long trainingId
+    +String title
+    +String description
+    +String actionType
+    +LocalDateTime createdAt
+  }
+  class TrainerIntervention {
+    +Long id
+    +Long predictionId
+    +Long trainerId
+    +Long learnerId
+    +String actionTaken
+    +String note
+    +String status
+    +LocalDateTime createdAt
+  }
+  class SupportSession {
+    +Long id
+    +Long predictionId
+    +Long trainerId
+    +Long learnerId
+    +String title
+    +String objective
+    +String meetingLink
+    +LocalDateTime scheduledAt
+    +String status
+    +String note
+    +LocalDateTime createdAt
+  }
+}
+
+User "1" -- "0..*" Training : crée / encadre >
+User "1" -- "0..*" Enrollment : suit >
+Training "1" -- "0..*" Enrollment : contient >
+Training "1" -- "1..*" Module : contient >
+Module "1" -- "1..*" Lesson : contient >
+Lesson "1" -- "0..*" PedagogicalResource : propose >
+Module "1" -- "0..*" Quiz : évalue >
+Lesson "0..1" -- "0..*" Quiz : peut évaluer >
+Quiz "1" -- "1..*" Question : contient >
+Question "1" -- "2..*" AnswerOption : propose >
+Quiz "1" -- "0..*" QuizAttempt : reçoit >
+User "1" -- "0..*" QuizAttempt : réalise >
+User "1" -- "0..*" Feedback : soumet >
+Training "1" -- "0..*" Feedback : reçoit >
+Module "0..1" -- "0..*" Feedback : concerne >
+User "1" -- "0..*" LearningProgress : possède >
+Training "1" -- "0..*" LearningProgress : suivi >
+Module "0..1" -- "0..*" LearningProgress : suivi >
+Lesson "0..1" -- "0..*" LearningProgress : suivi >
+User "1" -- "0..*" LearnerActivity : génère >
+Training "0..1" -- "0..*" LearnerActivity : concerne >
+Module "0..1" -- "0..*" LearnerActivity : concerne >
+User "1" -- "0..*" RiskPrediction : analysé >
+Training "1" -- "0..*" RiskPrediction : contexte >
+RiskPrediction "1" -- "0..*" Recommendation : génère >
+RiskPrediction "1" -- "0..*" TrainerIntervention : déclenche >
+RiskPrediction "1" -- "0..*" SupportSession : peut déclencher >
+User "1" -- "0..*" TrainerIntervention : réalise >
+User "1" -- "0..*" SupportSession : participe >
+
+@enduml
+
+================================================================================
+FIGURE 3 — CAS D'UTILISATION DU PROFIL APPRENANT
+================================================================================
+
+@startuml
+title Cas d'utilisation - Profil apprenant
+
+left to right direction
+scale max 1000 width
+
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam defaultFontSize 13
+skinparam packageStyle rectangle
+skinparam linetype ortho
+
+skinparam actor {
+  BackgroundColor #EAF2F8
+  BorderColor #5DADE2
+  FontColor #1F2D3D
+}
+
+skinparam usecase {
+  BackgroundColor #F8F9F9
+  BorderColor #5D6D7E
+  FontColor #1F2D3D
+}
+
+skinparam rectangle {
+  BackgroundColor #FCFCFC
+  BorderColor #85929E
+  RoundCorner 20
+}
+
+actor "Apprenant" as Learner
+
+rectangle "SmartTraining AI\nParcours apprenant" as System {
+  usecase "S'authentifier" as UC_Auth
+  usecase "Consulter ses formations" as UC_Trainings
+  usecase "Consulter les modules" as UC_Modules
+  usecase "Consulter une leçon" as UC_Lesson
+  usecase "Ouvrir une ressource\npédagogique" as UC_Resource
+  usecase "Marquer une leçon\ncomme terminée" as UC_Complete
+  usecase "Passer un quiz" as UC_Quiz
+  usecase "Consulter ses scores" as UC_Scores
+  usecase "Suivre sa progression" as UC_Progress
+  usecase "Soumettre un feedback" as UC_Feedback
+  usecase "Consulter les\nrecommandations" as UC_Recommendations
+  usecase "Accéder à une séance\nd'accompagnement" as UC_Support
+}
+
+Learner -- UC_Auth
+Learner -- UC_Trainings
+Learner -- UC_Modules
+Learner -- UC_Lesson
+Learner -- UC_Resource
+Learner -- UC_Complete
+Learner -- UC_Quiz
+Learner -- UC_Scores
+Learner -- UC_Progress
+Learner -- UC_Feedback
+Learner -- UC_Recommendations
+Learner -- UC_Support
+
+UC_Modules .> UC_Trainings : <<include>>
+UC_Lesson .> UC_Modules : <<include>>
+UC_Resource .> UC_Lesson : <<extend>>
+UC_Complete .> UC_Lesson : <<extend>>
+UC_Scores .> UC_Quiz : <<include>>
+UC_Progress .> UC_Complete : <<include>>
+UC_Recommendations .> UC_Progress : <<extend>>
+UC_Support .> UC_Recommendations : <<extend>>
+
+@enduml
+
+================================================================================
+FIGURE 4 — CAS D'UTILISATION FORMATEUR ET ADMINISTRATEUR
+================================================================================
+
+@startuml
+title Cas d'utilisation - Formateur et administrateur
+
+left to right direction
+scale max 1100 width
+
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam defaultFontSize 13
+skinparam packageStyle rectangle
+skinparam linetype ortho
+
+skinparam actor {
+  BackgroundColor #EAF2F8
+  BorderColor #5DADE2
+  FontColor #1F2D3D
+}
+
+skinparam usecase {
+  BackgroundColor #F8F9F9
+  BorderColor #5D6D7E
+  FontColor #1F2D3D
+}
+
+skinparam rectangle {
+  BackgroundColor #FCFCFC
+  BorderColor #85929E
+  RoundCorner 20
+}
+
+actor "Administrateur" as Admin
+actor "Formateur" as Trainer
+actor "Service IA\n(système externe)" as AISystem
+
+rectangle "SmartTraining AI\nGestion, suivi et accompagnement" as System {
+  usecase "S'authentifier" as UC_Auth
+  usecase "Gérer les utilisateurs\net les rôles" as UC_Users
+  usecase "Affecter les apprenants\naux formations" as UC_Enroll
+  usecase "Créer une formation" as UC_CreateTraining
+  usecase "Gérer les modules\net les leçons" as UC_Content
+  usecase "Ajouter des ressources\npédagogiques" as UC_Resources
+  usecase "Créer un quiz" as UC_Quiz
+  usecase "Consulter le tableau\nde bord" as UC_Dashboard
+  usecase "Suivre les scores\net la progression" as UC_Progress
+  usecase "Consulter les feedbacks" as UC_Feedbacks
+  usecase "Prédire le risque\napprenant" as UC_Predict
+  usecase "Consulter les alertes IA" as UC_Alerts
+  usecase "Traiter une alerte IA" as UC_Handle
+  usecase "Ajouter une intervention\nformateur" as UC_Intervention
+  usecase "Planifier une séance\nd'accompagnement" as UC_Support
+}
+
+Admin -- UC_Auth
+Admin -- UC_Users
+Admin -- UC_Enroll
+Admin -- UC_CreateTraining
+Admin -- UC_Dashboard
+
+Trainer -- UC_Auth
+Trainer -- UC_CreateTraining
+Trainer -- UC_Content
+Trainer -- UC_Resources
+Trainer -- UC_Quiz
+Trainer -- UC_Dashboard
+Trainer -- UC_Progress
+Trainer -- UC_Feedbacks
+Trainer -- UC_Alerts
+Trainer -- UC_Handle
+Trainer -- UC_Intervention
+Trainer -- UC_Support
+
+AISystem -- UC_Predict
+
+UC_Content .> UC_CreateTraining : <<include>>
+UC_Resources .> UC_Content : <<extend>>
+UC_Quiz .> UC_Content : <<extend>>
+UC_Alerts .> UC_Predict : <<include>>
+UC_Handle .> UC_Alerts : <<include>>
+UC_Intervention .> UC_Handle : <<extend>>
+UC_Support .> UC_Handle : <<extend>>
+
+@enduml
+
+================================================================================
+FIGURE 5 — SEQUENCE : CONNEXION UTILISATEUR
+================================================================================
+
+@startuml
+title Séquence - Connexion utilisateur
+
+hide footbox
+autonumber
+
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam sequenceMessageAlign center
+skinparam sequenceArrowThickness 1.2
+skinparam sequenceLifeLineBorderColor #34495E
+skinparam sequenceLifeLineBackgroundColor #FDFEFE
+skinparam sequenceParticipantBorderColor #2E86C1
+skinparam sequenceParticipantBackgroundColor #D6EAF8
+skinparam actorBorderColor #2E86C1
+skinparam actorBackgroundColor #D6EAF8
+skinparam databaseBorderColor #566573
+skinparam databaseBackgroundColor #F4F6F7
+
+actor "Utilisateur" as User
+participant "Client\nmobile/web" as Client
+participant "API Gateway" as Gateway
+participant "auth-service" as Auth
+database "auth_db" as DB
+
+User -> Client : Saisir email et mot de passe
+activate Client
+Client -> Gateway : POST /api/auth/login
+activate Gateway
+Gateway -> Auth : Transférer la requête
+activate Auth
+Auth -> DB : Vérifier utilisateur et rôle
+activate DB
+DB --> Auth : Utilisateur valide
+deactivate DB
+Auth --> Gateway : JWT + rôle
+deactivate Auth
+Gateway --> Client : Réponse authentification
+deactivate Gateway
+Client --> User : Redirection selon le rôle
+deactivate Client
+
+@enduml
+
+================================================================================
+FIGURE 6 — SEQUENCE : PASSAGE QUIZ ET PREDICTION DU RISQUE
+================================================================================
+
+@startuml
+title Séquence - Passage quiz et prédiction du risque
+
+hide footbox
+autonumber
+
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam sequenceMessageAlign center
+skinparam sequenceArrowThickness 1.2
+skinparam sequenceLifeLineBorderColor #34495E
+skinparam sequenceLifeLineBackgroundColor #FDFEFE
+skinparam sequenceParticipantBorderColor #2E86C1
+skinparam sequenceParticipantBackgroundColor #D6EAF8
+skinparam actorBorderColor #2E86C1
+skinparam actorBackgroundColor #D6EAF8
+skinparam databaseBorderColor #566573
+skinparam databaseBackgroundColor #F4F6F7
+
+actor "Apprenant" as Learner
+participant "Client\nmobile/web" as Client
+participant "API Gateway" as Gateway
+participant "evaluation-service" as Eval
+database "evaluation_db" as EvalDB
+participant "analytics-service" as Analytics
+database "analytics_db" as AnalyticsDB
+participant "ai-service\nFastAPI" as AI
+
+Learner -> Client : Répondre aux questions du quiz
+activate Client
+Client -> Gateway : POST /api/quizzes/{id}/submit
+activate Gateway
+Gateway -> Eval : Transférer la tentative
+activate Eval
+Eval -> EvalDB : Charger quiz et réponses
+activate EvalDB
+EvalDB --> Eval : Données du quiz
+deactivate EvalDB
+Eval -> Eval : Calculer le score
+Eval -> EvalDB : Enregistrer la tentative
+activate EvalDB
+EvalDB --> Eval : Tentative sauvegardée
+deactivate EvalDB
+Eval --> Gateway : Score + statut
+deactivate Eval
+Gateway --> Client : Résultat du quiz
+deactivate Gateway
+Client --> Learner : Afficher score et réussite/échec
+Client -> Gateway : Notifier activité apprenant
+activate Gateway
+Gateway -> Analytics : Envoyer score et activité
+activate Analytics
+Analytics -> AnalyticsDB : Mettre à jour progression
+activate AnalyticsDB
+AnalyticsDB --> Analytics : Progression sauvegardée
+deactivate AnalyticsDB
+Analytics -> AnalyticsDB : Préparer indicateurs apprenant
+activate AnalyticsDB
+AnalyticsDB --> Analytics : Données analytics
+deactivate AnalyticsDB
+Analytics -> AI : POST /predict-risk
+activate AI
+AI --> Analytics : Risque + facteurs + recommandation
+deactivate AI
+Analytics -> AnalyticsDB : Enregistrer prédiction IA
+activate AnalyticsDB
+AnalyticsDB --> Analytics : Prédiction sauvegardée
+deactivate AnalyticsDB
+Analytics --> Gateway : Recommandation disponible
+deactivate Analytics
+Gateway --> Client : Données de recommandation
+deactivate Gateway
+Client --> Learner : Afficher recommandation
+deactivate Client
+
+@enduml
+
+================================================================================
+FIGURE 7 — SEQUENCE : TRAITEMENT D'UNE ALERTE IA
+================================================================================
+
+@startuml
+title Séquence - Traitement d'une alerte IA
+
+hide footbox
+autonumber
+
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam sequenceMessageAlign center
+skinparam sequenceArrowThickness 1.2
+skinparam sequenceLifeLineBorderColor #34495E
+skinparam sequenceLifeLineBackgroundColor #FDFEFE
+skinparam sequenceParticipantBorderColor #2E86C1
+skinparam sequenceParticipantBackgroundColor #D6EAF8
+skinparam actorBorderColor #2E86C1
+skinparam actorBackgroundColor #D6EAF8
+skinparam databaseBorderColor #566573
+skinparam databaseBackgroundColor #F4F6F7
+
+actor "Formateur" as Trainer
+participant "Client\nmobile/web" as Client
+participant "API Gateway" as Gateway
+participant "analytics-service" as Analytics
+database "analytics_db" as DB
+
+Trainer -> Client : Consulter les alertes IA
+activate Client
+Client -> Gateway : GET /api/analytics/risk-alerts
+activate Gateway
+Gateway -> Analytics : Transférer la requête
+activate Analytics
+Analytics -> DB : Rechercher les alertes actives
+activate DB
+DB --> Analytics : Liste des alertes
+deactivate DB
+Analytics --> Gateway : Alertes IA
+deactivate Analytics
+Gateway --> Client : Réponse alertes
+deactivate Gateway
+Client --> Trainer : Afficher les alertes
+Trainer -> Client : Ouvrir une alerte
+Client -> Gateway : GET /api/analytics/risk-alerts/{id}
+activate Gateway
+Gateway -> Analytics : Charger le détail de l'alerte
+activate Analytics
+Analytics -> DB : Lire prédiction, facteurs\net recommandation
+activate DB
+DB --> Analytics : Détail de l'alerte
+deactivate DB
+Analytics --> Gateway : Détail de l'alerte
+deactivate Analytics
+Gateway --> Client : Données détaillées
+deactivate Gateway
+Client --> Trainer : Afficher facteurs et recommandation
+Trainer -> Client : Ajouter une intervention
+Client -> Gateway : POST /api/analytics/risk-alerts/{id}/interventions
+activate Gateway
+Gateway -> Analytics : Enregistrer l'intervention
+activate Analytics
+Analytics -> DB : Sauvegarder action formateur
+activate DB
+DB --> Analytics : Intervention sauvegardée
+deactivate DB
+Analytics --> Gateway : Intervention enregistrée
+deactivate Analytics
+Gateway --> Client : Réponse succès
+deactivate Gateway
+Client --> Trainer : Afficher confirmation
+Trainer -> Client : Planifier une séance d'accompagnement
+Client -> Gateway : POST /api/support-sessions
+activate Gateway
+Gateway -> Analytics : Créer séance d'accompagnement
+activate Analytics
+Analytics -> DB : Sauvegarder date, objectif\net lien visio
+activate DB
+DB --> Analytics : Séance sauvegardée
+deactivate DB
+Analytics --> Gateway : Séance enregistrée
+deactivate Analytics
+Gateway --> Client : Réponse succès
+deactivate Gateway
+Client --> Trainer : Afficher séance planifiée
+deactivate Client
+
+@enduml
+
+================================================================================
+FIGURE 8 — DIAGRAMME DE DEPLOIEMENT
+================================================================================
+
+@startuml
+title Diagramme de déploiement - SmartTraining AI
+
+left to right direction
+scale max 1100 width
+
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam linetype ortho
+skinparam ArrowColor #34495E
+skinparam ArrowThickness 1.2
+
+skinparam node {
+  BackgroundColor #FDFEFE
+  BorderColor #5D6D7E
+  FontColor #1F2D3D
+  RoundCorner 20
+}
+
+skinparam artifact {
+  BackgroundColor #D6EAF8
+  BorderColor #2E86C1
+  FontColor #1F2D3D
+  RoundCorner 10
+}
+
+skinparam database {
+  BackgroundColor #F4F6F7
+  BorderColor #566573
+  FontColor #1F2D3D
+}
+
+node "Postes clients" as Clients #EAF2F8 {
+  artifact "Application mobile\nReact Native / Expo" as Mobile
+  artifact "Interface web\nReact / Vite" as Web
+}
+
+node "Serveur backend\nSpring Boot / Spring Cloud" as Backend #FEF9E7 {
+  artifact "API Gateway\nPort 8080" as Gateway
+  artifact "Eureka Server\nPort 8761" as Eureka
+  artifact "auth-service\nPort 8081" as Auth
+  artifact "training-service\nPort 8082" as Training
+  artifact "evaluation-service\nPort 8083" as Evaluation
+  artifact "analytics-service\nPort 8084" as Analytics
+}
+
+node "Serveur IA\nPython / FastAPI" as AIServer #FDEDEC {
+  artifact "ai-service\nPort 8000" as AI
+  artifact "Modèle ML\nscikit-learn / joblib" as Model
+}
+
+database "Serveur MySQL" as MySQL #F4F6F7 {
+  database "auth_db" as AuthDB
+  database "training_db" as TrainingDB
+  database "evaluation_db" as EvaluationDB
+  database "analytics_db" as AnalyticsDB
+  database "ai_db" as AIDB
+}
+
+Mobile -right-> Gateway : HTTPS / JWT / JSON
+Web -right-> Gateway : HTTPS / JWT / JSON
+Gateway -down-> Eureka : découverte
+Gateway -down-> Auth : REST
+Gateway -down-> Training : REST
+Gateway -down-> Evaluation : REST
+Gateway -down-> Analytics : REST
+Auth -down-> AuthDB
+Training -down-> TrainingDB
+Evaluation -down-> EvaluationDB
+Analytics -down-> AnalyticsDB
+Analytics -right-> AI : HTTP / JSON\nPOST /predict-risk
+AI -down-> Model
+AI -down-> AIDB
+
+note bottom of Backend
+Les microservices sont enregistrés dans Eureka.
+Les clients accèdent au backend uniquement via l'API Gateway.
+end note
+
+note bottom of MySQL
+Chaque service possède son espace de données logique.
+end note
+
+@enduml

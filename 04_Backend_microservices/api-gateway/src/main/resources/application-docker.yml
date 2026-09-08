@@ -1,0 +1,69 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+
+  cloud:
+    gateway:
+      server:
+        webmvc:
+          routes:
+            - id: auth-service-route
+              uri: lb://auth-service
+              predicates:
+                - Path=/api/auth/**
+              filters:
+                - StripPrefix=1
+                - AddRequestHeader=X-Gateway-Source, SmartTraining-Gateway
+
+            - id: training-service-route
+              uri: lb://training-service
+              predicates:
+                - Path=/api/training-categories/**,/api/trainings/**,/api/modules/**,/api/lessons/**,/api/resources/**,/api/enrollments/**,/api/uploads/**,/api/scorm/**,/api/training-access-requests/**,/api/training-invitations/**,/api/certificates/**,/api/media/**
+              filters:
+                - StripPrefix=1
+                - AddRequestHeader=X-Gateway-Source, SmartTraining-Gateway
+
+            - id: evaluation-service-route
+              uri: lb://evaluation-service
+              predicates:
+                - Path=/api/quizzes/**,/api/questions/**,/api/options/**,/api/attempts/**,/api/scores/**
+              filters:
+                - StripPrefix=1
+                - AddRequestHeader=X-Gateway-Source, SmartTraining-Gateway
+
+            - id: analytics-service-route
+              uri: lb://analytics-service
+              predicates:
+                - Path=/api/analytics/**,/api/progress/**,/api/risk-predictions/**,/api/recommendations/**,/api/interventions/**,/api/support-sessions/**,/api/reviews/**,/api/feedbacks/**
+              filters:
+                - StripPrefix=1
+                - AddRequestHeader=X-Gateway-Source, SmartTraining-Gateway
+
+eureka:
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: ${EUREKA_DEFAULT_ZONE:http://discovery-service:8761/eureka/}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+app:
+  jwt:
+    secret: ${JWT_SECRET}
+
+info:
+  app:
+    name: api-gateway
+    description: Point d'entree unique securise des microservices SmartTraining AI
+    version: 1.0.0

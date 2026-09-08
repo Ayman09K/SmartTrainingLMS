@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		},
+		{
+			"path": "../../05_Mobile_React_Native"
+		},
+		{
+			"path": "../../06_Web_React"
+		}
+	],
+	"settings": {}
+}

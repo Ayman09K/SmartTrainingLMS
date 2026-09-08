@@ -1,0 +1,1758 @@
+import { useEffect, useMemo, useState } from "react";
+import type { ChangeEvent, FormEvent } from "react";
+import { Link, useParams, useSearchParams } from "react-router-dom";
+import {
+  ArrowLeft,
+  BookOpen,
+  ChevronDown,
+  ChevronUp,
+  Edit3,
+  ExternalLink,
+  Eye,
+  File,
+  FileText,
+  Image as ImageIcon,
+  Layers3,
+  Link2,
+  Package,
+  PlayCircle,
+  Plus,
+  Save,
+  Trash2,
+  Upload,
+  X,
+} from "lucide-react";
+import {
+  createLesson,
+  createModule,
+  createResource,
+  deleteLesson,
+  deleteModule,
+  deleteResource,
+  getFullTrainingById,
+  getTrainerTrainings,
+  updateLesson,
+  updateModule,
+  updateResource,
+  uploadLessonDocument,
+  uploadLessonImage,
+  uploadLessonPdf,
+  uploadLessonScorm,
+  uploadLessonVideo,
+} from "../../api/trainerApi";
+import { getApiErrorMessage } from "../../api/apiClient";
+import { buildMediaUrl } from "../../api/apiConfig";
+import { ErrorMessage } from "../../components/ui/ErrorMessage";
+import { LoadingState } from "../../components/ui/LoadingState";
+import { useAuth } from "../../features/auth/AuthContext";
+import type {
+  FullLessonResponse,
+  FullModuleResponse,
+  FullTrainingResponse,
+  LessonRequest,
+  ModuleRequest,
+  ResourceRequest,
+  ResourceResponse,
+  ResourceType,
+  StorageMode,
+  TrainingResponse,
+} from "../../types/training";
+import "../../components/trainer/Trainer.css";
+
+type ResourceCreateType =
+  | "TEXT"
+  | "EXTERNAL_LINK"
+  | "IMAGE"
+  | "VIDEO"
+  | "PDF"
+  | "DOCUMENT"
+  | "SCORM";
+
+interface ModuleFormState {
+  title: string;
+  description: string;
+  orderIndex: number;
+}
+
+interface LessonFormState {
+  title: string;
+  content: string;
+  orderIndex: number;
+  estimatedDurationMinutes: number;
+}
+
+interface ResourceFormState {
+  title: string;
+  description: string;
+  type: ResourceCreateType;
+  content: string;
+  orderIndex: number;
+  file: File | null;
+}
+
+const emptyModuleForm: ModuleFormState = {
+  title: "",
+  description: "",
+  orderIndex: 1,
+};
+
+const emptyLessonForm: LessonFormState = {
+  title: "",
+  content: "",
+  orderIndex: 1,
+  estimatedDurationMinutes: 10,
+};
+
+const emptyResourceForm: ResourceFormState = {
+  title: "",
+  description: "",
+  type: "TEXT",
+  content: "",
+  orderIndex: 1,
+  file: null,
+};
+
+function sortByOrder<T extends { orderIndex?: number; id: number }>(items?: T[]): T[] {
+  return [...(items || [])].sort(
+    (a, b) => (a.orderIndex ?? a.id) - (b.orderIndex ?? b.id),
+  );
+}
+
+function resourceUrl(resource: ResourceResponse): string {
+  return buildMediaUrl(
+    resource.publicUrl ||
+      resource.url ||
+      resource.relativePath ||
+      resource.scormLaunchPath,
+  );
+}
+
+function humanFileSize(value?: number): string {
+  if (!value || value <= 0) {
+    return "";
+  }
+
+  if (value < 1024) {
+    return `${value} o`;
+  }
+
+  if (value < 1024 * 1024) {
+    return `${Math.round(value / 1024)} Ko`;
+  }
+
+  return `${(value / (1024 * 1024)).toFixed(1)} Mo`;
+}
+
+function resourceIcon(type?: string) {
+  switch (type) {
+    case "IMAGE":
+      return <ImageIcon size={18} />;
+    case "VIDEO":
+    case "VIDEO_URL":
+      return <PlayCircle size={18} />;
+    case "PDF":
+    case "PDF_URL":
+      return <FileText size={18} />;
+    case "DOCUMENT":
+      return <File size={18} />;
+    case "SCORM":
+      return <Package size={18} />;
+    case "EXTERNAL_LINK":
+      return <Link2 size={18} />;
+    default:
+      return <BookOpen size={18} />;
+  }
+}
+
+function resourceLabel(type?: string): string {
+  const labels: Record<string, string> = {
+    TEXT: "Texte",
+    IMAGE: "Image",
+    VIDEO: "Vidéo",
+    VIDEO_URL: "Vidéo externe",
+    PDF: "PDF",
+    PDF_URL: "PDF externe",
+    DOCUMENT: "Document",
+    EXTERNAL_LINK: "Lien externe",
+    SCORM: "SCORM",
+  };
+
+  return labels[type || ""] || type || "Ressource";
+}
+
+function moduleRequest(module: FullModuleResponse, trainingId: number): ModuleRequest {
+  return {
+    trainingId,
+    title: module.title,
+    description: module.description || "",
+    orderIndex: module.orderIndex ?? 1,
+  };
+}
+
+function lessonRequest(lesson: FullLessonResponse, moduleId: number): LessonRequest {
+  return {
+    moduleId,
+    title: lesson.title,
+    content: lesson.content || "",
+    orderIndex: lesson.orderIndex ?? 1,
+    estimatedDurationMinutes: lesson.estimatedDurationMinutes ?? 10,
+  };
+}
+
+function resourceRequest(
+  resource: ResourceResponse,
+  lessonId: number,
+): ResourceRequest {
+  const type = (resource.type || "TEXT") as ResourceType;
+  const storageMode =
+    (resource.storageMode as StorageMode | undefined) ||
+    (type === "TEXT"
+      ? "TEXT_CONTENT"
+      : type === "SCORM"
+        ? "SCORM_PACKAGE"
+        : resource.publicUrl || resource.relativePath
+          ? "LOCAL_FILE"
+          : "EXTERNAL_URL");
+
+  return {
+    lessonId,
+    title: resource.title,
+    description: resource.description || "",
+    type,
+    storageMode,
+    url: resource.url,
+    textContent: resource.textContent,
+    orderIndex: resource.orderIndex ?? 1,
+  };
+}
+
+function acceptedFileTypes(type: ResourceCreateType): string {
+  switch (type) {
+    case "IMAGE":
+      return "image/png,image/jpeg,image/webp,image/gif";
+    case "VIDEO":
+      return "video/mp4";
+    case "PDF":
+      return "application/pdf";
+    case "DOCUMENT":
+      return ".doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.odt,.ods,.odp";
+    case "SCORM":
+      return ".zip,application/zip";
+    default:
+      return "";
+  }
+}
+
+export function TrainerContentBuilderPage() {
+  const { user } = useAuth();
+  const { trainingId: trainingIdParam } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const routeTrainingId = trainingIdParam
+    ? Number(trainingIdParam)
+    : Number(searchParams.get("trainingId") || 0);
+
+  const [trainings, setTrainings] = useState<TrainingResponse[]>([]);
+  const [training, setTraining] = useState<FullTrainingResponse | null>(null);
+  const [selectedModuleId, setSelectedModuleId] = useState(0);
+  const [selectedLessonId, setSelectedLessonId] = useState(0);
+
+  const [moduleForm, setModuleForm] = useState<ModuleFormState>(emptyModuleForm);
+  const [lessonForm, setLessonForm] = useState<LessonFormState>(emptyLessonForm);
+  const [resourceForm, setResourceForm] =
+    useState<ResourceFormState>(emptyResourceForm);
+
+  const [editingModuleId, setEditingModuleId] = useState<number | null>(null);
+  const [editingLessonId, setEditingLessonId] = useState<number | null>(null);
+  const [editingResourceId, setEditingResourceId] = useState<number | null>(null);
+
+  const [resourceEditTitle, setResourceEditTitle] = useState("");
+  const [resourceEditDescription, setResourceEditDescription] = useState("");
+  const [resourceEditOrder, setResourceEditOrder] = useState(1);
+
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  const modules = useMemo(() => sortByOrder(training?.modules), [training]);
+
+  const selectedModule = useMemo(
+    () => modules.find((module) => module.id === selectedModuleId),
+    [modules, selectedModuleId],
+  );
+
+  const lessons = useMemo(
+    () => sortByOrder(selectedModule?.lessons),
+    [selectedModule],
+  );
+
+  const selectedLesson = useMemo(
+    () => lessons.find((lesson) => lesson.id === selectedLessonId),
+    [lessons, selectedLessonId],
+  );
+
+  const resources = useMemo(
+    () => sortByOrder(selectedLesson?.resources),
+    [selectedLesson],
+  );
+
+  async function loadTraining(id: number) {
+    if (!user?.id) {
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const loaded = await getFullTrainingById(id);
+
+      if (user.role === "FORMATEUR" && loaded.trainerId !== user.id) {
+        setTraining(null);
+        setError("Cette formation n'appartient pas à ce compte formateur.");
+        return;
+      }
+
+      setTraining(loaded);
+
+      const orderedModules = sortByOrder(loaded.modules);
+      const nextModule =
+        orderedModules.find((item) => item.id === selectedModuleId) ||
+        orderedModules[0];
+
+      const orderedLessons = sortByOrder(nextModule?.lessons);
+      const nextLesson =
+        orderedLessons.find((item) => item.id === selectedLessonId) ||
+        orderedLessons[0];
+
+      setSelectedModuleId(nextModule?.id || 0);
+      setSelectedLessonId(nextLesson?.id || 0);
+    } catch (err) {
+      setError(getApiErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function loadTrainerTrainings() {
+    if (!user?.id) {
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const loaded = await getTrainerTrainings(user.id);
+      setTrainings(loaded);
+
+      if (routeTrainingId > 0) {
+        await loadTraining(routeTrainingId);
+      }
+    } catch (err) {
+      setError(getApiErrorMessage(err));
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void loadTrainerTrainings();
+  }, [user?.id, routeTrainingId]);
+
+  useEffect(() => {
+    setModuleForm({
+      title: "",
+      description: "",
+      orderIndex: modules.length + 1,
+    });
+  }, [modules.length]);
+
+  useEffect(() => {
+    setLessonForm({
+      title: "",
+      content: "",
+      orderIndex: lessons.length + 1,
+      estimatedDurationMinutes: 10,
+    });
+  }, [selectedModuleId, lessons.length]);
+
+  useEffect(() => {
+    setResourceForm({
+      ...emptyResourceForm,
+      orderIndex: resources.length + 1,
+    });
+  }, [selectedLessonId, resources.length]);
+
+  function clearMessages() {
+    setError("");
+    setSuccess("");
+  }
+
+  function selectTraining(id: number) {
+    setSearchParams({ trainingId: String(id) });
+  }
+
+  async function submitModule(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!training?.id || !moduleForm.title.trim()) {
+      setError("Le titre du module est obligatoire.");
+      return;
+    }
+
+    clearMessages();
+
+    try {
+      if (editingModuleId) {
+        await updateModule(editingModuleId, {
+          trainingId: training.id,
+          title: moduleForm.title.trim(),
+          description: moduleForm.description.trim(),
+          orderIndex: Math.max(1, moduleForm.orderIndex),
+        });
+        setSuccess("Module modifié.");
+      } else {
+        await createModule({
+          trainingId: training.id,
+          title: moduleForm.title.trim(),
+          description: moduleForm.description.trim(),
+          orderIndex: Math.max(1, moduleForm.orderIndex),
+        });
+        setSuccess("Module ajouté à la formation.");
+      }
+
+      setEditingModuleId(null);
+      setModuleForm(emptyModuleForm);
+      await loadTraining(training.id);
+    } catch (err) {
+      setError(getApiErrorMessage(err));
+    }
+  }
+
+  function editModule(module: FullModuleResponse) {
+    setEditingModuleId(module.id);
+    setModuleForm({
+      title: module.title,
+      description: module.description || "",
+      orderIndex: module.orderIndex ?? 1,
+    });
+  }
+
+  async function removeModule(module: FullModuleResponse) {
+    if (!training?.id) {
+      return;
+    }
+
+    if (
+      !window.confirm(
+        `Supprimer le module "${module.title}" ? Les leçons associées peuvent également être supprimées.`,
+      )
+    ) {
+      return;
+    }
+
+    clearMessages();
+
+    try {
+      await deleteModule(module.id);
+      setSuccess("Module supprimé.");
+      setSelectedModuleId(0);
+      setSelectedLessonId(0);
+      await loadTraining(training.id);
+    } catch (err) {
+      setError(getApiErrorMessage(err));
+    }
+  }
+
+  async function moveModule(module: FullModuleResponse, direction: -1 | 1) {
+    if (!training?.id) {
+      return;
+    }
+
+    const index = modules.findIndex((item) => item.id === module.id);
+    const target = modules[index + direction];
+
+    if (!target) {
+      return;
+    }
+
+    clearMessages();
+
+    try {
+      const currentOrder = module.orderIndex ?? index + 1;
+      const targetOrder = target.orderIndex ?? index + direction + 1;
+
+      await Promise.all([
+        updateModule(module.id, {
+          ...moduleRequest(module, training.id),
+          orderIndex: targetOrder,
+        }),
+        updateModule(target.id, {
+          ...moduleRequest(target, training.id),
+          orderIndex: currentOrder,
+        }),
+      ]);
+
+      setSuccess("Ordre des modules mis à jour.");
+      await loadTraining(training.id);
+    } catch (err) {
+      setError(getApiErrorMessage(err));
+    }
+  }
+
+  async function submitLesson(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!training?.id || !selectedModuleId || !lessonForm.title.trim()) {
+      setError("Sélectionnez un module et renseignez le titre de la leçon.");
+      return;
+    }
+
+    clearMessages();
+
+    try {
+      const request: LessonRequest = {
+        moduleId: selectedModuleId,
+        title: lessonForm.title.trim(),
+        content: lessonForm.content.trim(),
+        orderIndex: Math.max(1, lessonForm.orderIndex),
+        estimatedDurationMinutes: Math.max(
+          0,
+          lessonForm.estimatedDurationMinutes,
+        ),
+      };
+
+      if (editingLessonId) {
+        await updateLesson(editingLessonId, request);
+        setSuccess("Leçon modifiée.");
+      } else {
+        await createLesson(request);
+        setSuccess("Leçon ajoutée au module.");
+      }
+
+      setEditingLessonId(null);
+      setLessonForm(emptyLessonForm);
+      await loadTraining(training.id);
+    } catch (err) {
+      setError(getApiErrorMessage(err));
+    }
+  }
+
+  function editLesson(lesson: FullLessonResponse) {
+    setEditingLessonId(lesson.id);
+    setLessonForm({
+      title: lesson.title,
+      content: lesson.content || "",
+      orderIndex: lesson.orderIndex ?? 1,
+      estimatedDurationMinutes: lesson.estimatedDurationMinutes ?? 10,
+    });
+  }
+
+  async function removeLesson(lesson: FullLessonResponse) {
+    if (!training?.id) {
+      return;
+    }
+
+    if (!window.confirm(`Supprimer la leçon "${lesson.title}" ?`)) {
+      return;
+    }
+
+    clearMessages();
+
+    try {
+      await deleteLesson(lesson.id);
+      setSuccess("Leçon supprimée.");
+      setSelectedLessonId(0);
+      await loadTraining(training.id);
+    } catch (err) {
+      setError(getApiErrorMessage(err));
+    }
+  }
+
+  async function moveLesson(lesson: FullLessonResponse, direction: -1 | 1) {
+    if (!training?.id || !selectedModuleId) {
+      return;
+    }
+
+    const index = lessons.findIndex((item) => item.id === lesson.id);
+    const target = lessons[index + direction];
+
+    if (!target) {
+      return;
+    }
+
+    clearMessages();
+
+    try {
+      const currentOrder = lesson.orderIndex ?? index + 1;
+      const targetOrder = target.orderIndex ?? index + direction + 1;
+
+      await Promise.all([
+        updateLesson(lesson.id, {
+          ...lessonRequest(lesson, selectedModuleId),
+          orderIndex: targetOrder,
+        }),
+        updateLesson(target.id, {
+          ...lessonRequest(target, selectedModuleId),
+          orderIndex: currentOrder,
+        }),
+      ]);
+
+      setSuccess("Ordre des leçons mis à jour.");
+      await loadTraining(training.id);
+    } catch (err) {
+      setError(getApiErrorMessage(err));
+    }
+  }
+
+  function handleResourceFile(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] || null;
+    setResourceForm((current) => ({ ...current, file }));
+  }
+
+  async function submitResource(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!training?.id || !selectedLessonId || !user?.id) {
+      setError("Sélectionnez d'abord une leçon.");
+      return;
+    }
+
+    if (!resourceForm.title.trim()) {
+      setError("Le titre de la ressource est obligatoire.");
+      return;
+    }
+
+    clearMessages();
+    setUploading(true);
+
+    try {
+      const orderIndex = Math.max(1, resourceForm.orderIndex);
+
+      if (resourceForm.type === "TEXT") {
+        await createResource({
+          lessonId: selectedLessonId,
+          title: resourceForm.title.trim(),
+          description: resourceForm.description.trim(),
+          type: "TEXT",
+          storageMode: "TEXT_CONTENT",
+          textContent: resourceForm.content.trim(),
+          orderIndex,
+        });
+      } else if (resourceForm.type === "EXTERNAL_LINK") {
+        if (!resourceForm.content.trim()) {
+          throw new Error("L'URL du lien externe est obligatoire.");
+        }
+
+        await createResource({
+          lessonId: selectedLessonId,
+          title: resourceForm.title.trim(),
+          description: resourceForm.description.trim(),
+          type: "EXTERNAL_LINK",
+          storageMode: "EXTERNAL_URL",
+          url: resourceForm.content.trim(),
+          orderIndex,
+        });
+      } else {
+        if (!resourceForm.file) {
+          throw new Error("Sélectionnez le fichier à importer.");
+        }
+
+        const options = {
+          title: resourceForm.title.trim(),
+          description: resourceForm.description.trim(),
+          uploadedBy: user.id,
+          orderIndex,
+        };
+
+        switch (resourceForm.type) {
+          case "IMAGE":
+            await uploadLessonImage(
+              selectedLessonId,
+              resourceForm.file,
+              options,
+            );
+            break;
+          case "VIDEO":
+            if (
+              resourceForm.file.type &&
+              resourceForm.file.type !== "video/mp4"
+            ) {
+              throw new Error("Le fichier vidéo doit être au format MP4.");
+            }
+            await uploadLessonVideo(
+              selectedLessonId,
+              resourceForm.file,
+              options,
+            );
+            break;
+          case "PDF":
+            await uploadLessonPdf(
+              selectedLessonId,
+              resourceForm.file,
+              options,
+            );
+            break;
+          case "DOCUMENT":
+            await uploadLessonDocument(
+              selectedLessonId,
+              resourceForm.file,
+              options,
+            );
+            break;
+          case "SCORM":
+            if (!resourceForm.file.name.toLowerCase().endsWith(".zip")) {
+              throw new Error(
+                "Le package SCORM doit être fourni au format ZIP.",
+              );
+            }
+            await uploadLessonScorm(
+              selectedLessonId,
+              resourceForm.file,
+              options,
+            );
+            break;
+        }
+      }
+
+      setResourceForm({
+        ...emptyResourceForm,
+        orderIndex: resources.length + 2,
+      });
+      setSuccess("Ressource ajoutée à la leçon.");
+      await loadTraining(training.id);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : getApiErrorMessage(err),
+      );
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  function startEditResource(resource: ResourceResponse) {
+    setEditingResourceId(resource.id);
+    setResourceEditTitle(resource.title);
+    setResourceEditDescription(resource.description || "");
+    setResourceEditOrder(resource.orderIndex ?? 1);
+  }
+
+  async function saveResourceEdit(resource: ResourceResponse) {
+    if (!training?.id || !selectedLessonId) {
+      return;
+    }
+
+    clearMessages();
+
+    try {
+      await updateResource(resource.id, {
+        ...resourceRequest(resource, selectedLessonId),
+        title: resourceEditTitle.trim() || resource.title,
+        description: resourceEditDescription.trim(),
+        orderIndex: Math.max(1, resourceEditOrder),
+      });
+
+      setEditingResourceId(null);
+      setSuccess("Ressource modifiée.");
+      await loadTraining(training.id);
+    } catch (err) {
+      setError(getApiErrorMessage(err));
+    }
+  }
+
+  async function removeResource(resource: ResourceResponse) {
+    if (!training?.id) {
+      return;
+    }
+
+    if (!window.confirm(`Supprimer la ressource "${resource.title}" ?`)) {
+      return;
+    }
+
+    clearMessages();
+
+    try {
+      await deleteResource(resource.id);
+      setSuccess("Ressource supprimée.");
+      await loadTraining(training.id);
+    } catch (err) {
+      setError(getApiErrorMessage(err));
+    }
+  }
+
+  async function moveResource(resource: ResourceResponse, direction: -1 | 1) {
+    if (!training?.id || !selectedLessonId) {
+      return;
+    }
+
+    const index = resources.findIndex((item) => item.id === resource.id);
+    const target = resources[index + direction];
+
+    if (!target) {
+      return;
+    }
+
+    clearMessages();
+
+    try {
+      const currentOrder = resource.orderIndex ?? index + 1;
+      const targetOrder = target.orderIndex ?? index + direction + 1;
+
+      await Promise.all([
+        updateResource(resource.id, {
+          ...resourceRequest(resource, selectedLessonId),
+          orderIndex: targetOrder,
+        }),
+        updateResource(target.id, {
+          ...resourceRequest(target, selectedLessonId),
+          orderIndex: currentOrder,
+        }),
+      ]);
+
+      setSuccess("Ordre des ressources mis à jour.");
+      await loadTraining(training.id);
+    } catch (err) {
+      setError(getApiErrorMessage(err));
+    }
+  }
+
+  if (loading) {
+    return <LoadingState message="Chargement du Course Builder..." />;
+  }
+
+  if (!routeTrainingId || !training) {
+    return (
+      <div className="page trainer-builder-picker">
+        <div className="page-header">
+          <p className="trainer-eyebrow">Course Builder</p>
+          <h1 className="page-title">Choisir une formation</h1>
+          <p className="page-subtitle">
+            Ouvrez une formation pour construire ses modules, leçons et
+            ressources.
+          </p>
+        </div>
+
+        {error ? <ErrorMessage message={error} /> : null}
+
+        <div className="trainer-builder-picker-grid">
+          {trainings.map((item) => (
+            <article className="trainer-builder-picker-card" key={item.id}>
+              <div>
+                <span className="trainer-builder-tag">
+                  {item.category || "Sans catégorie"}
+                </span>
+                <h2>{item.title}</h2>
+                <p>{item.shortDescription || item.description || "Aucune description."}</p>
+              </div>
+              <button
+                className="trainer-button"
+                type="button"
+                onClick={() => selectTraining(item.id)}
+              >
+                <BookOpen size={16} />
+                Ouvrir le Course Builder
+              </button>
+            </article>
+          ))}
+        </div>
+
+        {!trainings.length ? (
+          <p className="trainer-empty">
+            Aucune formation formateur disponible.
+          </p>
+        ) : null}
+      </div>
+    );
+  }
+
+  return (
+    <div className="page trainer-builder-page">
+      <header className="trainer-builder-header">
+        <div className="trainer-builder-header-main">
+          <Link
+            className="trainer-icon-link"
+            to="/trainer/trainings"
+            aria-label="Retour aux formations"
+          >
+            <ArrowLeft size={19} />
+          </Link>
+
+          <div className="trainer-builder-cover">
+            {training.coverImageUrl || training.coverImagePath ? (
+              <img
+                src={buildMediaUrl(
+                  training.coverImageUrl || training.coverImagePath,
+                )}
+                alt=""
+              />
+            ) : (
+              <Layers3 size={24} />
+            )}
+          </div>
+
+          <div>
+            <p className="trainer-eyebrow">Course Builder</p>
+            <h1 className="page-title">{training.title}</h1>
+            <p className="page-subtitle">
+              {training.category || "Sans catégorie"} ·{" "}
+              {training.status || "DRAFT"}
+            </p>
+          </div>
+        </div>
+
+        <div className="trainer-builder-header-actions">
+          <Link
+            className="trainer-button secondary trainer-primary-link"
+            to={`/trainer/trainings/${training.id}/edit`}
+          >
+            <Edit3 size={16} />
+            Informations
+          </Link>
+          <button
+            className="trainer-button"
+            type="button"
+            onClick={() => setPreviewOpen(true)}
+          >
+            <Eye size={16} />
+            Prévisualiser comme apprenant
+          </button>
+        </div>
+      </header>
+
+      {error ? <ErrorMessage message={error} /> : null}
+      {success ? <div className="trainer-success">{success}</div> : null}
+
+      <div className="trainer-builder-workspace">
+        <aside className="trainer-builder-outline">
+          <div className="trainer-builder-panel-title">
+            <div>
+              <p className="trainer-eyebrow">Structure</p>
+              <h2>Modules & leçons</h2>
+            </div>
+          </div>
+
+          {!modules.length ? (
+            <div className="trainer-builder-empty-mini">
+              <Layers3 size={28} />
+              <p>Commencez par créer un module.</p>
+            </div>
+          ) : null}
+
+          {modules.map((module, moduleIndex) => (
+            <div className="trainer-builder-module" key={module.id}>
+              <div className="trainer-builder-outline-line">
+                <button
+                  className={
+                    selectedModuleId === module.id
+                      ? "trainer-builder-outline-button active"
+                      : "trainer-builder-outline-button"
+                  }
+                  type="button"
+                  onClick={() => {
+                    setSelectedModuleId(module.id);
+                    setSelectedLessonId(
+                      sortByOrder(module.lessons)[0]?.id || 0,
+                    );
+                  }}
+                >
+                  <Layers3 size={16} />
+                  <span>
+                    {module.orderIndex ?? moduleIndex + 1}. {module.title}
+                  </span>
+                </button>
+
+                <div className="trainer-builder-mini-actions">
+                  <button
+                    type="button"
+                    title="Monter"
+                    disabled={moduleIndex === 0}
+                    onClick={() => void moveModule(module, -1)}
+                  >
+                    <ChevronUp size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    title="Descendre"
+                    disabled={moduleIndex === modules.length - 1}
+                    onClick={() => void moveModule(module, 1)}
+                  >
+                    <ChevronDown size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    title="Modifier"
+                    onClick={() => editModule(module)}
+                  >
+                    <Edit3 size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    title="Supprimer"
+                    onClick={() => void removeModule(module)}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              </div>
+
+              {sortByOrder(module.lessons).map((lesson, lessonIndex) => (
+                <div
+                  className="trainer-builder-outline-line lesson"
+                  key={lesson.id}
+                >
+                  <button
+                    className={
+                      selectedLessonId === lesson.id
+                        ? "trainer-builder-outline-button active"
+                        : "trainer-builder-outline-button"
+                    }
+                    type="button"
+                    onClick={() => {
+                      setSelectedModuleId(module.id);
+                      setSelectedLessonId(lesson.id);
+                    }}
+                  >
+                    <BookOpen size={15} />
+                    <span>
+                      {lesson.orderIndex ?? lessonIndex + 1}. {lesson.title}
+                    </span>
+                  </button>
+
+                  <div className="trainer-builder-mini-actions">
+                    <button
+                      type="button"
+                      title="Monter"
+                      disabled={lessonIndex === 0}
+                      onClick={() => void moveLesson(lesson, -1)}
+                    >
+                      <ChevronUp size={13} />
+                    </button>
+                    <button
+                      type="button"
+                      title="Descendre"
+                      disabled={
+                        lessonIndex ===
+                        sortByOrder(module.lessons).length - 1
+                      }
+                      onClick={() => void moveLesson(lesson, 1)}
+                    >
+                      <ChevronDown size={13} />
+                    </button>
+                    <button
+                      type="button"
+                      title="Modifier"
+                      onClick={() => editLesson(lesson)}
+                    >
+                      <Edit3 size={13} />
+                    </button>
+                    <button
+                      type="button"
+                      title="Supprimer"
+                      onClick={() => void removeLesson(lesson)}
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ))}
+        </aside>
+
+        <main className="trainer-builder-canvas">
+          <div className="trainer-builder-panel-title">
+            <div>
+              <p className="trainer-eyebrow">Leçon sélectionnée</p>
+              <h2>{selectedLesson?.title || "Aucune leçon sélectionnée"}</h2>
+              {selectedLesson ? (
+                <p>
+                  Durée estimée :{" "}
+                  {selectedLesson.estimatedDurationMinutes ?? 0} min
+                </p>
+              ) : null}
+            </div>
+          </div>
+
+          {selectedLesson ? (
+            <>
+              {selectedLesson.content ? (
+                <article className="trainer-builder-lesson-text">
+                  <h3>Contenu texte</h3>
+                  <p>{selectedLesson.content}</p>
+                </article>
+              ) : null}
+
+              <div className="trainer-builder-resource-heading">
+                <div>
+                  <h3>Ressources</h3>
+                  <p>
+                    Texte, image, vidéo, PDF, document, lien externe ou
+                    package SCORM.
+                  </p>
+                </div>
+                <span>{resources.length}</span>
+              </div>
+
+              {!resources.length ? (
+                <div className="trainer-builder-empty-large">
+                  <BookOpen size={34} />
+                  <h3>Aucune ressource</h3>
+                  <p>
+                    Utilisez le panneau à droite pour enrichir cette leçon.
+                  </p>
+                </div>
+              ) : null}
+
+              <div className="trainer-builder-resource-list">
+                {resources.map((resource, resourceIndex) => {
+                  const url = resourceUrl(resource);
+                  const editing = editingResourceId === resource.id;
+
+                  return (
+                    <article
+                      className="trainer-builder-resource-card"
+                      key={resource.id}
+                    >
+                      <div className="trainer-builder-resource-icon">
+                        {resourceIcon(resource.type)}
+                      </div>
+
+                      <div className="trainer-builder-resource-main">
+                        <div className="trainer-builder-resource-top">
+                          <div>
+                            <span className="trainer-builder-tag">
+                              {resourceLabel(resource.type)}
+                            </span>
+                            <h3>{resource.title}</h3>
+                          </div>
+
+                          <div className="trainer-builder-card-actions">
+                            <button
+                              type="button"
+                              disabled={resourceIndex === 0}
+                              title="Monter"
+                              onClick={() =>
+                                void moveResource(resource, -1)
+                              }
+                            >
+                              <ChevronUp size={15} />
+                            </button>
+                            <button
+                              type="button"
+                              disabled={
+                                resourceIndex === resources.length - 1
+                              }
+                              title="Descendre"
+                              onClick={() =>
+                                void moveResource(resource, 1)
+                              }
+                            >
+                              <ChevronDown size={15} />
+                            </button>
+                            <button
+                              type="button"
+                              title="Modifier"
+                              onClick={() => startEditResource(resource)}
+                            >
+                              <Edit3 size={15} />
+                            </button>
+                            <button
+                              type="button"
+                              title="Supprimer"
+                              onClick={() => void removeResource(resource)}
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          </div>
+                        </div>
+
+                        {resource.description ? (
+                          <p>{resource.description}</p>
+                        ) : null}
+
+                        {resource.type === "TEXT" &&
+                        resource.textContent ? (
+                          <div className="trainer-builder-inline-text">
+                            {resource.textContent}
+                          </div>
+                        ) : null}
+
+                        {resource.type === "IMAGE" && url ? (
+                          <img
+                            className="trainer-builder-inline-image"
+                            src={url}
+                            alt={resource.title}
+                          />
+                        ) : null}
+
+                        {(resource.type === "VIDEO" ||
+                          resource.type === "VIDEO_URL") &&
+                        url ? (
+                          <video
+                            className="trainer-builder-inline-video"
+                            controls
+                            preload="metadata"
+                            src={url}
+                          />
+                        ) : null}
+
+                        {url &&
+                        resource.type !== "IMAGE" &&
+                        resource.type !== "VIDEO" &&
+                        resource.type !== "VIDEO_URL" &&
+                        resource.type !== "TEXT" ? (
+                          <a
+                            className="trainer-builder-open-link"
+                            href={url}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            <ExternalLink size={15} />
+                            {resource.type === "SCORM"
+                              ? "Prévisualiser le package SCORM"
+                              : "Ouvrir la ressource"}
+                          </a>
+                        ) : null}
+
+                        <div className="trainer-builder-resource-meta">
+                          {resource.originalFileName ? (
+                            <span>{resource.originalFileName}</span>
+                          ) : null}
+                          {resource.fileSize ? (
+                            <span>{humanFileSize(resource.fileSize)}</span>
+                          ) : null}
+                          {resource.mimeType ? (
+                            <span>{resource.mimeType}</span>
+                          ) : null}
+                          <span>
+                            Ordre {resource.orderIndex ?? resourceIndex + 1}
+                          </span>
+                        </div>
+
+                        {editing ? (
+                          <div className="trainer-builder-resource-edit">
+                            <input
+                              value={resourceEditTitle}
+                              onChange={(event) =>
+                                setResourceEditTitle(event.target.value)
+                              }
+                              placeholder="Titre"
+                            />
+                            <textarea
+                              rows={2}
+                              value={resourceEditDescription}
+                              onChange={(event) =>
+                                setResourceEditDescription(
+                                  event.target.value,
+                                )
+                              }
+                              placeholder="Description"
+                            />
+                            <input
+                              type="number"
+                              min={1}
+                              value={resourceEditOrder}
+                              onChange={(event) =>
+                                setResourceEditOrder(
+                                  Number(event.target.value),
+                                )
+                              }
+                            />
+                            <div className="trainer-builder-inline-actions">
+                              <button
+                                className="trainer-button"
+                                type="button"
+                                onClick={() =>
+                                  void saveResourceEdit(resource)
+                                }
+                              >
+                                <Save size={15} />
+                                Enregistrer
+                              </button>
+                              <button
+                                className="trainer-button secondary"
+                                type="button"
+                                onClick={() => setEditingResourceId(null)}
+                              >
+                                <X size={15} />
+                                Annuler
+                              </button>
+                            </div>
+                          </div>
+                        ) : null}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            </>
+          ) : (
+            <div className="trainer-builder-empty-large">
+              <BookOpen size={38} />
+              <h3>Sélectionnez une leçon</h3>
+              <p>
+                Créez un module puis une leçon pour commencer à ajouter des
+                ressources pédagogiques.
+              </p>
+            </div>
+          )}
+        </main>
+
+        <aside className="trainer-builder-properties">
+          <section className="trainer-builder-form-card">
+            <div className="trainer-builder-form-title">
+              <Layers3 size={18} />
+              <div>
+                <h3>
+                  {editingModuleId ? "Modifier le module" : "Ajouter un module"}
+                </h3>
+                <p>Titre, description et ordre.</p>
+              </div>
+            </div>
+
+            <form onSubmit={submitModule}>
+              <label>
+                <span>Titre *</span>
+                <input
+                  value={moduleForm.title}
+                  onChange={(event) =>
+                    setModuleForm({
+                      ...moduleForm,
+                      title: event.target.value,
+                    })
+                  }
+                  placeholder="Ex. Fondamentaux"
+                  required
+                />
+              </label>
+              <label>
+                <span>Description</span>
+                <textarea
+                  rows={2}
+                  value={moduleForm.description}
+                  onChange={(event) =>
+                    setModuleForm({
+                      ...moduleForm,
+                      description: event.target.value,
+                    })
+                  }
+                />
+              </label>
+              <label>
+                <span>Ordre</span>
+                <input
+                  type="number"
+                  min={1}
+                  value={moduleForm.orderIndex}
+                  onChange={(event) =>
+                    setModuleForm({
+                      ...moduleForm,
+                      orderIndex: Number(event.target.value),
+                    })
+                  }
+                />
+              </label>
+              <div className="trainer-builder-inline-actions">
+                <button className="trainer-button" type="submit">
+                  {editingModuleId ? <Save size={15} /> : <Plus size={15} />}
+                  {editingModuleId ? "Enregistrer" : "Ajouter"}
+                </button>
+                {editingModuleId ? (
+                  <button
+                    className="trainer-button secondary"
+                    type="button"
+                    onClick={() => {
+                      setEditingModuleId(null);
+                      setModuleForm(emptyModuleForm);
+                    }}
+                  >
+                    Annuler
+                  </button>
+                ) : null}
+              </div>
+            </form>
+          </section>
+
+          <section className="trainer-builder-form-card">
+            <div className="trainer-builder-form-title">
+              <BookOpen size={18} />
+              <div>
+                <h3>
+                  {editingLessonId ? "Modifier la leçon" : "Ajouter une leçon"}
+                </h3>
+                <p>
+                  {selectedModule
+                    ? `Dans : ${selectedModule.title}`
+                    : "Sélectionnez un module."}
+                </p>
+              </div>
+            </div>
+
+            <form onSubmit={submitLesson}>
+              <label>
+                <span>Titre *</span>
+                <input
+                  value={lessonForm.title}
+                  onChange={(event) =>
+                    setLessonForm({
+                      ...lessonForm,
+                      title: event.target.value,
+                    })
+                  }
+                  disabled={!selectedModule}
+                  required
+                />
+              </label>
+              <label>
+                <span>Contenu texte</span>
+                <textarea
+                  rows={3}
+                  value={lessonForm.content}
+                  onChange={(event) =>
+                    setLessonForm({
+                      ...lessonForm,
+                      content: event.target.value,
+                    })
+                  }
+                  disabled={!selectedModule}
+                />
+              </label>
+              <div className="trainer-builder-two-fields">
+                <label>
+                  <span>Ordre</span>
+                  <input
+                    type="number"
+                    min={1}
+                    value={lessonForm.orderIndex}
+                    onChange={(event) =>
+                      setLessonForm({
+                        ...lessonForm,
+                        orderIndex: Number(event.target.value),
+                      })
+                    }
+                    disabled={!selectedModule}
+                  />
+                </label>
+                <label>
+                  <span>Durée (min)</span>
+                  <input
+                    type="number"
+                    min={0}
+                    value={lessonForm.estimatedDurationMinutes}
+                    onChange={(event) =>
+                      setLessonForm({
+                        ...lessonForm,
+                        estimatedDurationMinutes: Number(
+                          event.target.value,
+                        ),
+                      })
+                    }
+                    disabled={!selectedModule}
+                  />
+                </label>
+              </div>
+              <div className="trainer-builder-inline-actions">
+                <button
+                  className="trainer-button"
+                  type="submit"
+                  disabled={!selectedModule}
+                >
+                  {editingLessonId ? <Save size={15} /> : <Plus size={15} />}
+                  {editingLessonId ? "Enregistrer" : "Ajouter"}
+                </button>
+                {editingLessonId ? (
+                  <button
+                    className="trainer-button secondary"
+                    type="button"
+                    onClick={() => {
+                      setEditingLessonId(null);
+                      setLessonForm(emptyLessonForm);
+                    }}
+                  >
+                    Annuler
+                  </button>
+                ) : null}
+              </div>
+            </form>
+          </section>
+
+          <section className="trainer-builder-form-card resource-form">
+            <div className="trainer-builder-form-title">
+              <Upload size={18} />
+              <div>
+                <h3>Ajouter une ressource</h3>
+                <p>
+                  {selectedLesson
+                    ? `Dans : ${selectedLesson.title}`
+                    : "Sélectionnez une leçon."}
+                </p>
+              </div>
+            </div>
+
+            <form onSubmit={submitResource}>
+              <label>
+                <span>Type</span>
+                <select
+                  value={resourceForm.type}
+                  onChange={(event) =>
+                    setResourceForm({
+                      ...resourceForm,
+                      type: event.target.value as ResourceCreateType,
+                      content: "",
+                      file: null,
+                    })
+                  }
+                  disabled={!selectedLesson}
+                >
+                  <option value="TEXT">Texte</option>
+                  <option value="IMAGE">Image</option>
+                  <option value="VIDEO">Vidéo MP4</option>
+                  <option value="PDF">PDF</option>
+                  <option value="DOCUMENT">Document</option>
+                  <option value="EXTERNAL_LINK">Lien externe</option>
+                  <option value="SCORM">SCORM ZIP</option>
+                </select>
+              </label>
+
+              <label>
+                <span>Titre *</span>
+                <input
+                  value={resourceForm.title}
+                  onChange={(event) =>
+                    setResourceForm({
+                      ...resourceForm,
+                      title: event.target.value,
+                    })
+                  }
+                  disabled={!selectedLesson}
+                  required
+                />
+              </label>
+
+              <label>
+                <span>Description</span>
+                <textarea
+                  rows={2}
+                  value={resourceForm.description}
+                  onChange={(event) =>
+                    setResourceForm({
+                      ...resourceForm,
+                      description: event.target.value,
+                    })
+                  }
+                  disabled={!selectedLesson}
+                />
+              </label>
+
+              {resourceForm.type === "TEXT" ? (
+                <label>
+                  <span>Contenu texte</span>
+                  <textarea
+                    rows={4}
+                    value={resourceForm.content}
+                    onChange={(event) =>
+                      setResourceForm({
+                        ...resourceForm,
+                        content: event.target.value,
+                      })
+                    }
+                    disabled={!selectedLesson}
+                  />
+                </label>
+              ) : null}
+
+              {resourceForm.type === "EXTERNAL_LINK" ? (
+                <label>
+                  <span>URL</span>
+                  <input
+                    type="url"
+                    value={resourceForm.content}
+                    onChange={(event) =>
+                      setResourceForm({
+                        ...resourceForm,
+                        content: event.target.value,
+                      })
+                    }
+                    placeholder="https://..."
+                    disabled={!selectedLesson}
+                  />
+                </label>
+              ) : null}
+
+              {!["TEXT", "EXTERNAL_LINK"].includes(resourceForm.type) ? (
+                <label className="trainer-builder-file-field">
+                  <span>Fichier</span>
+                  <input
+                    key={`${resourceForm.type}-${selectedLessonId}`}
+                    type="file"
+                    accept={acceptedFileTypes(resourceForm.type)}
+                    onChange={handleResourceFile}
+                    disabled={!selectedLesson}
+                  />
+                  {resourceForm.file ? (
+                    <small>{resourceForm.file.name}</small>
+                  ) : null}
+                  {resourceForm.type === "VIDEO" ? (
+                    <small>Format attendu : MP4.</small>
+                  ) : null}
+                  {resourceForm.type === "SCORM" ? (
+                    <small>
+                      ZIP SCORM contenant un imsmanifest.xml valide.
+                    </small>
+                  ) : null}
+                </label>
+              ) : null}
+
+              <label>
+                <span>Ordre</span>
+                <input
+                  type="number"
+                  min={1}
+                  value={resourceForm.orderIndex}
+                  onChange={(event) =>
+                    setResourceForm({
+                      ...resourceForm,
+                      orderIndex: Number(event.target.value),
+                    })
+                  }
+                  disabled={!selectedLesson}
+                />
+              </label>
+
+              <button
+                className="trainer-button trainer-builder-upload-button"
+                type="submit"
+                disabled={!selectedLesson || uploading}
+              >
+                <Upload size={16} />
+                {uploading
+                  ? "Import en cours..."
+                  : resourceForm.type === "TEXT" ||
+                      resourceForm.type === "EXTERNAL_LINK"
+                    ? "Ajouter la ressource"
+                    : "Importer le fichier"}
+              </button>
+            </form>
+          </section>
+        </aside>
+      </div>
+
+      {previewOpen ? (
+        <div
+          className="trainer-preview-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setPreviewOpen(false);
+            }
+          }}
+        >
+          <section
+            className="trainer-builder-preview"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Prévisualisation apprenant"
+          >
+            <header className="trainer-builder-preview-header">
+              <div>
+                <p className="trainer-eyebrow">Mode lecture · sans progression</p>
+                <h2>{training.title}</h2>
+                <p>
+                  Prévisualisation formateur : aucune progression apprenant
+                  n'est créée.
+                </p>
+              </div>
+              <button
+                className="trainer-button secondary"
+                type="button"
+                onClick={() => setPreviewOpen(false)}
+              >
+                <X size={16} />
+                Fermer
+              </button>
+            </header>
+
+            <div className="trainer-builder-preview-body">
+              {modules.map((module) => (
+                <section
+                  className="trainer-builder-preview-module"
+                  key={module.id}
+                >
+                  <h3>{module.title}</h3>
+                  {module.description ? <p>{module.description}</p> : null}
+
+                  {sortByOrder(module.lessons).map((lesson) => (
+                    <article
+                      className="trainer-builder-preview-lesson"
+                      key={lesson.id}
+                    >
+                      <h4>{lesson.title}</h4>
+                      {lesson.content ? <p>{lesson.content}</p> : null}
+
+                      {sortByOrder(lesson.resources).map((resource) => {
+                        const url = resourceUrl(resource);
+
+                        return (
+                          <div
+                            className="trainer-builder-preview-resource"
+                            key={resource.id}
+                          >
+                            <div className="trainer-builder-preview-resource-title">
+                              {resourceIcon(resource.type)}
+                              <strong>{resource.title}</strong>
+                              <span>{resourceLabel(resource.type)}</span>
+                            </div>
+
+                            {resource.type === "TEXT" ? (
+                              <p>{resource.textContent}</p>
+                            ) : null}
+
+                            {resource.type === "IMAGE" && url ? (
+                              <img src={url} alt={resource.title} />
+                            ) : null}
+
+                            {(resource.type === "VIDEO" ||
+                              resource.type === "VIDEO_URL") &&
+                            url ? (
+                              <video controls preload="metadata" src={url} />
+                            ) : null}
+
+                            {url &&
+                            resource.type !== "TEXT" &&
+                            resource.type !== "IMAGE" &&
+                            resource.type !== "VIDEO" &&
+                            resource.type !== "VIDEO_URL" ? (
+                              <a
+                                href={url}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                <ExternalLink size={15} />
+                                {resource.type === "SCORM"
+                                  ? "Lancer le SCORM"
+                                  : "Ouvrir la ressource"}
+                              </a>
+                            ) : null}
+                          </div>
+                        );
+                      })}
+                    </article>
+                  ))}
+                </section>
+              ))}
+
+              {!modules.length ? (
+                <div className="trainer-builder-empty-large">
+                  <BookOpen size={36} />
+                  <h3>Aucun contenu à prévisualiser</h3>
+                </div>
+              ) : null}
+            </div>
+          </section>
+        </div>
+      ) : null}
+    </div>
+  );
+}

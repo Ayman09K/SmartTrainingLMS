@@ -1,0 +1,233 @@
+import { useEffect, useMemo, useState } from "react";
+import {
+  getAdminTrainingsSafe,
+  getAdminUsers,
+  getAllAlertsAsAdmin,
+  ignoreAlert,
+  markAlertInProgress,
+  resolveAlert,
+} from "../../api/adminApi";
+import { getApiErrorMessage } from "../../api/apiClient";
+import { ErrorMessage } from "../../components/ui/ErrorMessage";
+import { LoadingState } from "../../components/ui/LoadingState";
+import type { AdminAlertResponse, AuthUser, TrainingResponse } from "../../types/admin";
+import "../../components/admin/Admin.css";
+
+type AlertFilter = "ALL" | "OPEN" | "IN_PROGRESS" | "RESOLVED" | "IGNORED";
+
+const filters: { key: AlertFilter; label: string }[] = [
+  { key: "OPEN", label: "Ouvertes" },
+  { key: "IN_PROGRESS", label: "En cours" },
+  { key: "RESOLVED", label: "RÃ©solues" },
+  { key: "IGNORED", label: "IgnorÃ©es" },
+  { key: "ALL", label: "Toutes" },
+];
+
+function normalizedStatus(alert: AdminAlertResponse): AlertFilter {
+  const status = (alert.status || "OPEN").toUpperCase();
+  if (status === "IN_PROGRESS" || status === "RESOLVED" || status === "IGNORED") {
+    return status;
+  }
+  return "OPEN";
+}
+
+function fullName(user?: AuthUser): string {
+  if (!user) return "Utilisateur inconnu";
+  const name = user.fullName || [user.firstName, user.lastName].filter(Boolean).join(" ").trim();
+  return name || user.email || `Utilisateur #${user.id}`;
+}
+
+export function AdminAlertsPage() {
+  const [alerts, setAlerts] = useState<AdminAlertResponse[]>([]);
+  const [users, setUsers] = useState<AuthUser[]>([]);
+  const [trainings, setTrainings] = useState<TrainingResponse[]>([]);
+  const [filter, setFilter] = useState<AlertFilter>("OPEN");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  async function load() {
+    setLoading(true);
+    setError("");
+
+    try {
+      const [loadedAlerts, loadedUsers, loadedTrainings] = await Promise.all([
+        getAllAlertsAsAdmin(),
+        getAdminUsers(),
+        getAdminTrainingsSafe(),
+      ]);
+      setAlerts(loadedAlerts);
+      setUsers(loadedUsers);
+      setTrainings(loadedTrainings);
+    } catch (err) {
+      setError(getApiErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void load();
+  }, []);
+
+  const userById = useMemo(
+    () => new Map(users.map((user) => [user.id, user])),
+    [users],
+  );
+
+  const trainingById = useMemo(
+    () => new Map(trainings.map((training) => [training.id, training])),
+    [trainings],
+  );
+
+  const counts = useMemo(() => {
+    const result: Record<AlertFilter, number> = {
+      ALL: alerts.length,
+      OPEN: 0,
+      IN_PROGRESS: 0,
+      RESOLVED: 0,
+      IGNORED: 0,
+    };
+
+    alerts.forEach((alert) => {
+      result[normalizedStatus(alert)] += 1;
+    });
+
+    return result;
+  }, [alerts]);
+
+  const visibleAlerts = useMemo(
+    () => filter === "ALL" ? alerts : alerts.filter((alert) => normalizedStatus(alert) === filter),
+    [alerts, filter],
+  );
+
+  async function handleAction(
+    alertId: number,
+    action: "IN_PROGRESS" | "RESOLVE" | "IGNORE",
+  ) {
+    setError("");
+    setSuccess("");
+
+    try {
+      if (action === "IN_PROGRESS") {
+        await markAlertInProgress(alertId);
+        setFilter("IN_PROGRESS");
+        setSuccess("Alerte prise en charge. Elle est maintenant visible dans lâ€™onglet En cours.");
+      }
+
+      if (action === "RESOLVE") {
+        await resolveAlert(alertId);
+        setFilter("RESOLVED");
+        setSuccess("Alerte rÃ©solue. Elle reste consultable dans lâ€™onglet RÃ©solues.");
+      }
+
+      if (action === "IGNORE") {
+        await ignoreAlert(alertId);
+        setFilter("IGNORED");
+        setSuccess("Alerte ignorÃ©e. Elle reste consultable dans lâ€™onglet IgnorÃ©es.");
+      }
+
+      await load();
+    } catch (err) {
+      setError(getApiErrorMessage(err));
+    }
+  }
+
+  if (loading) {
+    return <LoadingState message="Chargement alertes IA..." />;
+  }
+
+  return (
+    <div className="page">
+      <div className="page-header">
+        <h1 className="page-title">Alertes IA</h1>
+        <p className="page-subtitle">
+          Suivi complet des alertes pÃ©dagogiques : ouvertes, prises en charge, rÃ©solues et ignorÃ©es.
+        </p>
+      </div>
+
+      {error ? <ErrorMessage message={error} /> : null}
+      {success ? <div className="admin-success">{success}</div> : null}
+
+      <div className="admin-warning">
+        Une alerte HIGH ne doit pas Ãªtre gÃ©nÃ©rÃ©e pour un apprenant sans donnÃ©es. Les cas sans donnÃ©es doivent rester DATA_INSUFFICIENT.
+      </div>
+
+      <div className="admin-filter-tabs" role="tablist" aria-label="Statut des alertes">
+        {filters.map((item) => (
+          <button
+            key={item.key}
+            className={`admin-tab-button${filter === item.key ? " active" : ""}`}
+            type="button"
+            onClick={() => setFilter(item.key)}
+          >
+            {item.label} <span>{counts[item.key]}</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="admin-table-wrapper">
+        <table className="admin-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Utilisateur</th>
+              <th>Formation</th>
+              <th>Type</th>
+              <th>Niveau</th>
+              <th>Statut</th>
+              <th>Message</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {visibleAlerts.map((alert) => {
+              const user = alert.learnerId ? userById.get(alert.learnerId) : undefined;
+              const training = alert.trainingId ? trainingById.get(alert.trainingId) : undefined;
+              const status = normalizedStatus(alert);
+              const severity = alert.severity || alert.riskLevel || alert.priority || "-";
+
+              return (
+                <tr key={alert.id}>
+                  <td>#{alert.id}</td>
+                  <td>
+                    <div className="admin-cell-primary">{fullName(user)}</div>
+                    <div className="admin-cell-secondary">{user?.email || (alert.learnerId ? `ID ${alert.learnerId}` : "-")}</div>
+                  </td>
+                  <td>
+                    <div className="admin-cell-primary">{training?.title || "Formation inconnue"}</div>
+                    <div className="admin-cell-secondary">{alert.trainingId ? `ID ${alert.trainingId}` : "-"}</div>
+                  </td>
+                  <td>{alert.alertType || alert.source || "-"}</td>
+                  <td>{severity}</td>
+                  <td><span className={`admin-status-pill status-${status.toLowerCase()}`}>{status}</span></td>
+                  <td className="admin-long-cell">{alert.message || alert.description || alert.title || "-"}</td>
+                  <td>
+                    {status === "OPEN" ? (
+                      <div className="admin-inline-actions">
+                        <button className="admin-button secondary" type="button" onClick={() => void handleAction(alert.id, "IN_PROGRESS")}>En cours</button>
+                        <button className="admin-button" type="button" onClick={() => void handleAction(alert.id, "RESOLVE")}>RÃ©soudre</button>
+                        <button className="admin-button danger" type="button" onClick={() => void handleAction(alert.id, "IGNORE")}>Ignorer</button>
+                      </div>
+                    ) : status === "IN_PROGRESS" ? (
+                      <div className="admin-inline-actions">
+                        <button className="admin-button" type="button" onClick={() => void handleAction(alert.id, "RESOLVE")}>RÃ©soudre</button>
+                        <button className="admin-button danger" type="button" onClick={() => void handleAction(alert.id, "IGNORE")}>Ignorer</button>
+                      </div>
+                    ) : (
+                      <span className="admin-cell-secondary">TraitÃ©e</span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {!visibleAlerts.length ? (
+        <p className="admin-empty">Aucune alerte dans cette catÃ©gorie.</p>
+      ) : null}
+    </div>
+  );
+}

@@ -1,0 +1,63 @@
+server:
+  port: 8081
+
+spring:
+  # Auth-mail portable : aucune valeur secrete n'est stockee dans le projet.
+  # Les variables sont fournies par Windows User en local ou Docker/VPS en production.
+  mail:
+    host: ${SPRING_MAIL_HOST:smtp.gmail.com}
+    port: ${SPRING_MAIL_PORT:587}
+    username: ${SPRING_MAIL_USERNAME:}
+    password: ${SPRING_MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH:true}
+          starttls:
+            enable: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE:true}
+  application:
+    name: auth-service
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/smarttraining_auth_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: smarttraining_user
+    password: ${AUTH_DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  jackson:
+    time-zone: UTC
+
+eureka:
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+app:
+  jwt:
+    secret: ${APP_JWT_SECRET}
+    expiration-ms: 86400000
+
+info:
+  app:
+    name: auth-service
+    description: Service d'authentification et de gestion des utilisateurs SmartTraining AI
+    version: 1.0.0

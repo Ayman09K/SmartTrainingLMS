@@ -1,0 +1,113 @@
+# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+
+# dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Native
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
+.DS_Store
+*.pem
+
+# local env files
+.env*.local
+
+# typescript
+*.tsbuildinfo
+
+example
+
+# generated native folders
+/ios
+/android
+# ==================================================================================================
+# SmartTrainingLMS - EAS upload exclusions
+# Added by PATCH19-R3 AAB V2 preparation.
+# Keep application source/config/assets INCLUDED.
+# ==================================================================================================
+
+# Explicit dependency / Expo caches
+node_modules/
+.expo/
+.expo-shared/
+
+# Generated outputs / caches
+dist/
+web-build/
+coverage/
+.cache/
+.tmp/
+tmp/
+temp/
+
+# Native generated folders are not part of this Expo managed source tree
+android/
+ios/
+
+# Editor / assistant local metadata
+.vscode/
+.idea/
+.claude/
+
+# Local reports / archives / binary release outputs
+*.log
+*.zip
+*.7z
+*.rar
+*.apk
+*.aab
+*.ipa
+
+# Local backup/report folders if ever copied under the mobile root
+backups/
+backup/
+reports/
+
+# OS noise
+Thumbs.db
+.DS_Store
+# ==================================================================================================
+# EAS CLI Windows / no-VCS directory matching hardening
+# Keep both forms: current EAS CLI on Windows may evaluate directory paths without a trailing slash.
+# ==================================================================================================
+.expo
+.expo-shared
+.claude
+.vscode
+.idea
+dist
+web-build
+coverage
+.cache
+.tmp
+tmp
+temp
+android
+ios
+backups
+backup
+reports
+
+# Local lockfile migration backup - never needed by EAS build
+package-lock.json.sauvegarde-sdk57

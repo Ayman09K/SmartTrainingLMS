@@ -1,0 +1,7 @@
+.training-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-card); padding: 22px; display: flex; flex-direction: column; gap: 14px; }
+.training-card-header { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+.training-badge,.training-status { display: inline-flex; align-items: center; border-radius: 999px; padding: 6px 10px; font-size: 12px; font-weight: 900; }
+.training-badge { background: #eff6ff; color: var(--color-primary); }.training-status.active { background: #dcfce7; color: var(--color-success); }.training-status.inactive { background: #fee2e2; color: var(--color-danger); }
+.training-card h2 { margin: 0; font-size: 21px; }.training-card p { margin: 0; color: var(--color-text-muted); font-size: 14px; line-height: 1.6; }
+.training-meta { display: flex; flex-wrap: wrap; gap: 12px; color: var(--color-text-muted); font-size: 13px; font-weight: 700; }.training-meta span { display: inline-flex; align-items: center; gap: 6px; }
+.training-link { margin-top: auto; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: 13px; background: var(--color-primary); color: #fff; font-weight: 900; padding: 12px 14px; }.training-link:hover { background: var(--color-primary-dark); }

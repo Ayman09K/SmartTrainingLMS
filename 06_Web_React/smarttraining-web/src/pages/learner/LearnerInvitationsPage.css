@@ -1,0 +1,214 @@
+.learner-invitations-page {
+  display: grid;
+  gap: 20px;
+}
+
+.learner-invitations-header {
+  align-items: flex-start;
+}
+
+.learner-invitations-count {
+  min-width: 140px;
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 2px 8px;
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  background: var(--color-surface);
+}
+
+.learner-invitations-count strong {
+  font-size: 22px;
+}
+
+.learner-invitations-count span {
+  grid-column: 1 / -1;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.learner-invitations-list {
+  display: grid;
+  gap: 14px;
+}
+
+.learner-invitation-card {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px;
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.learner-invitation-main {
+  min-width: 0;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.learner-invitation-icon {
+  width: 46px;
+  height: 46px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.learner-invitation-content {
+  min-width: 0;
+}
+
+.learner-invitation-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: center;
+}
+
+.learner-invitation-title-row h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.learner-invitation-status {
+  display: inline-flex;
+  width: fit-content;
+  padding: 5px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.learner-invitation-status.status-pending {
+  background: #fff7ed;
+  color: #9a3412;
+}
+
+.learner-invitation-status.status-accepted {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.learner-invitation-status.status-declined,
+.learner-invitation-status.status-cancelled,
+.learner-invitation-status.status-expired {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.learner-invitation-message {
+  margin: 8px 0 0;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+
+.learner-invitation-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: 10px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.learner-invitation-meta span {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.learner-invitation-actions {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.learner-invitation-actions button,
+.learner-invitation-actions a,
+.learner-invitations-empty a {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 13px;
+  border: 0;
+  border-radius: 11px;
+  font: inherit;
+  font-weight: 900;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.learner-invitation-actions .accept,
+.learner-invitation-actions a,
+.learner-invitations-empty a {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.learner-invitation-actions .decline {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.learner-invitation-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.learner-invitations-success {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: #ecfdf5;
+  color: #047857;
+  font-weight: 800;
+}
+
+.learner-invitations-empty {
+  justify-items: center;
+  text-align: center;
+}
+
+@media (max-width: 820px) {
+  .learner-invitation-card {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .learner-invitation-actions {
+    width: 100%;
+  }
+
+  .learner-invitation-actions button,
+  .learner-invitation-actions a {
+    flex: 1 1 180px;
+  }
+}
+
+@media (max-width: 560px) {
+  .learner-invitation-main {
+    align-items: stretch;
+  }
+
+  .learner-invitation-icon {
+    display: none;
+  }
+
+  .learner-invitations-count {
+    width: 100%;
+  }
+}
