@@ -92,7 +92,7 @@ jobs:
 
       - name: Test discovery-service
         working-directory: 04_Backend_microservices/discovery-service
-        run: mvn -B -ntp test
+        run: EUREKA_CLIENT_ENABLED=true mvn -B -ntp test
 
       - name: Test api-gateway
         working-directory: 04_Backend_microservices/api-gateway
