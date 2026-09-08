@@ -10,7 +10,10 @@
     "ios": {
       "icon": "./assets/branding/SmartTraining_brand_mark.png",
       "bundleIdentifier": "com.smarttraininglms.app",
-      "buildNumber": "8"
+      "buildNumber": "8",
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "softwareKeyboardLayoutMode": "resize",
