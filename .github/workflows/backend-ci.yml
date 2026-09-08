@@ -57,7 +57,7 @@ jobs:
       AI_SERVICE_URL: http://127.0.0.1:8000
       ANALYTICS_SERVICE_URL: http://127.0.0.1:8084
       SMARTTRAINING_AUTH_INTERNAL_URL: http://127.0.0.1:8081
-      SMARTTRAINING_UPLOAD_DIR: ${{ runner.temp }}/smarttraining-uploads
+      SMARTTRAINING_UPLOAD_DIR: ${{ github.workspace }}/.tmp/smarttraining-uploads
 
     steps:
       - name: Checkout
