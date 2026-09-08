@@ -8,7 +8,9 @@
     "scheme": "smarttrainingmobile",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/branding/SmartTraining_brand_mark.png"
+      "icon": "./assets/branding/SmartTraining_brand_mark.png",
+      "bundleIdentifier": "com.smarttraininglms.app",
+      "buildNumber": "8"
     },
     "android": {
       "softwareKeyboardLayoutMode": "resize",

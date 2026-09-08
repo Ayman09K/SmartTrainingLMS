@@ -7,7 +7,15 @@
                                      "env":  {
                                                  "EXPO_PUBLIC_API_URL":  "https://api.smarttraininglms.com/api"
                                              }
-                                 }
+                                 },
+                  "ios-simulator":  {
+                                        "ios":  {
+                                                    "simulator":  true
+                                                },
+                                        "env":  {
+                                                    "EXPO_PUBLIC_API_URL":  "https://api.smarttraininglms.com/api"
+                                                }
+                                    }
               },
     "submit":  {
                    "production":  {
