@@ -1,116 +1,218 @@
-# SmartTraining AI
+<p align="center">
+  <img src="./05_Mobile_React_Native/smarttraining-mobile/assets/branding/SmartTraining_brand_mark.png" alt="SmartTraining LMS" width="96" />
+</p>
 
-Plateforme LMS intelligente, multiplateforme et orientée Learning Analytics, réalisée dans le cadre d'un Projet de Fin d'Études de 5e année DLTI à l'IGA, année universitaire 2025–2026.
+<h1 align="center">SmartTraining LMS</h1>
 
-SmartTraining AI associe :
-- une application Web React ;
-- une application Mobile React Native / Expo ;
-- une architecture backend en microservices Spring Boot ;
-- un moteur SCORM 1.2 / 2004 ;
-- un service de Machine Learning FastAPI pour la détection du risque apprenant ;
-- un assistant IA génératif intégré au LMS.
+<p align="center">
+  <strong>Plateforme LMS intelligente, multiplateforme et orientée Learning Analytics</strong><br/>
+  Projet de Fin d'Études — IGA — 5e année DLTI — 2025–2026
+</p>
 
-## Objectif
+<p align="center">
+  <img src="https://img.shields.io/badge/Architecture-Microservices-111827?style=for-the-badge" alt="Microservices" />
+  <img src="https://img.shields.io/badge/SCORM-1.2%20%2F%202004-2563EB?style=for-the-badge" alt="SCORM" />
+  <img src="https://img.shields.io/badge/IA-Gemini%20%2B%20ML-7C3AED?style=for-the-badge" alt="IA" />
+  <img src="https://img.shields.io/badge/Mobile-Android%20%2B%20iOS-059669?style=for-the-badge" alt="Mobile" />
+</p>
 
-Le projet vise à couvrir le cycle de formation au-delà d'un simple catalogue de contenus : administration, conception de formations, apprentissage, évaluations, suivi de progression, groupes, parcours, échéances, notifications, certificats, analytics, interventions pédagogiques et accompagnement assisté par IA.
+<p align="center">
+  <a href="https://github.com/saidkamel201306-dotcom/SmartTrainingLMS/actions/workflows/backend-ci.yml"><img src="https://github.com/saidkamel201306-dotcom/SmartTrainingLMS/actions/workflows/backend-ci.yml/badge.svg" alt="Backend CI" /></a>
+  <a href="https://github.com/saidkamel201306-dotcom/SmartTrainingLMS/actions/workflows/web-ci.yml"><img src="https://github.com/saidkamel201306-dotcom/SmartTrainingLMS/actions/workflows/web-ci.yml/badge.svg" alt="Web CI" /></a>
+  <a href="https://github.com/saidkamel201306-dotcom/SmartTrainingLMS/actions/workflows/mobile-ci.yml"><img src="https://github.com/saidkamel201306-dotcom/SmartTrainingLMS/actions/workflows/mobile-ci.yml/badge.svg" alt="Mobile CI" /></a>
+  <a href="https://github.com/saidkamel201306-dotcom/SmartTrainingLMS/actions/workflows/ai-ci.yml"><img src="https://github.com/saidkamel201306-dotcom/SmartTrainingLMS/actions/workflows/ai-ci.yml/badge.svg" alt="AI CI" /></a>
+</p>
 
-## Fonctionnalités principales
+---
 
-### LMS
-- gestion des rôles ADMIN, FORMATEUR et APPRENANT ;
-- formations structurées en modules, leçons et ressources ;
-- ressources texte, document, PDF, vidéo, lien externe et SCORM ;
-- quiz, questions, tentatives et scores ;
-- progression calculée côté serveur ;
-- groupes d'apprenants et affectations collectives ;
-- Learning Paths ;
-- échéances, notifications et certificats.
+<table>
+  <tr>
+    <td align="center" width="25%">
+      <strong>WEB</strong><br/>
+      <sub>Production HTTPS</sub><br/><br/>
+      ✅ Déployé
+    </td>
+    <td align="center" width="25%">
+      <strong>ANDROID</strong><br/>
+      <sub>Google Play</sub><br/><br/>
+      ✅ Test fermé
+    </td>
+    <td align="center" width="25%">
+      <strong>iOS</strong><br/>
+      <sub>EAS Build</sub><br/><br/>
+      ✅ Simulator build
+    </td>
+    <td align="center" width="25%">
+      <strong>CI</strong><br/>
+      <sub>GitHub Actions</sub><br/><br/>
+      ✅ 4 pipelines
+    </td>
+  </tr>
+</table>
 
-### SCORM
-- import de packages SCORM ;
-- prise en charge du runtime SCORM 1.2 et SCORM 2004 ;
-- persistance des données CMI, scores, temps, interactions et objectifs ;
-- lecture Web et Mobile.
+## À propos
 
-### Learning Analytics
-- consolidation de la progression et de l'activité ;
-- alertes et recommandations ;
-- vue de suivi formateur ;
-- feedbacks, interventions et séances d'accompagnement ;
-- indicateurs BI.
+SmartTraining LMS couvre le cycle complet d'une plateforme de formation moderne : **administration, conception, apprentissage, évaluations, suivi, groupes, parcours, échéances, notifications, certificats, Learning Analytics, SCORM et intelligence artificielle**.
 
-### Intelligence artificielle
-- modèle de classification supervisée pour le risque apprenant ;
-- API FastAPI de prédiction ;
-- assistant conversationnel basé sur Gemini ;
-- contexte LMS autorisé et adaptation selon le rôle utilisateur.
+L'objectif du projet est de proposer une expérience cohérente sur **Web et Mobile**, avec une architecture backend découplée en microservices.
 
-## Architecture
+## Expérience fonctionnelle
+
+<table>
+  <tr>
+    <td width="33%" valign="top">
+      <h3>🎓 LMS</h3>
+      <ul>
+        <li>ADMIN, FORMATEUR, APPRENANT</li>
+        <li>Formations, modules, leçons</li>
+        <li>Ressources et quiz</li>
+        <li>Progression côté serveur</li>
+        <li>Groupes et affectations</li>
+        <li>Learning Paths</li>
+      </ul>
+    </td>
+    <td width="33%" valign="top">
+      <h3>📊 Analytics</h3>
+      <ul>
+        <li>Suivi de progression</li>
+        <li>Alertes et recommandations</li>
+        <li>Interventions pédagogiques</li>
+        <li>Indicateurs BI</li>
+        <li>Analyse du risque apprenant</li>
+        <li>Visualisations ECharts</li>
+      </ul>
+    </td>
+    <td width="33%" valign="top">
+      <h3>🤖 IA & SCORM</h3>
+      <ul>
+        <li>SCORM 1.2 / 2004</li>
+        <li>Lecture Web et Mobile</li>
+        <li>FastAPI Machine Learning</li>
+        <li>Classification du risque</li>
+        <li>Assistant Gemini</li>
+        <li>Contexte LMS par rôle</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+---
+
+## Architecture technique
 
 ```mermaid
 flowchart LR
-    WEB[Web React / Vite]
-    MOB[Mobile React Native / Expo]
-    CADDY[Caddy / HTTPS]
-    GW[API Gateway :8080]
-    EUREKA[Eureka :8761]
+    U[Utilisateurs] --> WEB[Web React / Vite]
+    U --> MOB[Mobile React Native / Expo]
 
-    AUTH[Auth :8081]
-    TRAIN[Training :8082]
-    EVAL[Evaluation :8083]
-    ANALYTICS[Analytics :8084]
-    AI[FastAPI AI :8000]
-    GEMINI[Gemini API]
-
-    AUTHDB[(Auth DB)]
-    TRAINDB[(Training DB)]
-    EVALDB[(Evaluation DB)]
-    ANALYTICSDB[(Analytics DB)]
-
-    WEB --> CADDY
+    WEB --> CADDY[Caddy / HTTPS]
     MOB --> CADDY
-    CADDY --> GW
+    CADDY --> GW[API Gateway :8080]
 
-    GW --> AUTH
-    GW --> TRAIN
-    GW --> EVAL
-    GW --> ANALYTICS
+    GW --> AUTH[Auth :8081]
+    GW --> TRAIN[Training :8082]
+    GW --> EVAL[Evaluation :8083]
+    GW --> ANALYTICS[Analytics :8084]
 
-    AUTH --- EUREKA
+    AUTH --- EUREKA[Eureka :8761]
     TRAIN --- EUREKA
     EVAL --- EUREKA
     ANALYTICS --- EUREKA
     GW --- EUREKA
 
-    AUTH --> AUTHDB
-    TRAIN --> TRAINDB
-    EVAL --> EVALDB
-    ANALYTICS --> ANALYTICSDB
+    AUTH --> AUTHDB[(MySQL Auth)]
+    TRAIN --> TRAINDB[(MySQL Training)]
+    EVAL --> EVALDB[(MySQL Evaluation)]
+    ANALYTICS --> ANALYTICSDB[(MySQL Analytics)]
 
-    ANALYTICS --> AI
-    AI --> GEMINI
+    ANALYTICS --> AI[FastAPI AI :8000]
+    AI --> GEMINI[Gemini API]
 ```
 
-Le détail des responsabilités et des flux est décrit dans [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+<p align="center">
+  <a href="docs/ARCHITECTURE.md"><strong>Voir l'architecture détaillée →</strong></a>
+</p>
 
-## Stack technique
+## Stack
 
-| Couche | Technologies principales |
+<p align="center">
+  <img src="https://img.shields.io/badge/Java-17-ED8B00?style=flat-square" alt="Java 17" />
+  <img src="https://img.shields.io/badge/Spring_Boot-4.1-6DB33F?style=flat-square" alt="Spring Boot" />
+  <img src="https://img.shields.io/badge/MySQL-8-4479A1?style=flat-square" alt="MySQL 8" />
+  <img src="https://img.shields.io/badge/React-19-61DAFB?style=flat-square" alt="React" />
+  <img src="https://img.shields.io/badge/TypeScript-6-3178C6?style=flat-square" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/Expo-56-000020?style=flat-square" alt="Expo" />
+  <img src="https://img.shields.io/badge/FastAPI-Python-009688?style=flat-square" alt="FastAPI" />
+  <img src="https://img.shields.io/badge/Docker-VPS-2496ED?style=flat-square" alt="Docker" />
+</p>
+
+| Couche | Technologies |
 |---|---|
-| Backend | Java 17, Spring Boot 4.1.0, Spring Cloud, Spring Security, JPA |
-| Discovery / Gateway | Netflix Eureka, Spring Cloud Gateway |
-| Données | MySQL 8 |
-| Web | React 19, TypeScript, Vite 8, MUI, ECharts |
-| Mobile | React Native 0.85, Expo 56, Expo Router, TypeScript |
-| IA | Python, FastAPI, pandas, scikit-learn, joblib |
-| Assistant | Gemini API via service FastAPI |
-| Déploiement | Docker, Ubuntu VPS, Caddy, HTTPS |
-| Mobile Android | Expo / EAS, AAB, Google Play test fermé |
+| **Backend** | Java 17, Spring Boot, Spring Cloud, Spring Security, JPA |
+| **Gateway & Discovery** | Spring Cloud Gateway, Netflix Eureka |
+| **Données** | MySQL 8 |
+| **Web** | React, TypeScript, Vite, Material UI, ECharts |
+| **Mobile** | React Native, Expo, Expo Router, TypeScript |
+| **IA** | Python, FastAPI, pandas, scikit-learn, joblib |
+| **Assistant** | Gemini via service FastAPI |
+| **Production** | Docker, Ubuntu VPS, Caddy, HTTPS |
+| **Qualité** | Git, GitHub, GitHub Actions |
 
-## Organisation du dépôt
+---
+
+## État de validation
+
+| Brique | Validation |
+|---|---|
+| **Backend** | ✅ Tests Maven avec MySQL dans GitHub Actions |
+| **Web** | ✅ Lint + build Vite |
+| **Mobile** | ✅ Lint + TypeScript |
+| **IA** | ✅ Compilation Python + test de prédiction |
+| **Production Web/API** | ✅ VPS + HTTPS |
+| **Android** | ✅ `1.0.7` / `versionCode 8` / Google Play test fermé |
+| **iOS** | ✅ `1.0.7` / build `8` / EAS iOS Simulator build |
+| **SCORM** | ✅ Web + Mobile |
+
+> **CI : oui. CD automatique : non.**
+> Le déploiement de production reste volontairement contrôlé afin de limiter les risques de régression pendant les phases de démonstration et de test.
+
+---
+
+## Mobile : Android & iOS
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>Android</h3>
+      <ul>
+        <li>Package : <code>com.smarttraininglms.app</code></li>
+        <li>Version : <code>1.0.7</code></li>
+        <li>versionCode : <code>8</code></li>
+        <li>Distribution : <strong>AAB</strong></li>
+        <li>Canal : <strong>Google Play test fermé</strong></li>
+      </ul>
+    </td>
+    <td width="50%" valign="top">
+      <h3>iOS</h3>
+      <ul>
+        <li>Bundle : <code>com.smarttraininglms.app</code></li>
+        <li>Version : <code>1.0.7</code></li>
+        <li>Build : <code>8</code></li>
+        <li>EAS profile : <code>ios-simulator</code></li>
+        <li>Artefact : <strong>.app Simulator</strong></li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+La publication **TestFlight / App Store** n'est pas revendiquée dans le périmètre livré. La compatibilité iOS est démontrée par un build EAS Simulator terminé avec succès.
+
+---
+
+## Arborescence
 
 ```text
-SmartTraining_AI/
+SmartTrainingLMS/
 ├── README.md
 ├── CHANGELOG.md
 ├── SECURITY.md
@@ -125,89 +227,67 @@ SmartTraining_AI/
 └── 07_IA_FastAPI/
 ```
 
-Les contenus générés à l'exécution (uploads SCORM, builds, caches, fichiers `.env`, AAB/APK, logs et secrets) sont volontairement exclus du dépôt.
+## Documentation
 
-## Démarrage local
+<p align="center">
+  <a href="docs/ARCHITECTURE.md">Architecture</a> ·
+  <a href="docs/DEPLOYMENT.md">Déploiement</a> ·
+  <a href="docs/AI_MODEL.md">Modèle IA</a> ·
+  <a href="docs/DEMO_SOUTENANCE.md">Démo soutenance</a> ·
+  <a href="SECURITY.md">Sécurité</a>
+</p>
 
-### Prérequis
-- Java 17 ;
-- Maven ;
-- MySQL 8 ;
-- Node.js / npm ;
-- Python ;
-- Expo CLI via `npx`.
+<details>
+  <summary><strong>Démarrage local</strong></summary>
 
 ### Ordre recommandé
 
-1. Eureka Discovery — port `8761`
-2. Auth Service — port `8081`
-3. Training Service — port `8082`
-4. Evaluation Service — port `8083`
-5. FastAPI AI — port `8000`
-6. Analytics Service — port `8084`
-7. API Gateway — port `8080`
-8. Web — port `5173`
-9. Mobile — port Metro distinct des ports backend
+1. Eureka Discovery — `8761`
+2. Auth Service — `8081`
+3. Training Service — `8082`
+4. Evaluation Service — `8083`
+5. FastAPI AI — `8000`
+6. Analytics Service — `8084`
+7. API Gateway — `8080`
+8. Web — `5173`
+9. Mobile — Metro sur un port distinct
 
-Chaque microservice Spring Boot peut être démarré depuis son dossier avec :
+### Commandes
 
+**Backend**
 ```powershell
 mvn spring-boot:run
 ```
 
-Service IA :
-
+**IA**
 ```powershell
 cd 07_IA_FastAPI\ai-service
 python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-Web :
-
+**Web**
 ```powershell
 cd 06_Web_React\smarttraining-web
 npm ci
 npm run dev
 ```
 
-Mobile :
-
+**Mobile**
 ```powershell
 cd 05_Mobile_React_Native\smarttraining-mobile
 npm ci
 npx expo start --port 8086
 ```
 
-Le port `8086` est proposé pour Metro afin d'éviter le conflit avec `evaluation-service` sur `8083`.
+</details>
 
-Les variables d'environnement et le déploiement sont détaillés dans [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+---
 
-## État de livraison
+<p align="center">
+  <strong>SmartTraining LMS</strong><br/>
+  Projet de Fin d'Études — IGA — 5e année DLTI — 2025–2026
+</p>
 
-- Web : déployé sur l'environnement de démonstration ;
-- API : déployée derrière HTTPS et API Gateway ;
-- Android : version applicative `1.0.7`, `versionCode 8`, utilisée en test fermé Google Play ;
-- iOS : le socle React Native / Expo est multiplateforme, mais la distribution iOS n'est pas déclarée comme une release livrée à ce stade.
-
-## Documentation
-
-- [Architecture](docs/ARCHITECTURE.md)
-- [Déploiement et configuration](docs/DEPLOYMENT.md)
-- [Modèle IA](docs/AI_MODEL.md)
-- [Scénario de démonstration / soutenance](docs/DEMO_SOUTENANCE.md)
-- [Backend](04_Backend_microservices/README.md)
-- [Mobile](05_Mobile_React_Native/smarttraining-mobile/README.md)
-- [Web](06_Web_React/smarttraining-web/README.md)
-- [IA](07_IA_FastAPI/README.md)
-
-## Sécurité
-
-Aucun secret de production ne doit être versionné. Les mots de passe de base de données, secrets JWT, identifiants SMTP, clé Gemini et autres credentials sont injectés par variables d'environnement.
-
-Voir [SECURITY.md](SECURITY.md).
-
-## Statut académique
-
-Projet de Fin d'Études — IGA — 5e année DLTI — année universitaire 2025–2026.
-
-Ce dépôt constitue une version source assainie destinée à la traçabilité technique, à la soutenance et à la démonstration du projet. Les données runtime et secrets d'environnement ne font pas partie du dépôt.
+<p align="center">
+  <sub>Dépôt source assaini : les secrets, fichiers .env, builds, AAB/APK, uploads SCORM runtime et données sensibles sont exclus.</sub>
+</p>
