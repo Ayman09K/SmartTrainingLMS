@@ -50,45 +50,36 @@
   </tr>
 </table>
 
-## Aperçu du produit
+## Aperçu produit
 
-<p align="center">
-  <strong>Interface Web — accès à la plateforme</strong>
-</p>
-
-<p align="center">
-  <img src="./docs/assets/screenshots/web-login.png" alt="SmartTraining LMS - Connexion Web" width="100%" />
-</p>
-
-<p align="center">
-  <strong>Administration — Learning Analytics & BI</strong>
-</p>
-
-<p align="center">
-  <img src="./docs/assets/screenshots/web-admin-bi.png" alt="SmartTraining LMS - Statistiques et BI" width="100%" />
-</p>
-
-<table>
+<table align="center">
   <tr>
-    <td width="50%" align="center" valign="top">
-      <strong>Mobile — suivi d'une formation</strong><br/><br/>
-      <img src="./docs/assets/screenshots/mobile-training.jpeg" alt="SmartTraining LMS Mobile - Suivi formation" width="360" />
+    <td align="center" valign="top">
+      <img src="docs/assets/screenshots/web-login.png" alt="Connexion Web" width="470" /><br/>
+      <sub><strong>Web</strong> — Connexion</sub>
     </td>
-    <td width="50%" align="center" valign="top">
-      <strong>Mobile — Assistant IA</strong><br/><br/>
-      <img src="./docs/assets/screenshots/mobile-assistant.jpeg" alt="SmartTraining LMS Mobile - Assistant IA" width="360" />
+    <td align="center" valign="top">
+      <img src="docs/assets/screenshots/web-admin-bi.png" alt="Statistiques BI Web" width="470" /><br/>
+      <sub><strong>Web</strong> — Statistiques / BI</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" valign="top">
+      <img src="docs/assets/screenshots/mobile-training.jpeg" alt="Suivi de formation mobile" width="230" /><br/>
+      <sub><strong>Mobile</strong> — Suivi de formation</sub>
+    </td>
+    <td align="center" valign="top">
+      <img src="docs/assets/screenshots/mobile-assistant.jpeg" alt="Assistant IA mobile" width="230" /><br/>
+      <sub><strong>Mobile</strong> — Assistant IA</sub>
     </td>
   </tr>
 </table>
 
 <p align="center">
-  <sub>Captures issues de la version fonctionnelle SmartTraining LMS.</sub>
+  <sub>Captures réelles de la plateforme : Web (connexion et BI) et Mobile (suivi de formation et assistant SmartTraining).</sub>
 </p>
 
----
-
 ## À propos
-
 SmartTraining LMS couvre le cycle complet d'une plateforme de formation moderne : **administration, conception, apprentissage, évaluations, suivi, groupes, parcours, échéances, notifications, certificats, Learning Analytics, SCORM et intelligence artificielle**.
 
 L'objectif du projet est de proposer une expérience cohérente sur **Web et Mobile**, avec une architecture backend découplée en microservices.
@@ -137,36 +128,13 @@ L'objectif du projet est de proposer une expérience cohérente sur **Web et Mob
 
 ## Architecture technique
 
-![Architecture technique SmartTraining LMS](docs/assets/architecture/architecture-technique-smarttraining-lms.png)
+<p align="center">
+  <img src="docs/assets/architecture/architecture-technique-smarttraining-lms.png" alt="Architecture technique SmartTraining LMS" width="1100" />
+</p>
 
-```mermaid
-flowchart LR
-    U[Utilisateurs] --> WEB[Web React / Vite]
-    U --> MOB[Mobile React Native / Expo]
-
-    WEB --> CADDY[Caddy / HTTPS]
-    MOB --> CADDY
-    CADDY --> GW[API Gateway :8080]
-
-    GW --> AUTH[Auth :8081]
-    GW --> TRAIN[Training :8082]
-    GW --> EVAL[Evaluation :8083]
-    GW --> ANALYTICS[Analytics :8084]
-
-    AUTH --- EUREKA[Eureka :8761]
-    TRAIN --- EUREKA
-    EVAL --- EUREKA
-    ANALYTICS --- EUREKA
-    GW --- EUREKA
-
-    AUTH --> AUTHDB[(MySQL Auth)]
-    TRAIN --> TRAINDB[(MySQL Training)]
-    EVAL --> EVALDB[(MySQL Evaluation)]
-    ANALYTICS --> ANALYTICSDB[(MySQL Analytics)]
-
-    ANALYTICS --> AI[FastAPI AI :8000]
-    AI --> GEMINI[Gemini API]
-```
+<p align="center">
+  <sub>Vue d'ensemble de l'écosystème SmartTraining LMS : clients Web et Mobile, exposition HTTPS via Caddy, API Gateway, microservices Spring Boot, découverte Eureka, persistance MySQL et service IA FastAPI.</sub>
+</p>
 
 <p align="center">
   <a href="docs/ARCHITECTURE.md"><strong>Voir l'architecture détaillée →</strong></a>
