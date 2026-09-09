@@ -203,17 +203,17 @@ L'objectif du projet est de proposer une expérience cohérente sur **Web et Mob
 
 <table align="center" width="90%">
   <tr>
-    <th align="center" width="28%">Brique</th>
-    <th align="center">Validation</th>
+    <th align="left" width="28%">Brique</th>
+    <th align="left">Validation</th>
   </tr>
-  <tr><td><strong>Backend</strong></td><td>✅ Tests Maven avec MySQL dans GitHub Actions</td></tr>
-  <tr><td><strong>Web</strong></td><td>✅ Lint + build Vite</td></tr>
-  <tr><td><strong>Mobile</strong></td><td>✅ Lint + TypeScript</td></tr>
-  <tr><td><strong>IA</strong></td><td>✅ Compilation Python + test de prédiction</td></tr>
-  <tr><td><strong>Production Web/API</strong></td><td>✅ VPS + HTTPS</td></tr>
-  <tr><td><strong>Android</strong></td><td>✅ <code>1.0.7</code> / <code>versionCode 8</code> / Google Play test fermé</td></tr>
-  <tr><td><strong>iOS</strong></td><td>✅ <code>1.0.7</code> / build <code>8</code> / EAS iOS Simulator build</td></tr>
-  <tr><td><strong>SCORM</strong></td><td>✅ Web + Mobile</td></tr>
+  <tr><td align="left"><strong>Backend</strong></td><td align="left">✅ Tests Maven avec MySQL dans GitHub Actions</td></tr>
+  <tr><td align="left"><strong>Web</strong></td><td align="left">✅ Lint + build Vite</td></tr>
+  <tr><td align="left"><strong>Mobile</strong></td><td align="left">✅ Lint + TypeScript</td></tr>
+  <tr><td align="left"><strong>IA</strong></td><td align="left">✅ Compilation Python + test de prédiction</td></tr>
+  <tr><td align="left"><strong>Production Web/API</strong></td><td align="left">✅ VPS + HTTPS</td></tr>
+  <tr><td align="left"><strong>Android</strong></td><td align="left">✅ <code>1.0.7</code> / <code>versionCode 8</code> / Google Play test fermé</td></tr>
+  <tr><td align="left"><strong>iOS</strong></td><td align="left">✅ <code>1.0.7</code> / build <code>8</code> / EAS iOS Simulator build</td></tr>
+  <tr><td align="left"><strong>SCORM</strong></td><td align="left">✅ Web + Mobile</td></tr>
 </table>
 
 </div>
@@ -227,32 +227,35 @@ L'objectif du projet est de proposer une expérience cohérente sur **Web et Mob
 
 <table align="center" width="90%">
   <tr>
-    <td width="50%" valign="top">
+    <td width="50%" valign="top" align="left">
       <h3 align="center">Android</h3>
-      <ul>
-        <li>Package : <code>com.smarttraininglms.app</code></li>
-        <li>Version : <code>1.0.7</code></li>
-        <li>versionCode : <code>8</code></li>
-        <li>Distribution : <strong>AAB</strong></li>
-        <li>Canal : <strong>Google Play test fermé</strong></li>
-      </ul>
+      <p>
+        <strong>Package :</strong> <code>com.smarttraininglms.app</code><br/>
+        <strong>Version :</strong> <code>1.0.7</code><br/>
+        <strong>versionCode :</strong> <code>8</code><br/>
+        <strong>Distribution :</strong> AAB<br/>
+        <strong>Canal :</strong> Google Play test fermé
+      </p>
     </td>
-    <td width="50%" valign="top">
+    <td width="50%" valign="top" align="left">
       <h3 align="center">iOS</h3>
-      <ul>
-        <li>Bundle : <code>com.smarttraininglms.app</code></li>
-        <li>Version : <code>1.0.7</code></li>
-        <li>Build : <code>8</code></li>
-        <li>EAS profile : <code>ios-simulator</code></li>
-        <li>Artefact : <strong>.app Simulator</strong></li>
-      </ul>
+      <p>
+        <strong>Bundle :</strong> <code>com.smarttraininglms.app</code><br/>
+        <strong>Version :</strong> <code>1.0.7</code><br/>
+        <strong>Build :</strong> <code>8</code><br/>
+        <strong>EAS profile :</strong> <code>ios-simulator</code><br/>
+        <strong>Artefact :</strong> .app Simulator
+      </p>
     </td>
   </tr>
 </table>
 
 </div>
 
-La publication **TestFlight / App Store** n'est pas revendiquée dans le périmètre livré. La compatibilité iOS est démontrée par un build EAS Simulator terminé avec succès.
+<p align="center">
+  La publication <strong>TestFlight / App Store</strong> n'est pas revendiquée dans le périmètre livré.<br/>
+  La compatibilité iOS est démontrée par un build EAS Simulator terminé avec succès.
+</p>
 
 ## Arborescence
 
