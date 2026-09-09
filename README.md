@@ -25,7 +25,9 @@
 
 ---
 
-<table>
+<div align="center">
+
+<table align="center">
   <tr>
     <td align="center" width="25%">
       <strong>WEB</strong><br/>
@@ -50,33 +52,46 @@
   </tr>
 </table>
 
+</div>
+
 ## Aperçu produit
+
+<p align="center"><strong>Web</strong></p>
 
 <table align="center">
   <tr>
     <td align="center" valign="top">
       <img src="docs/assets/screenshots/web-login.png" alt="Connexion Web" width="470" /><br/>
-      <sub><strong>Web</strong> — Connexion</sub>
+      <sub>Connexion</sub>
     </td>
     <td align="center" valign="top">
       <img src="docs/assets/screenshots/web-admin-bi.png" alt="Statistiques BI Web" width="470" /><br/>
-      <sub><strong>Web</strong> — Statistiques / BI</sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" valign="top">
-      <img src="docs/assets/screenshots/mobile-training.jpeg" alt="Suivi de formation mobile" width="230" /><br/>
-      <sub><strong>Mobile</strong> — Suivi de formation</sub>
-    </td>
-    <td align="center" valign="top">
-      <img src="docs/assets/screenshots/mobile-assistant.jpeg" alt="Assistant IA mobile" width="230" /><br/>
-      <sub><strong>Mobile</strong> — Assistant IA</sub>
+      <sub>Statistiques / BI</sub>
     </td>
   </tr>
 </table>
 
+<p align="center"><strong>Mobile</strong></p>
+
+<div align="center">
+
+<table align="center">
+  <tr>
+    <td align="center" valign="top">
+      <img src="docs/assets/screenshots/mobile-training.jpeg" alt="Suivi de formation mobile" height="260" /><br/>
+      <sub>Suivi de formation</sub>
+    </td>
+    <td align="center" valign="top">
+      <img src="docs/assets/screenshots/mobile-assistant.jpeg" alt="Assistant IA mobile" height="260" /><br/>
+      <sub>Assistant IA</sub>
+    </td>
+  </tr>
+</table>
+
+</div>
+
 <p align="center">
-  <sub>Captures réelles de la plateforme : Web (connexion et BI) et Mobile (suivi de formation et assistant SmartTraining).</sub>
+  <sub>Captures réelles de la plateforme SmartTraining LMS.</sub>
 </p>
 
 ## À propos
