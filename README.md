@@ -50,6 +50,43 @@
   </tr>
 </table>
 
+## Aperçu du produit
+
+<p align="center">
+  <strong>Interface Web — accès à la plateforme</strong>
+</p>
+
+<p align="center">
+  <img src="./docs/assets/screenshots/web-login.png" alt="SmartTraining LMS - Connexion Web" width="100%" />
+</p>
+
+<p align="center">
+  <strong>Administration — Learning Analytics & BI</strong>
+</p>
+
+<p align="center">
+  <img src="./docs/assets/screenshots/web-admin-bi.png" alt="SmartTraining LMS - Statistiques et BI" width="100%" />
+</p>
+
+<table>
+  <tr>
+    <td width="50%" align="center" valign="top">
+      <strong>Mobile — suivi d'une formation</strong><br/><br/>
+      <img src="./docs/assets/screenshots/mobile-training.jpeg" alt="SmartTraining LMS Mobile - Suivi formation" width="360" />
+    </td>
+    <td width="50%" align="center" valign="top">
+      <strong>Mobile — Assistant IA</strong><br/><br/>
+      <img src="./docs/assets/screenshots/mobile-assistant.jpeg" alt="SmartTraining LMS Mobile - Assistant IA" width="360" />
+    </td>
+  </tr>
+</table>
+
+<p align="center">
+  <sub>Captures issues de la version fonctionnelle SmartTraining LMS.</sub>
+</p>
+
+---
+
 ## À propos
 
 SmartTraining LMS couvre le cycle complet d'une plateforme de formation moderne : **administration, conception, apprentissage, évaluations, suivi, groupes, parcours, échéances, notifications, certificats, Learning Analytics, SCORM et intelligence artificielle**.
