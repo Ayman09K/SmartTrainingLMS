@@ -27,7 +27,7 @@
 
 <div align="center">
 
-<table align="center">
+<table align="center" width="72%">
   <tr>
     <td align="center" width="25%">
       <strong>WEB</strong><br/>
@@ -58,13 +58,13 @@
 
 <p align="center"><strong>Web</strong></p>
 
-<table align="center">
+<table align="center" width="100%">
   <tr>
-    <td align="center" valign="top">
+    <td align="center" valign="top" width="50%">
       <img src="docs/assets/screenshots/web-login.png" alt="Connexion Web" width="470" /><br/>
       <sub>Connexion</sub>
     </td>
-    <td align="center" valign="top">
+    <td align="center" valign="top" width="50%">
       <img src="docs/assets/screenshots/web-admin-bi.png" alt="Statistiques BI Web" width="470" /><br/>
       <sub>Statistiques / BI</sub>
     </td>
@@ -75,14 +75,14 @@
 
 <div align="center">
 
-<table align="center">
+<table align="center" width="42%">
   <tr>
-    <td align="center" valign="top">
-      <img src="docs/assets/screenshots/mobile-training.jpeg" alt="Suivi de formation mobile" height="260" /><br/>
+    <td align="center" valign="top" width="50%">
+      <img src="docs/assets/screenshots/mobile-training.jpeg" alt="Suivi de formation mobile" height="240" /><br/>
       <sub>Suivi de formation</sub>
     </td>
-    <td align="center" valign="top">
-      <img src="docs/assets/screenshots/mobile-assistant.jpeg" alt="Assistant IA mobile" height="260" /><br/>
+    <td align="center" valign="top" width="50%">
+      <img src="docs/assets/screenshots/mobile-assistant.jpeg" alt="Assistant IA mobile" height="240" /><br/>
       <sub>Assistant IA</sub>
     </td>
   </tr>
@@ -101,10 +101,23 @@ L'objectif du projet est de proposer une expérience cohérente sur **Web et Mob
 
 ## Expérience fonctionnelle
 
-<table>
+<table align="center" width="100%">
   <tr>
-    <td width="33%" valign="top">
-      <h3>🎓 LMS</h3>
+    <td align="center" valign="top" width="33%">
+      <img src="docs/assets/readme/lms.svg" alt="LMS" width="58" /><br/><br/>
+      <strong>LMS</strong>
+    </td>
+    <td align="center" valign="top" width="33%">
+      <img src="docs/assets/readme/analytics.svg" alt="Learning Analytics" width="58" /><br/><br/>
+      <strong>Learning Analytics</strong>
+    </td>
+    <td align="center" valign="top" width="33%">
+      <img src="docs/assets/readme/ai.svg" alt="IA et SCORM" width="58" /><br/><br/>
+      <strong>IA & SCORM</strong>
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
       <ul>
         <li>ADMIN, FORMATEUR, APPRENANT</li>
         <li>Formations, modules, leçons</li>
@@ -114,8 +127,7 @@ L'objectif du projet est de proposer une expérience cohérente sur **Web et Mob
         <li>Learning Paths</li>
       </ul>
     </td>
-    <td width="33%" valign="top">
-      <h3>📊 Analytics</h3>
+    <td valign="top">
       <ul>
         <li>Suivi de progression</li>
         <li>Alertes et recommandations</li>
@@ -125,8 +137,7 @@ L'objectif du projet est de proposer une expérience cohérente sur **Web et Mob
         <li>Visualisations ECharts</li>
       </ul>
     </td>
-    <td width="33%" valign="top">
-      <h3>🤖 IA & SCORM</h3>
+    <td valign="top">
       <ul>
         <li>SCORM 1.2 / 2004</li>
         <li>Lecture Web et Mobile</li>
@@ -138,8 +149,6 @@ L'objectif du projet est de proposer une expérience cohérente sur **Web et Mob
     </td>
   </tr>
 </table>
-
----
 
 ## Architecture technique
 
@@ -168,44 +177,58 @@ L'objectif du projet est de proposer une expérience cohérente sur **Web et Mob
   <img src="https://img.shields.io/badge/Docker-VPS-2496ED?style=flat-square" alt="Docker" />
 </p>
 
-| Couche | Technologies |
-|---|---|
-| **Backend** | Java 17, Spring Boot, Spring Cloud, Spring Security, JPA |
-| **Gateway & Discovery** | Spring Cloud Gateway, Netflix Eureka |
-| **Données** | MySQL 8 |
-| **Web** | React, TypeScript, Vite, Material UI, ECharts |
-| **Mobile** | React Native, Expo, Expo Router, TypeScript |
-| **IA** | Python, FastAPI, pandas, scikit-learn, joblib |
-| **Assistant** | Gemini via service FastAPI |
-| **Production** | Docker, Ubuntu VPS, Caddy, HTTPS |
-| **Qualité** | Git, GitHub, GitHub Actions |
+<div align="center">
 
----
+<table align="center" width="88%">
+  <tr>
+    <th align="center" width="28%">Couche</th>
+    <th align="center">Technologies</th>
+  </tr>
+  <tr><td><strong>Backend</strong></td><td>Java 17, Spring Boot, Spring Cloud, Spring Security, JPA</td></tr>
+  <tr><td><strong>Gateway & Discovery</strong></td><td>Spring Cloud Gateway, Netflix Eureka</td></tr>
+  <tr><td><strong>Données</strong></td><td>MySQL 8</td></tr>
+  <tr><td><strong>Web</strong></td><td>React, TypeScript, Vite, Material UI, ECharts</td></tr>
+  <tr><td><strong>Mobile</strong></td><td>React Native, Expo, Expo Router, TypeScript</td></tr>
+  <tr><td><strong>IA</strong></td><td>Python, FastAPI, pandas, scikit-learn, joblib</td></tr>
+  <tr><td><strong>Assistant</strong></td><td>Gemini via service FastAPI</td></tr>
+  <tr><td><strong>Production</strong></td><td>Docker, Ubuntu VPS, Caddy, HTTPS</td></tr>
+  <tr><td><strong>Qualité</strong></td><td>Git, GitHub, GitHub Actions</td></tr>
+</table>
+
+</div>
 
 ## État de validation
 
-| Brique | Validation |
-|---|---|
-| **Backend** | ✅ Tests Maven avec MySQL dans GitHub Actions |
-| **Web** | ✅ Lint + build Vite |
-| **Mobile** | ✅ Lint + TypeScript |
-| **IA** | ✅ Compilation Python + test de prédiction |
-| **Production Web/API** | ✅ VPS + HTTPS |
-| **Android** | ✅ `1.0.7` / `versionCode 8` / Google Play test fermé |
-| **iOS** | ✅ `1.0.7` / build `8` / EAS iOS Simulator build |
-| **SCORM** | ✅ Web + Mobile |
+<div align="center">
+
+<table align="center" width="90%">
+  <tr>
+    <th align="center" width="28%">Brique</th>
+    <th align="center">Validation</th>
+  </tr>
+  <tr><td><strong>Backend</strong></td><td>✅ Tests Maven avec MySQL dans GitHub Actions</td></tr>
+  <tr><td><strong>Web</strong></td><td>✅ Lint + build Vite</td></tr>
+  <tr><td><strong>Mobile</strong></td><td>✅ Lint + TypeScript</td></tr>
+  <tr><td><strong>IA</strong></td><td>✅ Compilation Python + test de prédiction</td></tr>
+  <tr><td><strong>Production Web/API</strong></td><td>✅ VPS + HTTPS</td></tr>
+  <tr><td><strong>Android</strong></td><td>✅ <code>1.0.7</code> / <code>versionCode 8</code> / Google Play test fermé</td></tr>
+  <tr><td><strong>iOS</strong></td><td>✅ <code>1.0.7</code> / build <code>8</code> / EAS iOS Simulator build</td></tr>
+  <tr><td><strong>SCORM</strong></td><td>✅ Web + Mobile</td></tr>
+</table>
+
+</div>
 
 > **CI : oui. CD automatique : non.**
 > Le déploiement de production reste volontairement contrôlé afin de limiter les risques de régression pendant les phases de démonstration et de test.
 
----
-
 ## Mobile : Android & iOS
 
-<table>
+<div align="center">
+
+<table align="center" width="90%">
   <tr>
     <td width="50%" valign="top">
-      <h3>Android</h3>
+      <h3 align="center">Android</h3>
       <ul>
         <li>Package : <code>com.smarttraininglms.app</code></li>
         <li>Version : <code>1.0.7</code></li>
@@ -215,7 +238,7 @@ L'objectif du projet est de proposer une expérience cohérente sur **Web et Mob
       </ul>
     </td>
     <td width="50%" valign="top">
-      <h3>iOS</h3>
+      <h3 align="center">iOS</h3>
       <ul>
         <li>Bundle : <code>com.smarttraininglms.app</code></li>
         <li>Version : <code>1.0.7</code></li>
@@ -227,9 +250,9 @@ L'objectif du projet est de proposer une expérience cohérente sur **Web et Mob
   </tr>
 </table>
 
-La publication **TestFlight / App Store** n'est pas revendiquée dans le périmètre livré. La compatibilité iOS est démontrée par un build EAS Simulator terminé avec succès.
+</div>
 
----
+La publication **TestFlight / App Store** n'est pas revendiquée dans le périmètre livré. La compatibilité iOS est démontrée par un build EAS Simulator terminé avec succès.
 
 ## Arborescence
 
