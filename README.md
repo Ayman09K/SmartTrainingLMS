@@ -137,6 +137,8 @@ L'objectif du projet est de proposer une expérience cohérente sur **Web et Mob
 
 ## Architecture technique
 
+![Architecture technique SmartTraining LMS](docs/assets/architecture/architecture-technique-smarttraining-lms.png)
+
 ```mermaid
 flowchart LR
     U[Utilisateurs] --> WEB[Web React / Vite]
