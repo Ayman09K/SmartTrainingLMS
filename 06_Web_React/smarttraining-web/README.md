@@ -13,17 +13,17 @@ Interface Web de SmartTraining AI.
 - React Router ;
 - Axios.
 
-## RÃ´le de l'application
+## Rôle de l'application
 
 L'interface Web couvre les espaces ADMIN, FORMATEUR et APPRENANT.
 
-Elle consomme l'API SmartTraining via l'API Gateway et ne porte pas les dÃ©cisions mÃ©tier critiques cÃ´tÃ© client.
+Elle consomme l'API SmartTraining via l'API Gateway et ne porte pas les décisions métier critiques côté client.
 
 Fonctions principales :
 - authentification ;
 - administration ;
 - gestion des formations ;
-- modules, leÃ§ons et ressources ;
+- modules, leçons et ressources ;
 - quiz ;
 - suivi apprenants ;
 - analytics / BI ;
@@ -39,7 +39,7 @@ Fonctions principales :
 npm ci
 ```
 
-## DÃ©veloppement
+## Développement
 
 ```powershell
 npm run dev
@@ -47,20 +47,20 @@ npm run dev
 
 Vite utilise normalement le port `5173`.
 
-## VÃ©rifications
+## Vérifications
 
 ```powershell
 npm run lint
 npm run build
 ```
 
-Le dossier `dist/` est un artefact de build et n'est pas versionnÃ©.
+Le dossier `dist/` est un artefact de build et n'est pas versionné.
 
 ## API
 
-L'URL de l'API dÃ©pend de l'environnement.
+L'URL de l'API dépend de l'environnement.
 
-En production, le Web consomme l'API HTTPS publique SmartTraining. Les secrets et credentials ne doivent jamais Ãªtre placÃ©s dans le code frontend.
+En production, le Web consomme l'API HTTPS publique SmartTraining. Les secrets et credentials ne doivent jamais être placés dans le code frontend.
 
 ## Architecture
 

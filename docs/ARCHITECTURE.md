@@ -2,80 +2,80 @@
 
 ## 1. Vue d'ensemble
 
-SmartTraining AI suit une architecture distribuÃ©e composÃ©e de clients Web et Mobile, d'une API Gateway, de microservices mÃ©tier Spring Boot, d'un service IA FastAPI et de bases MySQL logiquement sÃ©parÃ©es par domaine.
+SmartTraining AI suit une architecture distribuée composée de clients Web et Mobile, d'une API Gateway, de microservices métier Spring Boot, d'un service IA FastAPI et de bases MySQL logiquement séparées par domaine.
 
-Le principe central est que les clients ne portent pas la logique mÃ©tier critique. Les contrÃ´les d'accÃ¨s, la progression, les Ã©valuations, les analytics et les dÃ©cisions de sÃ©curitÃ© sont traitÃ©s cÃ´tÃ© serveur.
+Le principe central est que les clients ne portent pas la logique métier critique. Les contrôles d'accès, la progression, les évaluations, les analytics et les décisions de sécurité sont traités côté serveur.
 
 ## 2. Microservices
 
-| Service | Port local | ResponsabilitÃ© principale |
+| Service | Port local | Responsabilité principale |
 |---|---:|---|
-| discovery-service | 8761 | registre Eureka et dÃ©couverte des services |
-| api-gateway | 8080 | point d'entrÃ©e API, routage et contrÃ´le JWT |
-| auth-service | 8081 | authentification, utilisateurs, rÃ´les, statut des comptes, reset mot de passe |
-| training-service | 8082 | formations, modules, leÃ§ons, ressources, inscriptions, groupes, parcours, certificats, SCORM |
+| discovery-service | 8761 | registre Eureka et découverte des services |
+| api-gateway | 8080 | point d'entrée API, routage et contrôle JWT |
+| auth-service | 8081 | authentification, utilisateurs, rôles, statut des comptes, reset mot de passe |
+| training-service | 8082 | formations, modules, leçons, ressources, inscriptions, groupes, parcours, certificats, SCORM |
 | evaluation-service | 8083 | quiz, questions, options, tentatives et scores |
-| analytics-service | 8084 | progression, Ã©vÃ©nements, risques, alertes, recommandations, feedbacks, interventions, BI et assistant |
-| ai-service | 8000 | prÃ©diction ML et gÃ©nÃ©ration de rÃ©ponses de l'assistant |
+| analytics-service | 8084 | progression, événements, risques, alertes, recommandations, feedbacks, interventions, BI et assistant |
+| ai-service | 8000 | prédiction ML et génération de réponses de l'assistant |
 
 ## 3. API Gateway
 
-Les clients Web et Mobile consomment une API commune exposÃ©e par l'API Gateway.
+Les clients Web et Mobile consomment une API commune exposée par l'API Gateway.
 
 Exemples de familles de routes :
-- `/api/auth/**` â†’ auth-service ;
-- `/api/trainings/**`, `/api/modules/**`, `/api/lessons/**`, `/api/resources/**` â†’ training-service ;
-- `/api/quizzes/**`, `/api/questions/**`, `/api/attempts/**` â†’ evaluation-service ;
-- `/api/analytics/**`, `/api/progress/**`, `/api/risk-predictions/**` â†’ analytics-service.
+- `/api/auth/**` → auth-service ;
+- `/api/trainings/**`, `/api/modules/**`, `/api/lessons/**`, `/api/resources/**` → training-service ;
+- `/api/quizzes/**`, `/api/questions/**`, `/api/attempts/**` → evaluation-service ;
+- `/api/analytics/**`, `/api/progress/**`, `/api/risk-predictions/**` → analytics-service.
 
-La route publique de l'assistant est portÃ©e par Analytics :
+La route publique de l'assistant est portée par Analytics :
 
 `POST /api/analytics/assistant/chat`
 
-Analytics transmet ensuite la requÃªte au service FastAPI interne :
+Analytics transmet ensuite la requête au service FastAPI interne :
 
 `POST /assistant/chat`
 
 ## 4. Authentification et autorisation
 
-L'authentification produit un JWT. La Gateway et les Resource Servers valident ce token avant l'accÃ¨s aux routes protÃ©gÃ©es.
+L'authentification produit un JWT. La Gateway et les Resource Servers valident ce token avant l'accès aux routes protégées.
 
-Les rÃ´les mÃ©tier principaux sont :
+Les rôles métier principaux sont :
 - `ADMIN` ;
 - `FORMATEUR` ;
 - `APPRENANT`.
 
-Les permissions ne reposent pas uniquement sur l'interface : elles sont appliquÃ©es cÃ´tÃ© backend.
+Les permissions ne reposent pas uniquement sur l'interface : elles sont appliquées côté backend.
 
-## 5. DonnÃ©es
+## 5. Données
 
-Les domaines principaux disposent de bases logiquement sÃ©parÃ©es :
+Les domaines principaux disposent de bases logiquement séparées :
 - `smarttraining_auth_db` ;
 - `smarttraining_training_db` ;
 - `smarttraining_evaluation_db` ;
 - `smarttraining_analytics_db`.
 
-Le moteur MySQL peut Ãªtre mutualisÃ© au niveau infrastructure, mais la sÃ©paration logique maintient le dÃ©coupage mÃ©tier.
+Le moteur MySQL peut être mutualisé au niveau infrastructure, mais la séparation logique maintient le découpage métier.
 
 ## 6. Flux d'apprentissage
 
 Un parcours apprenant typique suit le flux :
 
 1. authentification ;
-2. consultation d'une formation affectÃ©e ;
-3. ouverture des modules, leÃ§ons et ressources ;
-4. exÃ©cution Ã©ventuelle d'un contenu SCORM ;
-5. rÃ©alisation de quiz ;
-6. Ã©mission d'Ã©vÃ©nements de progression ;
-7. consolidation cÃ´tÃ© Analytics ;
+2. consultation d'une formation affectée ;
+3. ouverture des modules, leçons et ressources ;
+4. exécution éventuelle d'un contenu SCORM ;
+5. réalisation de quiz ;
+6. émission d'événements de progression ;
+7. consolidation côté Analytics ;
 8. calcul de risque et recommandations ;
 9. consultation du suivi par le formateur.
 
 ## 7. SCORM
 
-Le training-service gÃ¨re l'import et l'exÃ©cution des packages SCORM.
+Le training-service gère l'import et l'exécution des packages SCORM.
 
-Les fichiers importÃ©s et extraits sont des donnÃ©es runtime stockÃ©es dans un rÃ©pertoire configurable (`SMARTTRAINING_UPLOAD_DIR`). Ils ne sont pas versionnÃ©s dans Git.
+Les fichiers importés et extraits sont des données runtime stockées dans un répertoire configurable (`SMARTTRAINING_UPLOAD_DIR`). Ils ne sont pas versionnés dans Git.
 
 Le runtime prend en charge SCORM 1.2 et SCORM 2004 et persiste notamment :
 - progression / statut ;
@@ -83,15 +83,15 @@ Le runtime prend en charge SCORM 1.2 et SCORM 2004 et persiste notamment :
 - temps ;
 - interactions ;
 - objectifs ;
-- valeurs CMI nÃ©cessaires Ã  la reprise.
+- valeurs CMI nécessaires à la reprise.
 
-## 8. Intelligence artificielle prÃ©dictive
+## 8. Intelligence artificielle prédictive
 
-Le service FastAPI charge au dÃ©marrage un pipeline scikit-learn sÃ©rialisÃ© avec joblib.
+Le service FastAPI charge au démarrage un pipeline scikit-learn sérialisé avec joblib.
 
-Analytics prÃ©pare les donnÃ©es utiles puis appelle le service IA. La rÃ©ponse contient une probabilitÃ© / classification de risque et des informations exploitables par le suivi pÃ©dagogique.
+Analytics prépare les données utiles puis appelle le service IA. La réponse contient une probabilité / classification de risque et des informations exploitables par le suivi pédagogique.
 
-Le modÃ¨le et ses limites sont documentÃ©s dans `docs/AI_MODEL.md`.
+Le modèle et ses limites sont documentés dans `docs/AI_MODEL.md`.
 
 ## 9. Assistant IA
 
@@ -108,32 +108,32 @@ sequenceDiagram
 
     U->>C: Question
     C->>G: POST /api/analytics/assistant/chat
-    G->>A: JWT validÃ© + requÃªte
-    A->>A: Contexte LMS autorisÃ© selon rÃ´le
+    G->>A: JWT validé + requête
+    A->>A: Contexte LMS autorisé selon rôle
     A->>F: POST /assistant/chat
-    F->>M: Prompt + contexte autorisÃ©
-    M-->>F: RÃ©ponse
-    F-->>A: RÃ©ponse structurÃ©e
-    A-->>G: RÃ©ponse utilisateur
+    F->>M: Prompt + contexte autorisé
+    M-->>F: Réponse
+    F-->>A: Réponse structurée
+    A-->>G: Réponse utilisateur
     G-->>C: JSON
     C-->>U: Message
 ```
 
-Le contexte LMS fourni au modÃ¨le est construit cÃ´tÃ© backend et limitÃ© aux donnÃ©es autorisÃ©es. La clÃ© Gemini n'est jamais stockÃ©e dans le code source.
+Le contexte LMS fourni au modèle est construit côté backend et limité aux données autorisées. La clé Gemini n'est jamais stockée dans le code source.
 
-## 10. ObservabilitÃ©
+## 10. Observabilité
 
 Les microservices Spring exposent Spring Boot Actuator, notamment les endpoints `health` et `info`.
 
-Le service FastAPI expose `/health`, qui indique Ã©galement si le modÃ¨le ML est chargÃ©.
+Le service FastAPI expose `/health`, qui indique également si le modèle ML est chargé.
 
-## 11. Principes de sÃ©curitÃ©
+## 11. Principes de sécurité
 
 - aucun secret dans Git ;
-- JWT validÃ© cÃ´tÃ© serveur ;
-- contrÃ´le des rÃ´les cÃ´tÃ© backend ;
+- JWT validé côté serveur ;
+- contrôle des rôles côté backend ;
 - variables d'environnement pour credentials ;
 - HTTPS en production ;
-- Caddy comme point d'entrÃ©e public ;
-- services mÃ©tier non exposÃ©s directement sur Internet ;
-- uploads runtime exclus du dÃ©pÃ´t.
+- Caddy comme point d'entrée public ;
+- services métier non exposés directement sur Internet ;
+- uploads runtime exclus du dépôt.

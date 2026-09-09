@@ -1,47 +1,47 @@
-# Politique de sÃ©curitÃ©
+# Politique de sécurité
 
-## PÃ©rimÃ¨tre
+## Périmètre
 
-Cette politique concerne le dÃ©pÃ´t source SmartTraining AI prÃ©parÃ© pour le PFE.
+Cette politique concerne le dépôt source SmartTraining AI préparé pour le PFE.
 
-## Signaler une vulnÃ©rabilitÃ©
+## Signaler une vulnérabilité
 
 Ne publiez jamais dans une issue :
 - mot de passe ;
 - token JWT ;
-- clÃ© Gemini ;
+- clé Gemini ;
 - identifiant SMTP ;
-- clÃ© API ;
-- clÃ© privÃ©e ;
-- donnÃ©e personnelle rÃ©elle.
+- clé API ;
+- clé privée ;
+- donnée personnelle réelle.
 
-Pour un signalement de sÃ©curitÃ©, utilisez en prioritÃ© le mÃ©canisme privÃ© de signalement de vulnÃ©rabilitÃ© GitHub s'il est activÃ© sur le dÃ©pÃ´t. Ã€ dÃ©faut, contactez le mainteneur du projet par le canal privÃ© acadÃ©mique / projet dÃ©jÃ  Ã©tabli.
+Pour un signalement de sécurité, utilisez en priorité le mécanisme privé de signalement de vulnérabilité GitHub s'il est activé sur le dépôt. À défaut, contactez le mainteneur du projet par le canal privé académique / projet déjà établi.
 
 Le signalement doit contenir :
-- composant concernÃ© ;
+- composant concerné ;
 - version ou commit ;
-- description du problÃ¨me ;
-- Ã©tapes de reproduction sans secret rÃ©el ;
-- impact estimÃ©.
+- description du problème ;
+- étapes de reproduction sans secret réel ;
+- impact estimé.
 
 ## Gestion des secrets
 
-Les secrets doivent Ãªtre fournis par variables d'environnement.
+Les secrets doivent être fournis par variables d'environnement.
 
-Le dÃ©pÃ´t ignore notamment :
+Le dépôt ignore notamment :
 - `.env*` locaux ;
-- clÃ©s et certificats privÃ©s ;
+- clés et certificats privés ;
 - APK / AAB ;
 - fichiers runtime SCORM ;
 - caches et logs.
 
-Si un secret est exposÃ© accidentellement :
+Si un secret est exposé accidentellement :
 1. ne pas simplement supprimer la ligne et continuer ;
-2. rÃ©voquer / faire tourner le secret ;
-3. nettoyer l'historique concernÃ© si nÃ©cessaire ;
-4. vÃ©rifier les journaux d'utilisation ;
-5. rescanner le dÃ©pÃ´t avant un nouveau push.
+2. révoquer / faire tourner le secret ;
+3. nettoyer l'historique concerné si nécessaire ;
+4. vérifier les journaux d'utilisation ;
+5. rescanner le dépôt avant un nouveau push.
 
-## Versions supportÃ©es
+## Versions supportées
 
-La baseline PFE courante est la seule version activement maintenue dans ce dÃ©pÃ´t. Les anciennes copies locales et archives historiques ne sont pas considÃ©rÃ©es comme des versions supportÃ©es.
+La baseline PFE courante est la seule version activement maintenue dans ce dépôt. Les anciennes copies locales et archives historiques ne sont pas considérées comme des versions supportées.

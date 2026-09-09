@@ -4,22 +4,22 @@ Le backend SmartTraining AI est construit en Java 17 avec Spring Boot et Spring 
 
 ## Services
 
-| Service | Port | RÃ´le |
+| Service | Port | Rôle |
 |---|---:|---|
 | discovery-service | 8761 | Eureka Server |
-| api-gateway | 8080 | entrÃ©e API et routage |
-| auth-service | 8081 | identitÃ©, authentification, rÃ´les |
-| training-service | 8082 | cÅ“ur LMS, SCORM, groupes, parcours |
+| api-gateway | 8080 | entrée API et routage |
+| auth-service | 8081 | identité, authentification, rôles |
+| training-service | 8082 | cœur LMS, SCORM, groupes, parcours |
 | evaluation-service | 8083 | quiz et scores |
 | analytics-service | 8084 | progression, analytics, risques, assistant |
 
-## DÃ©marrage local
+## Démarrage local
 
-PrÃ©requis :
+Prérequis :
 - Java 17 ;
 - Maven ;
 - MySQL 8 ;
-- variables d'environnement nÃ©cessaires.
+- variables d'environnement nécessaires.
 
 Dans chaque service :
 
@@ -27,7 +27,7 @@ Dans chaque service :
 mvn spring-boot:run
 ```
 
-Ordre recommandÃ© :
+Ordre recommandé :
 1. discovery-service ;
 2. auth-service ;
 3. training-service ;
@@ -35,13 +35,13 @@ Ordre recommandÃ© :
 5. analytics-service ;
 6. api-gateway.
 
-Le service FastAPI sur le port 8000 doit Ãªtre actif pour les fonctions IA d'Analytics.
+Le service FastAPI sur le port 8000 doit être actif pour les fonctions IA d'Analytics.
 
 ## Tests
 
-Les tests backend sont placÃ©s sous `src/test/`.
+Les tests backend sont placés sous `src/test/`.
 
-ExÃ©cution pour un service :
+Exécution pour un service :
 
 ```powershell
 mvn test
@@ -55,18 +55,18 @@ mvn clean package
 
 ## Configuration
 
-Les fichiers `application.yml` de ce dÃ©pÃ´t candidat ont Ã©tÃ© assainis : aucune valeur sensible ne doit Ãªtre inscrite en dur.
+Les fichiers `application.yml` de ce dépôt candidat ont été assainis : aucune valeur sensible ne doit être inscrite en dur.
 
 Les profils Docker utilisent des variables d'environnement pour les bases, JWT et URLs internes.
 
-## ObservabilitÃ©
+## Observabilité
 
 Les services exposent Spring Boot Actuator :
 - `/actuator/health`
 - `/actuator/info`
 
-## DonnÃ©es runtime
+## Données runtime
 
-`training-service/uploads/` n'est pas versionnÃ©.
+`training-service/uploads/` n'est pas versionné.
 
-Ce dossier reÃ§oit les mÃ©dias et contenus SCORM importÃ©s et doit Ãªtre gÃ©rÃ© comme stockage persistant sÃ©parÃ©.
+Ce dossier reçoit les médias et contenus SCORM importés et doit être géré comme stockage persistant séparé.

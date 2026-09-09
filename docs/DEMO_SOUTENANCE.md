@@ -1,10 +1,10 @@
-# DÃ©monstration de soutenance
+# Démonstration de soutenance
 
-Ce document propose un fil de dÃ©monstration court et cohÃ©rent. Il ne remplace pas le discours oral : il sert de garde-fou pour montrer l'architecture, le produit et les choix techniques sans se disperser.
+Ce document propose un fil de démonstration court et cohérent. Il ne remplace pas le discours oral : il sert de garde-fou pour montrer l'architecture, le produit et les choix techniques sans se disperser.
 
-## 1. Introduction â€” 30 secondes
+## 1. Introduction — 30 secondes
 
-PrÃ©senter SmartTraining AI comme un LMS multiplateforme composÃ© de :
+Présenter SmartTraining AI comme un LMS multiplateforme composé de :
 - Web ;
 - Mobile ;
 - microservices Spring Boot ;
@@ -13,32 +13,32 @@ PrÃ©senter SmartTraining AI comme un LMS multiplateforme composÃ© de :
 - service ML FastAPI ;
 - assistant IA.
 
-Message Ã  faire passer : le projet n'est pas une seule interface, mais un systÃ¨me complet.
+Message à faire passer : le projet n'est pas une seule interface, mais un système complet.
 
-## 2. Architecture â€” 1 minute
+## 2. Architecture — 1 minute
 
-Montrer le schÃ©ma du README.
+Montrer le schéma du README.
 
 Expliquer simplement :
-- Web et Mobile consomment la mÃªme API ;
-- la Gateway est le point d'entrÃ©e ;
-- Eureka permet la dÃ©couverte des services ;
-- chaque microservice a une responsabilitÃ© ;
+- Web et Mobile consomment la même API ;
+- la Gateway est le point d'entrée ;
+- Eureka permet la découverte des services ;
+- chaque microservice a une responsabilité ;
 - Analytics communique avec FastAPI pour l'IA ;
 - les secrets ne sont pas dans le code.
 
-## 3. Parcours LMS â€” 2 minutes
+## 3. Parcours LMS — 2 minutes
 
-Ã€ partir d'un compte de dÃ©monstration dÃ©jÃ  prÃ©parÃ© :
+À partir d'un compte de démonstration déjà préparé :
 1. ouvrir une formation ;
-2. montrer modules et leÃ§ons ;
+2. montrer modules et leçons ;
 3. ouvrir une ressource ;
 4. montrer un package SCORM ;
 5. revenir sur la progression.
 
-Ne pas crÃ©er des donnÃ©es complexes en direct si elles peuvent dÃ©jÃ  Ãªtre prÃ©parÃ©es.
+Ne pas créer des données complexes en direct si elles peuvent déjà être préparées.
 
-## 4. Ã‰valuation â€” 1 minute
+## 4. Évaluation — 1 minute
 
 Montrer :
 - un quiz ;
@@ -46,13 +46,13 @@ Montrer :
 - le score ;
 - l'impact sur le suivi.
 
-Expliquer que l'Ã©valuation appartient Ã  un microservice sÃ©parÃ©.
+Expliquer que l'évaluation appartient à un microservice séparé.
 
-## 5. Analytics et IA prÃ©dictive â€” 2 minutes
+## 5. Analytics et IA prédictive — 2 minutes
 
 Montrer la vue de suivi :
 - progression ;
-- activitÃ© ;
+- activité ;
 - risque ;
 - alertes / recommandations ;
 - intervention si pertinente.
@@ -62,32 +62,32 @@ Puis expliquer le pipeline ML :
 - Logistic Regression ;
 - FastAPI ;
 - weak label du prototype ;
-- mÃ©triques ;
-- limite clairement assumÃ©e.
+- métriques ;
+- limite clairement assumée.
 
 Le point important pour le jury est de distinguer :
-- le modÃ¨le prÃ©dictif ;
-- les rÃ¨gles de garde-fou ;
-- l'assistant gÃ©nÃ©ratif.
+- le modèle prédictif ;
+- les règles de garde-fou ;
+- l'assistant génératif.
 
-## 6. Assistant IA â€” 1 minute
+## 6. Assistant IA — 1 minute
 
 Poser une question utile au LMS.
 
 Expliquer le chemin :
-Web/Mobile â†’ Gateway â†’ Analytics â†’ contexte autorisÃ© â†’ FastAPI â†’ Gemini.
+Web/Mobile → Gateway → Analytics → contexte autorisé → FastAPI → Gemini.
 
 Insister sur deux points :
-- la clÃ© Gemini est cÃ´tÃ© serveur ;
-- le contexte transmis dÃ©pend du rÃ´le et des donnÃ©es autorisÃ©es.
+- la clé Gemini est côté serveur ;
+- le contexte transmis dépend du rôle et des données autorisées.
 
-## 7. DÃ©ploiement â€” 1 minute
+## 7. Déploiement — 1 minute
 
 Montrer :
 - site Web HTTPS ;
 - API publique ;
-- Ã©ventuellement le health check ;
-- Android installÃ© ou Google Play test fermÃ©.
+- éventuellement le health check ;
+- Android installé ou Google Play test fermé.
 
 Expliquer :
 - VPS Ubuntu ;
@@ -96,42 +96,42 @@ Expliquer :
 - HTTPS ;
 - services internes non directement publics.
 
-## 8. Conclusion â€” 30 secondes
+## 8. Conclusion — 30 secondes
 
-RÃ©sumer les apports :
+Résumer les apports :
 - architecture microservices ;
-- interopÃ©rabilitÃ© SCORM ;
-- mÃªme backend pour Web et Mobile ;
+- interopérabilité SCORM ;
+- même backend pour Web et Mobile ;
 - Learning Analytics ;
 - ML explicable ;
-- assistant IA contextualisÃ© ;
-- dÃ©ploiement rÃ©el.
+- assistant IA contextualisé ;
+- déploiement réel.
 
-## Questions techniques Ã  maÃ®triser
+## Questions techniques à maîtriser
 
 ### Pourquoi des microservices ?
-SÃ©parer les responsabilitÃ©s mÃ©tier, isoler les Ã©volutions et permettre un dÃ©ploiement par service.
+Séparer les responsabilités métier, isoler les évolutions et permettre un déploiement par service.
 
 ### Pourquoi une API Gateway ?
-Fournir une entrÃ©e unique aux clients et centraliser le routage et une partie de la sÃ©curitÃ©.
+Fournir une entrée unique aux clients et centraliser le routage et une partie de la sécurité.
 
 ### Pourquoi Eureka ?
-Permettre aux services de se dÃ©couvrir par nom plutÃ´t que par adresse fixe.
+Permettre aux services de se découvrir par nom plutôt que par adresse fixe.
 
 ### Pourquoi JWT ?
-Fournir une authentification stateless adaptÃ©e aux clients Web/Mobile et aux APIs.
+Fournir une authentification stateless adaptée aux clients Web/Mobile et aux APIs.
 
 ### Pourquoi Logistic Regression ?
-ModÃ¨le simple, rapide et explicable, pertinent pour un prototype acadÃ©mique de classification binaire.
+Modèle simple, rapide et explicable, pertinent pour un prototype académique de classification binaire.
 
 ### Pourquoi FastAPI ?
-Exposer facilement le pipeline Python/ML via HTTP tout en gardant le backend mÃ©tier en Java.
+Exposer facilement le pipeline Python/ML via HTTP tout en gardant le backend métier en Java.
 
-### Quelle diffÃ©rence entre IA prÃ©dictive et assistant IA ?
-Le modÃ¨le ML calcule un risque Ã  partir de features structurÃ©es. L'assistant Gemini gÃ©nÃ¨re du langage naturel Ã  partir d'une question et d'un contexte autorisÃ©.
+### Quelle différence entre IA prédictive et assistant IA ?
+Le modèle ML calcule un risque à partir de features structurées. L'assistant Gemini génère du langage naturel à partir d'une question et d'un contexte autorisé.
 
 ### Pourquoi ne pas mettre les packages SCORM dans Git ?
-Ce sont des contenus importÃ©s Ã  l'exÃ©cution, volumineux et variables. Git contient le moteur et le code qui les gÃ¨rent, pas les donnÃ©es runtime.
+Ce sont des contenus importés à l'exécution, volumineux et variables. Git contient le moteur et le code qui les gèrent, pas les données runtime.
 
-### Quelle limite principale de l'IA prÃ©dictive ?
-La cible est un weak label synthÃ©tique. Une vraie production nÃ©cessiterait des labels rÃ©els observÃ©s et une nouvelle validation.
+### Quelle limite principale de l'IA prédictive ?
+La cible est un weak label synthétique. Une vraie production nécessiterait des labels réels observés et une nouvelle validation.

@@ -1,8 +1,8 @@
 # SmartTraining AI / FastAPI
 
 Service Python responsable :
-- de la prÃ©diction du risque apprenant ;
-- de l'assistant IA gÃ©nÃ©ratif.
+- de la prédiction du risque apprenant ;
+- de l'assistant IA génératif.
 
 ## Stack
 
@@ -14,7 +14,7 @@ Service Python responsable :
 - joblib 1.5.3 ;
 - Pydantic 2.13.4.
 
-## DÃ©marrage
+## Démarrage
 
 ```powershell
 cd ai-service
@@ -28,45 +28,45 @@ python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 - `POST /predict-risk`
 - `POST /assistant/chat`
 
-## ModÃ¨le de risque
+## Modèle de risque
 
-Le pipeline chargÃ© au dÃ©marrage est une Logistic Regression scikit-learn sÃ©rialisÃ©e avec joblib.
+Le pipeline chargé au démarrage est une Logistic Regression scikit-learn sérialisée avec joblib.
 
-Les mÃ©tadonnÃ©es du modÃ¨le contiennent :
+Les métadonnées du modèle contiennent :
 - liste des features ;
-- mÃ©thode d'entraÃ®nement ;
-- hyperparamÃ¨tres ;
-- mÃ©triques ;
+- méthode d'entraînement ;
+- hyperparamètres ;
+- métriques ;
 - avertissement sur le weak label.
 
-Voir `../docs/AI_MODEL.md` depuis la racine du dÃ©pÃ´t.
+Voir `../docs/AI_MODEL.md` depuis la racine du dépôt.
 
 ## Assistant
 
-La clÃ© Gemini est lue depuis :
+La clé Gemini est lue depuis :
 
 `GEMINI_API_KEY`
 
-ParamÃ¨tres complÃ©mentaires :
+Paramètres complémentaires :
 - `GEMINI_MODEL` ;
 - `GEMINI_TIMEOUT_SECONDS` ;
 - `SMARTTRAINING_TIMEZONE`.
 
-Aucune clÃ© Gemini ne doit apparaÃ®tre dans Git.
+Aucune clé Gemini ne doit apparaître dans Git.
 
 ## Structure
 
 ```text
 07_IA_FastAPI/
-â”œâ”€â”€ ai-service/
-â”‚   â”œâ”€â”€ app/
-â”‚   â”œâ”€â”€ models/
-â”‚   â”œâ”€â”€ Dockerfile
-â”‚   â””â”€â”€ requirements.txt
-â”œâ”€â”€ datasets/
-â”œâ”€â”€ models/
-â”œâ”€â”€ notebooks/
-â””â”€â”€ scripts/
+├── ai-service/
+│   ├── app/
+│   ├── models/
+│   ├── Dockerfile
+│   └── requirements.txt
+├── datasets/
+├── models/
+├── notebooks/
+└── scripts/
 ```
 
-Le dataset, le notebook, les mÃ©tadonnÃ©es et les scripts sont conservÃ©s pour la reproductibilitÃ© acadÃ©mique du PFE.
+Le dataset, le notebook, les métadonnées et les scripts sont conservés pour la reproductibilité académique du PFE.
