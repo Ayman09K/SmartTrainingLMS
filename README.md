@@ -173,6 +173,7 @@ L'objectif du projet est de proposer une expérience cohérente sur **Web et Mob
   <img src="https://img.shields.io/badge/React-19-61DAFB?style=flat-square" alt="React" />
   <img src="https://img.shields.io/badge/TypeScript-6-3178C6?style=flat-square" alt="TypeScript" />
   <img src="https://img.shields.io/badge/Expo-56-000020?style=flat-square" alt="Expo" />
+  <img src="https://img.shields.io/badge/NativeWind-Mobile%20UI-38BDF8?style=flat-square" alt="NativeWind" />
   <img src="https://img.shields.io/badge/FastAPI-Python-009688?style=flat-square" alt="FastAPI" />
   <img src="https://img.shields.io/badge/Docker-VPS-2496ED?style=flat-square" alt="Docker" />
 </p>
@@ -188,7 +189,7 @@ L'objectif du projet est de proposer une expérience cohérente sur **Web et Mob
   <tr><td><strong>Gateway & Discovery</strong></td><td>Spring Cloud Gateway, Netflix Eureka</td></tr>
   <tr><td><strong>Données</strong></td><td>MySQL 8</td></tr>
   <tr><td><strong>Web</strong></td><td>React, TypeScript, Vite, Material UI, ECharts</td></tr>
-  <tr><td><strong>Mobile</strong></td><td>React Native, Expo, Expo Router, TypeScript</td></tr>
+  <tr><td><strong>Mobile</strong></td><td>React Native, Expo, Expo Router, NativeWind, TypeScript</td></tr>
   <tr><td><strong>IA</strong></td><td>Python, FastAPI, pandas, scikit-learn, joblib</td></tr>
   <tr><td><strong>Assistant</strong></td><td>Gemini via service FastAPI</td></tr>
   <tr><td><strong>Production</strong></td><td>Docker, Ubuntu VPS, Caddy, HTTPS</td></tr>
