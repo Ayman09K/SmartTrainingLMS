@@ -1,61 +1,63 @@
 {
-  "expo": {
-    "name": "SmartTraining",
-    "slug": "smarttraining-mobile",
-    "version": "1.0.7",
-    "orientation": "default",
-    "icon": "./assets/branding/SmartTraining_brand_mark.png",
-    "scheme": "smarttrainingmobile",
-    "userInterfaceStyle": "automatic",
-    "ios": {
-      "icon": "./assets/branding/SmartTraining_brand_mark.png",
-      "bundleIdentifier": "com.smarttraininglms.app",
-      "buildNumber": "8",
-      "config": {
-        "usesNonExemptEncryption": false
-      }
-    },
-    "android": {
-      "softwareKeyboardLayoutMode": "resize",
-      "adaptiveIcon": {
-        "backgroundColor": "#FFFFFF",
-        "foregroundImage": "./assets/branding/SmartTraining_brand_mark.png"
-      },
-      "predictiveBackGestureEnabled": false,
-      "package": "com.smarttraininglms.app",
-      "versionCode": 8
-    },
-    "web": {
-      "output": "static",
-      "favicon": "./assets/branding/SmartTraining_favicon_tab_v2_64.png",
-      "bundler": "metro"
-    },
-    "plugins": [
-      "expo-router",
-      [
-        "expo-splash-screen",
-        {
-          "backgroundColor": "#FFFFFF",
-          "image": "./assets/branding/SmartTraining_brand_mark.png",
-          "imageWidth": 140
-        }
-      ],
-      "expo-secure-store",
-      "expo-font",
-      "expo-image",
-      "expo-status-bar",
-      "expo-web-browser",
-      "expo-sharing"
-    ],
-    "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
-    },
-    "extra": {
-      "router": {},
-      "eas": {
-        "projectId": "f5e7b48c-01af-487f-9876-839d43fb7c78"
-      }
-    }
-  }
+    "expo":  {
+                 "name":  "SmartTraining",
+                 "slug":  "smarttraining-mobile",
+                 "version":  "1.0.8",
+                 "orientation":  "default",
+                 "icon":  "./assets/branding/SmartTraining_brand_mark.png",
+                 "scheme":  "smarttrainingmobile",
+                 "userInterfaceStyle":  "automatic",
+                 "ios":  {
+                             "icon":  "./assets/branding/SmartTraining_brand_mark.png",
+                             "bundleIdentifier":  "com.smarttraininglms.app",
+                             "buildNumber":  "8",
+                             "config":  {
+                                            "usesNonExemptEncryption":  false
+                                        }
+                         },
+                 "android":  {
+                                 "softwareKeyboardLayoutMode":  "resize",
+                                 "adaptiveIcon":  {
+                                                      "backgroundColor":  "#FFFFFF",
+                                                      "foregroundImage":  "./assets/branding/SmartTraining_brand_mark.png"
+                                                  },
+                                 "predictiveBackGestureEnabled":  false,
+                                 "package":  "com.smarttraininglms.app",
+                                 "versionCode":  9
+                             },
+                 "web":  {
+                             "output":  "static",
+                             "favicon":  "./assets/branding/SmartTraining_favicon_tab_v2_64.png",
+                             "bundler":  "metro"
+                         },
+                 "plugins":  [
+                                 "expo-router",
+                                 [
+                                     "expo-splash-screen",
+                                     {
+                                         "backgroundColor":  "#FFFFFF",
+                                         "image":  "./assets/onboarding/SmartTraining_brand_mark.png",
+                                         "imageWidth":  150
+                                     }
+                                 ],
+                                 "expo-secure-store",
+                                 "expo-font",
+                                 "expo-image",
+                                 "expo-status-bar",
+                                 "expo-web-browser",
+                                 "expo-sharing"
+                             ],
+                 "experiments":  {
+                                     "typedRoutes":  true,
+                                     "reactCompiler":  true
+                                 },
+                 "extra":  {
+                               "router":  {
+
+                                          },
+                               "eas":  {
+                                           "projectId":  "f5e7b48c-01af-487f-9876-839d43fb7c78"
+                                       }
+                           }
+             }
 }

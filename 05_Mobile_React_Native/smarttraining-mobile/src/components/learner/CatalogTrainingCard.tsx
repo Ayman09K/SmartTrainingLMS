@@ -1,16 +1,20 @@
+import { SymbolView } from "expo-symbols";
+import { type ComponentProps } from "react";
 import {
-  StyleSheet,
+  ActivityIndicator,
+  Pressable,
   Text,
   TextInput,
   View,
 } from "react-native";
 
-import AppButton from "../AppButton";
 import { TrainingCover } from "../ux/RichPrimitives";
+import {
+  buildLearnerMediaUrl,
+} from "../../features/trainings/learnerTrainingService";
 import {
   useSmartTrainingTheme,
 } from "../../theme/provider/SmartTrainingThemeProvider";
-import { buildLearnerMediaUrl } from "../../features/trainings/learnerTrainingService";
 import {
   LearnerCatalogTraining,
   LearnerEnrollmentMode,
@@ -31,19 +35,86 @@ type CatalogTrainingCardProps = {
   onOpenTraining: () => void;
 };
 
-function accessLabel(mode?: string | null): string {
-  if (mode === "SELF_ENROLLMENT") return "Inscription libre";
-  if (mode === "ACCESS_CODE") return "Code d\u2019acc\u00E8s";
-  if (mode === "ASSIGNMENT_ONLY") return "Acc\u00E8s sur demande";
-  if (mode === "INVITATION") return "Sur invitation";
-  return "Acc\u00E8s encadr\u00E9";
+type SymbolName = ComponentProps<typeof SymbolView>["name"];
+
+function accessPresentation(
+  mode?: string | null,
+): {
+  label: string;
+  tint: string;
+  background: string;
+  icon: SymbolName;
+} {
+  if (mode === "SELF_ENROLLMENT") {
+    return {
+      label: "Inscription libre",
+      tint: "#16A36A",
+      background: "#ECFDF3",
+      icon: {
+        ios: "person.badge.plus",
+        android: "person_add",
+        web: "person_add",
+      },
+    };
+  }
+
+  if (mode === "ACCESS_CODE") {
+    return {
+      label: "Code d’accès",
+      tint: "#7C3AED",
+      background: "#F3EEFF",
+      icon: {
+        ios: "key.fill",
+        android: "key",
+        web: "key",
+      },
+    };
+  }
+
+  if (mode === "ASSIGNMENT_ONLY") {
+    return {
+      label: "Sur demande",
+      tint: "#D97706",
+      background: "#FFF7ED",
+      icon: {
+        ios: "hand.raised.fill",
+        android: "front_hand",
+        web: "front_hand",
+      },
+    };
+  }
+
+  if (mode === "INVITATION") {
+    return {
+      label: "Sur invitation",
+      tint: "#2563EB",
+      background: "#EFF6FF",
+      icon: {
+        ios: "envelope.fill",
+        android: "mail",
+        web: "mail",
+      },
+    };
+  }
+
+  return {
+    label: "Accès encadré",
+    tint: "#667085",
+    background: "#F2F4F7",
+    icon: {
+      ios: "lock.fill",
+      android: "lock",
+      web: "lock",
+    },
+  };
 }
 
 function levelLabel(level?: string | null): string {
-  if (level === "DEBUTANT") return "D\u00E9butant";
-  if (level === "INTERMEDIAIRE") return "Interm\u00E9diaire";
-  if (level === "AVANCE") return "Avanc\u00E9";
-  return level || "Niveau non indiqu\u00E9";
+  if (level === "DEBUTANT") return "Débutant";
+  if (level === "INTERMEDIAIRE") return "Intermédiaire";
+  if (level === "AVANCE") return "Avancé";
+
+  return level || "Niveau non indiqué";
 }
 
 function normalizedMode(
@@ -59,6 +130,118 @@ function normalizedMode(
   }
 
   return null;
+}
+
+function MetaPill({
+  icon,
+  value,
+  tint,
+  background,
+}: {
+  icon: SymbolName;
+  value: string;
+  tint: string;
+  background: string;
+}) {
+  return (
+    <View className="min-h-[29px] rounded-[10px] border border-[#EEE9F0] bg-[#FBFAFC] px-[6px] flex-row items-center">
+      <View
+        className="w-[22px] h-[22px] rounded-[7px] mr-[5px] items-center justify-center" style={{ backgroundColor: background }}
+      >
+        <SymbolView
+          name={icon}
+          tintColor={tint}
+          size={11}
+          weight="bold"
+        />
+      </View>
+
+      <Text
+        numberOfLines={1}
+        className="text-[#475467] text-[10px] font-extrabold"
+      >
+        {value}
+      </Text>
+    </View>
+  );
+}
+
+function PrimaryAction({
+  eyebrow,
+  label,
+  icon,
+  loading,
+  disabled = false,
+  onPress,
+  tone = "primary",
+}: {
+  eyebrow: string;
+  label: string;
+  icon: SymbolName;
+  loading?: boolean;
+  disabled?: boolean;
+  onPress: () => void;
+  tone?: "primary" | "consult";
+}) {
+  const blocked = disabled || loading;
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{
+        disabled: blocked,
+      }}
+      disabled={blocked}
+      onPress={onPress}
+      android_ripple={{ color: "transparent" }}
+      className={`min-h-[52px] mt-[9px] rounded-[15px] border px-[7px] flex-row items-center ${(tone === "consult" ? "border-[#5B21B6] bg-[#5B21B6]" : "border-[#7C3AED] bg-[#7C3AED]")} ${(blocked ? "opacity-[0.5]" : "")}`}
+    >
+      <View className="w-[36px] h-[36px] rounded-[12px] mr-[9px] bg-[rgba(255,255,255,0.16)] items-center justify-center">
+        {loading ? (
+          <ActivityIndicator
+            size="small"
+            color="#FFFFFF"
+          />
+        ) : (
+          <SymbolView
+            name={icon}
+            tintColor="#FFFFFF"
+            size={13}
+            weight="bold"
+          />
+        )}
+      </View>
+
+      <View className="flex-1 min-w-[0px]">
+        <Text
+          numberOfLines={1}
+          className="text-[rgba(255,255,255,0.78)] text-[9px] leading-[11px] font-black tracking-[0.45px]"
+        >
+          {eyebrow}
+        </Text>
+
+        <Text
+          numberOfLines={1}
+          className="mt-[2px] text-[#FFFFFF] text-[12px] leading-[16px] font-black"
+        >
+          {label}
+        </Text>
+      </View>
+
+      <View className="w-[30px] h-[30px] rounded-[15px] bg-[rgba(255,255,255,0.16)] items-center justify-center">
+        <SymbolView
+          name={{
+            ios: "chevron.right",
+            android: "chevron_right",
+            web: "chevron_right",
+          }}
+          tintColor="#FFFFFF"
+          size={11}
+          weight="bold"
+        />
+      </View>
+    </Pressable>
+  );
 }
 
 export default function CatalogTrainingCard({
@@ -77,538 +260,379 @@ export default function CatalogTrainingCard({
 }: CatalogTrainingCardProps) {
   const { theme } = useSmartTrainingTheme();
 
-  const mode = normalizedMode(training.enrollmentMode);
+  const mode = normalizedMode(
+    training.enrollmentMode,
+  );
+
+  const access = accessPresentation(
+    training.enrollmentMode,
+  );
+
   const description =
     training.shortDescription ||
     training.description ||
-    "D\u00E9couvre le contenu et les objectifs de cette formation.";
+    "Découvre le contenu et les objectifs de cette formation.";
 
   return (
     <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: theme.colors.surface,
+      className="overflow-hidden rounded-[21px] border bg-[#FFFFFF]" style={[{ shadowOpacity: 0.035, shadowRadius: 8, shadowOffset: {
+      width: 0,
+      height: 3,
+    }, elevation: 1 }, {
           borderColor: theme.colors.border,
-          borderRadius: theme.shape.cardRadius,
-          borderWidth: theme.shape.borderWidth,
-          padding: theme.shape.cardPadding,
-          shadowColor: theme.colors.foreground,
-          shadowOpacity: theme.shape.shadowOpacity,
-        },
-      ]}
+          shadowColor: theme.colors.shadow,
+        }]}
     >
-      <View
-        style={[
-          styles.coverFrame,
-          { borderRadius: theme.shape.controlRadius },
-        ]}
-      >
+      <View className="h-[104px] overflow-hidden bg-[#F4F1F6]">
         <TrainingCover
           title={training.title}
-          coverUrl={buildLearnerMediaUrl(training.coverImageUrl)}
+          coverUrl={buildLearnerMediaUrl(
+            training.coverImageUrl,
+          )}
         />
-      </View>
 
-      <View style={styles.badgeRow}>
         <View
-          style={[
-            styles.accessBadge,
-            {
-              backgroundColor: theme.colors.surfaceSoft,
-              borderColor: theme.colors.accent,
-              borderWidth: Math.max(
-                1,
-                theme.shape.borderWidth,
-              ),
-            },
-          ]}
+          className="absolute top-[9px] left-[9px] min-h-[27px] px-[8px] rounded-full flex-row items-center gap-[5px]" style={{ backgroundColor: access.background }}
         >
+          <SymbolView
+            name={access.icon}
+            tintColor={access.tint}
+            size={10}
+            weight="bold"
+          />
+
           <Text
-            style={[
-              styles.accessBadgeText,
-              {
-                color: theme.colors.accent,
-              },
-            ]}
+            className="text-[12px] font-black" style={{ color: access.tint }}
           >
-            {accessLabel(training.enrollmentMode)}
+            {access.label}
           </Text>
         </View>
 
-        {training.category ? (
-          <View
-            style={[
-              styles.neutralBadge,
-              {
-                backgroundColor: theme.colors.surfaceElevated,
-                borderColor: theme.colors.border,
-                borderWidth: theme.shape.borderWidth,
-              },
-            ]}
-          >
-            <Text
-              style={[
-                styles.neutralBadgeText,
-                {
-                  color: theme.colors.foregroundMuted,
-                },
-              ]}
-            >
-              {training.category}
+        {enrolled ? (
+          <View className="absolute top-[9px] right-[9px] min-h-[27px] px-[8px] rounded-full bg-[#ECFDF3] flex-row items-center gap-[5px]">
+            <SymbolView
+              name={{
+                ios: "checkmark.seal.fill",
+                android: "verified",
+                web: "verified",
+              }}
+              tintColor="#16A36A"
+              size={10}
+              weight="bold"
+            />
+            <Text className="text-[#16A36A] text-[12px] font-black">
+              Inscrite
+            </Text>
+          </View>
+        ) : pendingRequest ? (
+          <View className="absolute top-[9px] right-[9px] min-h-[27px] px-[8px] rounded-full bg-[#FFF7ED] flex-row items-center gap-[5px]">
+            <SymbolView
+              name={{
+                ios: "clock.fill",
+                android: "schedule",
+                web: "schedule",
+              }}
+              tintColor="#D97706"
+              size={10}
+              weight="bold"
+            />
+            <Text className="text-[#D97706] text-[12px] font-black">
+              En attente
             </Text>
           </View>
         ) : null}
       </View>
 
-      <Text
-        style={[
-          styles.title,
-          {
-            color: theme.colors.foreground,
-          },
-        ]}
-      >
-        {training.title}
-      </Text>
-
-      <Text
-        numberOfLines={2}
-        style={[
-          styles.description,
-          {
-            color: theme.colors.foregroundMuted,
-          },
-        ]}
-      >
-        {description}
-      </Text>
-
-      <View style={styles.metaRow}>
-        <View
-          style={[
-            styles.metaPill,
-            {
-              backgroundColor: theme.colors.surfaceSoft,
-            },
-          ]}
-        >
-          <Text
-            style={[
-              styles.meta,
-              {
-                color: theme.colors.foregroundMuted,
-              },
-            ]}
-          >
-            {levelLabel(training.level)}
-          </Text>
-        </View>
-
-        <View
-          style={[
-            styles.metaPill,
-            {
-              backgroundColor: theme.colors.surfaceSoft,
-            },
-          ]}
-        >
-          <Text
-            style={[
-              styles.meta,
-              {
-                color: theme.colors.foregroundMuted,
-              },
-            ]}
-          >
-            {training.estimatedDurationHours
-              ? `${training.estimatedDurationHours} h`
-              : "Dur\u00E9e non indiqu\u00E9e"}
-          </Text>
-        </View>
-
-        {typeof training.averageRating === "number" &&
-        training.averageRating > 0 ? (
-          <View
-            style={[
-              styles.metaPill,
-              {
-                backgroundColor: theme.colors.surfaceSoft,
-              },
-            ]}
-          >
+      <View className="p-[11px]">
+        <View className="flex-row items-start gap-[8px]">
+          <View className="flex-1 min-w-[0px]">
             <Text
-              style={[
-                styles.meta,
-                {
-                  color: theme.colors.foregroundMuted,
-                },
-              ]}
+              numberOfLines={2}
+              className="text-[16px] leading-[21px] font-black tracking-[-0.15px]" style={{ color: theme.colors.foreground }}
             >
-              {training.averageRating.toFixed(1)} / 5
+              {training.title}
+            </Text>
+
+            <Text
+              numberOfLines={2}
+              className="mt-[3px] text-[12px] leading-[17px]" style={{
+                  color:
+                    theme.colors.foregroundMuted,
+                }}
+            >
+              {description}
             </Text>
           </View>
-        ) : null}
-      </View>
 
-      {enrolled ? (
-        <View
-          style={[
-            styles.stateBox,
-            {
-              backgroundColor: theme.colors.surfaceSoft,
-              borderColor: theme.colors.success,
-              borderWidth: Math.max(
-                1,
-                theme.shape.borderWidth,
-              ),
-              borderRadius: theme.shape.controlRadius,
-              padding: theme.shape.cardPadding,
-            },
-          ]}
-        >
-          <Text
-            style={[
-              styles.stateTitle,
-              {
-                color: theme.colors.success,
-              },
-            ]}
-          >
-            {"Inscription active"}
-          </Text>
-          <Text
-            style={[
-              styles.stateText,
-              {
-                color: theme.colors.foregroundMuted,
-              },
-            ]}
-          >
-            Cette formation est disponible dans ton espace de formation.
-          </Text>
-          <AppButton
-            title="Ouvrir la formation"
-            onPress={onOpenTraining}
-            variant="secondary"
-            style={styles.actionButton}
-          />
+          {training.category ? (
+            <View className="max-w-[118px] min-h-[27px] px-[8px] rounded-full bg-[#F3EEFF] justify-center">
+              <Text
+                numberOfLines={1}
+                className="text-[#7C3AED] text-[12px] font-black"
+              >
+                {training.category}
+              </Text>
+            </View>
+          ) : null}
         </View>
-      ) : pendingRequest ? (
-        <View
-          style={[
-            styles.stateBox,
-            {
-              backgroundColor: theme.colors.surfaceSoft,
-              borderColor: theme.colors.warning,
-              borderWidth: Math.max(
-                1,
-                theme.shape.borderWidth,
-              ),
-              borderRadius: theme.shape.controlRadius,
-              padding: theme.shape.cardPadding,
-            },
-          ]}
-        >
-          <Text
-            style={[
-              styles.stateTitle,
-              {
-                color: theme.colors.warning,
-              },
-            ]}
-          >
-            Demande en attente
-          </Text>
-          <Text
-            style={[
-              styles.stateText,
-              {
-                color: theme.colors.foregroundMuted,
-              },
-            ]}
-          >
-            {
-              "Ta demande a bien \u00E9t\u00E9 transmise. Tu verras la formation dans ton parcours d\u00E8s qu\u2019elle sera accept\u00E9e."
+
+        <View className="mt-[8px] flex-row flex-wrap gap-[6px]">
+          <MetaPill
+            icon={{
+              ios: "chart.bar.fill",
+              android: "bar_chart",
+              web: "bar_chart",
+            }}
+            value={levelLabel(training.level)}
+            tint="#7C3AED"
+            background="#F3EEFF"
+          />
+
+          <MetaPill
+            icon={{
+              ios: "clock.fill",
+              android: "schedule",
+              web: "schedule",
+            }}
+            value={
+              training.estimatedDurationHours
+                ? `${training.estimatedDurationHours} h`
+                : "Durée non indiquée"
             }
-          </Text>
-        </View>
-      ) : mode === "SELF_ENROLLMENT" ? (
-        <View
-          style={[
-            styles.actionArea,
-            {
-              borderTopColor: theme.colors.border,
-              borderTopWidth: theme.shape.borderWidth,
-            },
-          ]}
-        >
-          <Text
-            style={[
-              styles.actionHelp,
-              {
-                color: theme.colors.foregroundMuted,
-              },
-            ]}
-          >
-            {
-              "Cette formation est ouverte \u00E0 l\u2019inscription imm\u00E9diate."
-            }
-          </Text>
-          <AppButton
-            title={"S\u2019inscrire"}
-            onPress={onSelfEnroll}
-            loading={busy}
-            style={styles.actionButton}
+            tint="#2563EB"
+            background="#EFF6FF"
           />
+
+          {typeof training.averageRating === "number" &&
+          training.averageRating > 0 ? (
+            <MetaPill
+              icon={{
+                ios: "star.fill",
+                android: "star",
+                web: "star",
+              }}
+              value={`${training.averageRating.toFixed(1)} / 5`}
+              tint="#D97706"
+              background="#FFF7ED"
+            />
+          ) : null}
         </View>
-      ) : mode === "ACCESS_CODE" ? (
-        <View
-          style={[
-            styles.actionArea,
-            {
-              borderTopColor: theme.colors.border,
-              borderTopWidth: theme.shape.borderWidth,
-            },
-          ]}
-        >
-          <Text
-            style={[
-              styles.actionHelp,
-              {
-                color: theme.colors.foregroundMuted,
-              },
-            ]}
-          >
-            {
-              "Saisis le code communiqu\u00E9 par ton formateur ou ton organisation."
-            }
-          </Text>
-          <TextInput
-            style={[
-              styles.input,
-              {
-                borderColor: theme.colors.border,
-                backgroundColor: theme.colors.surfaceElevated,
-                color: theme.colors.foreground,
-                borderRadius: theme.shape.controlRadius,
-                borderWidth: theme.shape.borderWidth,
-                minHeight: theme.shape.minTouchTarget,
-              },
-            ]}
-            placeholder={"Code d\u2019acc\u00E8s"}
-          accessibilityLabel={"Code d\u2019acc\u00E8s"}
-            placeholderTextColor={theme.colors.foregroundSubtle}
-            value={accessCode}
-            onChangeText={onAccessCodeChange}
-            autoCorrect={false}
-            autoCapitalize="none"
-          />
-          <AppButton
-            title="Valider le code"
-            onPress={onAccessCodeEnroll}
-            loading={busy}
-            disabled={!accessCode.trim()}
-            style={styles.actionButton}
-          />
-        </View>
-      ) : mode === "ASSIGNMENT_ONLY" ? (
-        <View
-          style={[
-            styles.actionArea,
-            {
-              borderTopColor: theme.colors.border,
-              borderTopWidth: theme.shape.borderWidth,
-            },
-          ]}
-        >
-          <Text
-            style={[
-              styles.actionHelp,
-              {
-                color: theme.colors.foregroundMuted,
-              },
-            ]}
-          >
-            {
-              "Cette formation n\u00E9cessite l\u2019accord d\u2019un formateur ou d\u2019un administrateur."
-            }
-          </Text>
-          <TextInput
-            style={[
-              styles.input,
-              styles.messageInput,
-              {
-                borderColor: theme.colors.border,
-                backgroundColor: theme.colors.surfaceElevated,
-                color: theme.colors.foreground,
-                borderRadius: theme.shape.controlRadius,
-                borderWidth: theme.shape.borderWidth,
-                minHeight: Math.max(
-                  96,
-                  theme.shape.minTouchTarget,
-                ),
-              },
-            ]}
-            placeholder={
-              "Message facultatif pour accompagner ta demande"
-            }
-          accessibilityLabel={"Message facultatif pour la demande d\u2019acc\u00E8s"}
-            placeholderTextColor={theme.colors.foregroundSubtle}
-            value={accessMessage}
-            onChangeText={onAccessMessageChange}
-            multiline
-            maxLength={500}
-            textAlignVertical="top"
-          />
-          <AppButton
-            title={"Demander l\u2019acc\u00E8s"}
-            onPress={onRequestAccess}
-            loading={busy}
-            style={styles.actionButton}
-          />
-        </View>
-      ) : (
-        <View
-          style={[
-            styles.stateBox,
-            {
-              backgroundColor: theme.colors.surfaceSoft,
-              borderColor: theme.colors.border,
-              borderWidth: theme.shape.borderWidth,
-              borderRadius: theme.shape.controlRadius,
-              padding: theme.shape.cardPadding,
-            },
-          ]}
-        >
-          <Text
-            style={[
-              styles.stateTitle,
-              {
-                color: theme.colors.foreground,
-              },
-            ]}
-          >
-            {mode === "INVITATION"
-              ? "Acc\u00E8s sur invitation"
-              : "Acc\u00E8s encadr\u00E9"}
-          </Text>
-          <Text
-            style={[
-              styles.stateText,
-              {
-                color: theme.colors.foregroundMuted,
-              },
-            ]}
-          >
-            {mode === "INVITATION"
-              ? "L\u2019inscription sera disponible lorsqu\u2019une invitation t\u2019aura \u00E9t\u00E9 adress\u00E9e."
-              : "Le mode d\u2019acc\u00E8s de cette formation ne permet pas une inscription directe depuis le catalogue."}
-          </Text>
-        </View>
-      )}
+
+        {enrolled ? (
+          <View className="mt-[9px] rounded-[15px] border border-[#BBF7D0] bg-[#F0FDF4] p-[9px]">
+            <View className="flex-row items-center">
+              <View className="w-[34px] h-[34px] rounded-[11px] mr-[8px] bg-[#FFFFFF] items-center justify-center">
+                <SymbolView
+                  name={{
+                    ios: "checkmark.circle.fill",
+                    android: "check_circle",
+                    web: "check_circle",
+                  }}
+                  tintColor="#16A36A"
+                  size={15}
+                  weight="bold"
+                />
+              </View>
+
+              <View className="flex-1 min-w-[0px]">
+                <Text className="text-[#15803D] text-[11px] font-black">
+                  Inscription active
+                </Text>
+                <Text className="mt-[2px] text-[#667085] text-[10px] leading-[14px]">
+                  Cette formation est déjà disponible dans ton espace.
+                </Text>
+              </View>
+            </View>
+
+            <PrimaryAction
+              eyebrow="FORMATION DISPONIBLE"
+              label="Consulter la formation"
+              tone="consult"
+              icon={{
+                ios: "play.fill",
+                android: "play_arrow",
+                web: "play_arrow",
+              }}
+              onPress={onOpenTraining}
+            />
+          </View>
+        ) : pendingRequest ? (
+          <View className="mt-[9px] rounded-[15px] border border-[#FED7AA] bg-[#FFF7ED] p-[9px]">
+            <View className="flex-row items-center">
+              <View className="w-[34px] h-[34px] rounded-[11px] mr-[8px] bg-[#FFFFFF] items-center justify-center">
+                <SymbolView
+                  name={{
+                    ios: "clock.fill",
+                    android: "schedule",
+                    web: "schedule",
+                  }}
+                  tintColor="#D97706"
+                  size={15}
+                  weight="bold"
+                />
+              </View>
+
+              <View className="flex-1 min-w-[0px]">
+                <Text className="text-[#B45309] text-[11px] font-black">
+                  Demande en attente
+                </Text>
+                <Text className="mt-[2px] text-[#667085] text-[10px] leading-[14px]">
+                  Ta demande a été transmise. L’accès sera disponible après décision.
+                </Text>
+              </View>
+            </View>
+          </View>
+        ) : mode === "SELF_ENROLLMENT" ? (
+          <View className="mt-[9px] rounded-[15px] border border-[#E5D9F5] bg-[#FAF7FF] p-[9px]">
+            <Text className="text-[#4C1D95] text-[12px] font-black">
+              Inscription immédiate
+            </Text>
+            <Text className="mt-[2px] text-[#667085] text-[11px] leading-[15px]">
+              Cette formation est ouverte à l’inscription libre.
+            </Text>
+
+            <PrimaryAction
+              eyebrow="INSCRIPTION"
+              label="S’inscrire à la formation"
+              icon={{
+                ios: "person.badge.plus",
+                android: "person_add",
+                web: "person_add",
+              }}
+              loading={busy}
+              onPress={onSelfEnroll}
+            />
+          </View>
+        ) : mode === "ACCESS_CODE" ? (
+          <View className="mt-[9px] rounded-[15px] border border-[#E5D9F5] bg-[#FAF7FF] p-[9px]">
+            <Text className="text-[#4C1D95] text-[12px] font-black">
+              Code d’accès requis
+            </Text>
+            <Text className="mt-[2px] text-[#667085] text-[11px] leading-[15px]">
+              Saisis le code communiqué par ton formateur ou ton organisation.
+            </Text>
+
+            <View className="min-h-[44px] mt-[8px] rounded-[12px] border border-[#E5D9F5] bg-[#FFFFFF] px-[6px] flex-row items-center">
+              <View className="w-[30px] h-[30px] rounded-[9px] bg-[#F3EEFF] items-center justify-center">
+                <SymbolView
+                  name={{
+                    ios: "key.fill",
+                    android: "key",
+                    web: "key",
+                  }}
+                  tintColor="#7C3AED"
+                  size={13}
+                  weight="bold"
+                />
+              </View>
+
+              <TextInput
+                accessibilityLabel="Code d’accès"
+                value={accessCode}
+                onChangeText={onAccessCodeChange}
+                placeholder="Code d’accès"
+                placeholderTextColor={
+                  theme.colors.foregroundSubtle
+                }
+                autoCorrect={false}
+                autoCapitalize="none"
+                className="flex-1 min-w-[0px] min-h-[42px] px-[8px] text-[12px]" style={{
+                    color: theme.colors.foreground,
+                  }}
+              />
+            </View>
+
+            <PrimaryAction
+              eyebrow="ACCÈS"
+              label="Valider le code"
+              icon={{
+                ios: "checkmark.circle.fill",
+                android: "check_circle",
+                web: "check_circle",
+              }}
+              loading={busy}
+              disabled={!accessCode.trim()}
+              onPress={onAccessCodeEnroll}
+            />
+          </View>
+        ) : mode === "ASSIGNMENT_ONLY" ? (
+          <View className="mt-[9px] rounded-[15px] border border-[#E5D9F5] bg-[#FAF7FF] p-[9px]">
+            <Text className="text-[#4C1D95] text-[12px] font-black">
+              Demande d’accès
+            </Text>
+            <Text className="mt-[2px] text-[#667085] text-[11px] leading-[15px]">
+              Cette formation nécessite l’accord d’un formateur ou d’un administrateur.
+            </Text>
+
+            <TextInput
+              accessibilityLabel="Message facultatif pour la demande d’accès"
+              value={accessMessage}
+              onChangeText={onAccessMessageChange}
+              placeholder="Message facultatif"
+              placeholderTextColor={
+                theme.colors.foregroundSubtle
+              }
+              multiline
+              maxLength={500}
+              textAlignVertical="top"
+              className="min-h-[80px] max-h-[120px] mt-[8px] rounded-[12px] border border-[#E5D9F5] bg-[#FFFFFF] px-[10px] pt-[9px] text-[12px]" style={{
+                  color: theme.colors.foreground,
+                }}
+            />
+
+            <PrimaryAction
+              eyebrow="DEMANDE D’ACCÈS"
+              label="Envoyer la demande"
+              icon={{
+                ios: "paperplane.fill",
+                android: "send",
+                web: "send",
+              }}
+              loading={busy}
+              onPress={onRequestAccess}
+            />
+          </View>
+        ) : (
+          <View className="mt-[9px] rounded-[15px] border border-[#E4E7EC] bg-[#F8F6F3] p-[9px]">
+            <View className="flex-row items-center">
+              <View className="w-[34px] h-[34px] rounded-[11px] mr-[8px] bg-[#FFFFFF] items-center justify-center">
+                <SymbolView
+                  name={
+                    mode === "INVITATION"
+                      ? {
+                          ios: "envelope.fill",
+                          android: "mail",
+                          web: "mail",
+                        }
+                      : {
+                          ios: "lock.fill",
+                          android: "lock",
+                          web: "lock",
+                        }
+                  }
+                  tintColor="#667085"
+                  size={14}
+                  weight="bold"
+                />
+              </View>
+
+              <View className="flex-1 min-w-[0px]">
+                <Text className="text-[#475467] text-[11px] font-black">
+                  {mode === "INVITATION"
+                    ? "Accès sur invitation"
+                    : "Accès encadré"}
+                </Text>
+
+                <Text className="mt-[2px] text-[#667085] text-[10px] leading-[14px]">
+                  {mode === "INVITATION"
+                    ? "L’inscription sera disponible lorsqu’une invitation t’aura été adressée."
+                    : "Le mode d’accès ne permet pas une inscription directe depuis le catalogue."}
+                </Text>
+              </View>
+            </View>
+          </View>
+        )}
+      </View>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    width: "100%",
-    marginBottom: 12,
-    shadowRadius: 10,
-    shadowOffset: {
-      width: 0,
-      height: 3,
-    },
-    elevation: 2,
-  },
-  coverFrame: {
-    height: 112,
-    overflow: "hidden",
-    marginBottom: 10,
-  },
-  badgeRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
-    marginBottom: 8,
-  },
-  accessBadge: {
-    borderRadius: 999,
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-  },
-  accessBadgeText: {
-    fontSize: 10,
-    fontWeight: "900",
-    letterSpacing: 0.3,
-  },
-  neutralBadge: {
-    borderRadius: 999,
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-  },
-  neutralBadgeText: {
-    fontSize: 10,
-    fontWeight: "800",
-  },
-  title: {
-    fontSize: 18,
-    lineHeight: 24,
-    fontWeight: "900",
-    marginBottom: 5,
-  },
-  description: {
-    fontSize: 13,
-    lineHeight: 18,
-    marginBottom: 9,
-  },
-  metaRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
-    marginBottom: 10,
-  },
-  metaPill: {
-    borderRadius: 999,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  meta: {
-    fontSize: 11,
-    fontWeight: "700",
-  },
-  actionArea: {
-    paddingTop: 12,
-  },
-  actionHelp: {
-    fontSize: 13,
-    lineHeight: 18,
-    marginBottom: 9,
-  },
-  input: {
-    width: "100%",
-    maxWidth: 560,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 10,
-  },
-  messageInput: {
-    paddingTop: 10,
-  },
-  actionButton: {
-    alignSelf: "flex-start",
-    minWidth: 160,
-  },
-  stateBox: {},
-  stateTitle: {
-    fontSize: 14,
-    fontWeight: "900",
-    marginBottom: 4,
-  },
-  stateText: {
-    fontSize: 12,
-    lineHeight: 17,
-    marginBottom: 10,
-  },
-});

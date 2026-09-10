@@ -1,4 +1,5 @@
 import { Href, Stack, router } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
 
 import LoadingState from "../../components/LoadingState";
@@ -51,85 +52,96 @@ export default function LearnerLayout() {
   }
 
   return (
-    <Stack
-      screenOptions={{
-        headerStyle: {
-          backgroundColor: theme.colors.headerBackground,
-        },
-        headerTintColor: theme.colors.headerForeground,
-        headerTitleStyle: {
-          fontWeight: "700",
-        },
-        headerTitleAlign: "center",
-        headerLeft: () => (
-          <SafeHeaderBackButton fallback={"/learner" as Href} />
-        ),
-        contentStyle: {
-          backgroundColor: theme.colors.background,
-        },
-      }}
-    >
-      <Stack.Screen
-        name="(tabs)"
-        options={{
-          headerShown: false,
-        }}
+    <>
+      {/*
+        Même gestion de la barre système que l'espace Formateur :
+        texte/icônes clairs sur le header navy.
+      */}
+      <StatusBar
+        style="light"
+        animated
       />
-      <Stack.Screen
-        name="invitations"
-        options={{ title: "Mes invitations" }}
-      />
-      <Stack.Screen
-        name="certificates"
-        options={{
-          title: "Mes certificats",
+
+      <Stack
+        screenOptions={{
+          headerStyle: {
+            backgroundColor: theme.colors.headerBackground,
+          },
+          headerTintColor: theme.colors.headerForeground,
+          headerTitleStyle: {
+            fontWeight: "700",
+          },
+          headerTitleAlign: "center",
           headerLeft: () => (
-            <SafeHeaderBackButton
-              fallback={"/learner/my-trainings" as Href}
-            />
+            <SafeHeaderBackButton fallback={"/learner" as Href} />
           ),
+          contentStyle: {
+            backgroundColor: theme.colors.background,
+          },
         }}
-      />
-      <Stack.Screen
-        name="learning-path-detail"
-        options={{ title: "Parcours" }}
-      />
-      <Stack.Screen
-        name="training-detail"
-        options={{ title: "Formation" }}
-      />
-      <Stack.Screen
-        name="course-player"
-        options={{ title: "Parcours" }}
-      />
-      <Stack.Screen
-        name="recommendations"
-        options={{ title: "Mes recommandations" }}
-      />
-      <Stack.Screen
-        name="reviews-feedback"
-        options={{ title: "Avis et feedback" }}
-      />
-      <Stack.Screen
-        name="sessions"
-        options={{ title: "Mes séances" }}
-      />
-      <Stack.Screen
-        name="appearance"
-        options={{ title: "Apparence" }}
-      />
-      <Stack.Screen
-        name="become-trainer"
-        options={{ title: "Devenir formateur" }}
-      />
-      <Stack.Screen
-        name="assistant"
-        options={{ title: "Assistant SmartTraining" }}
-      />
-      <Stack.Screen
-        name="notifications"
-        options={{ title: "Notifications" }}
-      />
-    </Stack>
+      >
+        <Stack.Screen
+          name="(tabs)"
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="invitations"
+          options={{ title: "Mes invitations" }}
+        />
+        <Stack.Screen
+          name="certificates"
+          options={{
+            title: "Mes certificats",
+            headerLeft: () => (
+              <SafeHeaderBackButton
+                fallback={"/learner/my-trainings" as Href}
+              />
+            ),
+          }}
+        />
+        <Stack.Screen
+          name="learning-path-detail"
+          options={{ title: "Parcours" }}
+        />
+        <Stack.Screen
+          name="training-detail"
+          options={{ title: "Formation" }}
+        />
+        <Stack.Screen
+          name="course-player"
+          options={{ title: "Parcours" }}
+        />
+        <Stack.Screen
+          name="recommendations"
+          options={{ title: "Mes recommandations" }}
+        />
+        <Stack.Screen
+          name="reviews-feedback"
+          options={{ title: "Avis et feedback" }}
+        />
+        <Stack.Screen
+          name="sessions"
+          options={{ title: "Mes séances" }}
+        />
+        <Stack.Screen
+          name="appearance"
+          options={{ title: "Apparence" }}
+        />
+        <Stack.Screen
+          name="become-trainer"
+          options={{ title: "Devenir formateur" }}
+        />
+        <Stack.Screen
+          name="assistant"
+          options={{ title: "Assistant SmartTraining" }}
+        />
+        <Stack.Screen
+          name="notifications"
+          options={{ title: "Notifications" }}
+        />
+      </Stack>
+    </>
   );
 }

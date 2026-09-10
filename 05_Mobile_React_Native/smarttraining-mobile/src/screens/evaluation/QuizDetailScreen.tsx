@@ -1,3 +1,4 @@
+import { useNavigation } from "expo-router";
 import ScreenContainer from "../../components/ScreenContainer";
 import { useSmartTrainingTheme } from "../../theme/provider/SmartTrainingThemeProvider";
 import { isAxiosError } from "axios";
@@ -5,13 +6,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Platform,
+  Pressable,
   RefreshControl,
   ScrollView,
-  StyleSheet,
   Text,
   View,
 } from "react-native";
-import AppButton from "../../components/AppButton";
 import ErrorMessage from "../../components/ErrorMessage";
 import LoadingState from "../../components/LoadingState";
 import QuestionBlock from "../../components/evaluation/QuestionBlock";
@@ -34,6 +34,8 @@ import {
 } from "../../types/evaluation";
 
 type Answers = Record<number, SubmittedAnswerRequest>;
+
+const HISTORY_PAGE_SIZE = 3;
 
 interface QuizDetailScreenProps {
   quizId: number;
@@ -314,11 +316,9 @@ function sanitizeSubmissionAnswer(
 export default function QuizDetailScreen({
   quizId,
   onResult,
-  onBack,
-  backLabel = "Retour aux quiz",
 }: QuizDetailScreenProps) {
   const { theme } = useSmartTrainingTheme();
-  const styles = makeStyles(theme);
+  const navigation = useNavigation();
   const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [attempts, setAttempts] = useState<QuizAttemptResponse[]>([]);
   const [activeAttempt, setActiveAttempt] =
@@ -331,7 +331,9 @@ export default function QuizDetailScreen({
   const [starting, setStarting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [historyPage, setHistoryPage] = useState(1);
   const expiryHandled = useRef(false);
+  const allowNextRemoval = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -348,6 +350,7 @@ export default function QuizDetailScreen({
 
         setQuiz(quizData);
         setAttempts(attemptData);
+        setHistoryPage(1);
         setActiveAttempt(current);
         setSecondsRemaining(
           current ? secondsFromAttempt(current, quizData) : null,
@@ -377,6 +380,38 @@ export default function QuizDetailScreen({
       active = false;
     };
   }, [quizId]);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("beforeRemove", (event) => {
+      if (!activeAttempt || allowNextRemoval.current) {
+        allowNextRemoval.current = false;
+        return;
+      }
+
+      event.preventDefault();
+
+      const warning =
+        "La tentative et le chronomètre continuent même si tu quittes cet écran. Les réponses non soumises ne sont pas enregistrées.";
+
+      const leave = () => {
+        allowNextRemoval.current = true;
+        navigation.dispatch(event.data.action);
+      };
+
+      if (Platform.OS === "web") {
+        const confirmed = confirmOnWeb(`Quitter le quiz ?\n\n${warning}`);
+        if (confirmed) leave();
+        return;
+      }
+
+      Alert.alert("Quitter le quiz ?", warning, [
+        { text: "Rester", style: "cancel" },
+        { text: "Quitter", onPress: leave },
+      ]);
+    });
+
+    return unsubscribe;
+  }, [activeAttempt, navigation]);
 
   useEffect(() => {
     if (!quiz || !activeAttempt) {
@@ -455,6 +490,17 @@ export default function QuizDetailScreen({
     ).length;
   }, [quiz, selected]);
 
+  const historyTotalPages = Math.max(
+    1,
+    Math.ceil(attempts.length / HISTORY_PAGE_SIZE),
+  );
+  const safeHistoryPage = Math.min(historyPage, historyTotalPages);
+
+  const visibleAttempts = useMemo(() => {
+    const start = (safeHistoryPage - 1) * HISTORY_PAGE_SIZE;
+    return attempts.slice(start, start + HISTORY_PAGE_SIZE);
+  }, [attempts, safeHistoryPage]);
+
   async function refresh(): Promise<void> {
     try {
       setRefreshing(true);
@@ -470,6 +516,7 @@ export default function QuizDetailScreen({
 
       setQuiz(quizData);
       setAttempts(attemptData);
+      setHistoryPage(1);
       setActiveAttempt(current);
       setSecondsRemaining(
           current ? secondsFromAttempt(current, quizData) : null,
@@ -616,385 +663,573 @@ export default function QuizDetailScreen({
       ],
     );
   }
-  function requestBack(): void {
-    if (activeAttempt) {
-      const warning =
-        "La tentative et le chronomètre continuent même si tu quittes cet écran. Les réponses non soumises ne sont pas enregistrées.";
-
-      if (Platform.OS === "web") {
-        const confirmed = confirmOnWeb(
-          `Quitter le quiz ?
-
-${warning}`,
-        );
-
-        if (confirmed) {
-          onBack();
-        }
-
-        return;
-      }
-
-      Alert.alert(
-        "Quitter le quiz ?",
-        warning,
-        [
-          {
-            text: "Rester",
-            style: "cancel",
-          },
-          {
-            text: "Quitter",
-            onPress: onBack,
-          },
-        ],
-      );
-
-      return;
-    }
-
-    onBack();
-  }
   if (loading) {
     return <LoadingState message="Chargement du quiz..." />;
   }
 
   if (!quiz) {
     return (
-      <View style={styles.container}>
-        <ErrorMessage
-          message={error || "Quiz introuvable."}
-          onRetry={refresh}
-        />
-        <AppButton
-          title={backLabel}
-          onPress={onBack}
-          variant="secondary"
-        />
-      </View>
+      <ScreenContainer
+        edges={["left", "right", "bottom"]}
+        style={{ padding: 14, backgroundColor: theme.colors.background }}
+      >
+        <View className="flex-1 justify-center">
+          <ErrorMessage
+            message={error || "Quiz introuvable."}
+            onRetry={refresh}
+          />
+        </View>
+      </ScreenContainer>
     );
   }
 
+  const hasTimeLimit = quiz.timeLimitMinutes > 0;
+  const dangerTimer =
+    secondsRemaining !== null && secondsRemaining <= 60;
+
   return (
-    <ScreenContainer>
-      <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      keyboardShouldPersistTaps="handled"
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={refresh}
-        />
-      }
+    <ScreenContainer
+      edges={["left", "right", "bottom"]}
+      style={{ padding: 0, backgroundColor: theme.colors.background }}
     >
-      <AppButton
-        title={backLabel}
-        onPress={requestBack}
-        variant="secondary"
-      />
-
-      <Text style={styles.title}>{quiz.title}</Text>
-
-      {quiz.description ? (
-        <Text style={styles.description}>{quiz.description}</Text>
-      ) : null}
-
-      <View style={styles.rulesCard}>
-        <Text style={styles.rulesTitle}>Règles du quiz</Text>
-        <Text style={styles.rule}>
-          Score requis : {quiz.passingScore} %
-        </Text>
-        <Text style={styles.rule}>
-          Durée : {quiz.timeLimitMinutes} min
-        </Text>
-        <Text style={styles.rule}>
-          Tentatives utilisées : {consumedAttempts} / {quiz.maxAttempts}
-        </Text>
-        <Text style={styles.rule}>
-          {activeAttempt
-            ? `Tentative en cours · ${remainingAttempts ?? 0} restante(s) après celle-ci`
-            : `${remainingAttempts ?? 0} tentative(s) restante(s)`}
-        </Text>
-      </View>
-
-      {error ? <ErrorMessage message={error} onRetry={refresh} /> : null}
-
-      {activeAttempt ? (
-        <>
+      <ScrollView
+        className="flex-1"
+        contentContainerClassName="px-[14px] pb-9 pt-3"
+        keyboardShouldPersistTaps="handled"
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={refresh}
+            tintColor={theme.colors.accent}
+          />
+        }
+        showsVerticalScrollIndicator={false}
+      >
+        <View className="w-full max-w-[760px] self-center">
           <View
-            style={[
-              styles.timerCard,
-              secondsRemaining !== null &&
-              secondsRemaining <= 60
-                ? styles.timerDanger
-                : null,
-            ]}
+            className="relative overflow-hidden rounded-[26px] px-4 pb-4 pt-4"
+            style={{
+              backgroundColor: "#172554",
+              shadowColor: "#0F172A",
+              shadowOpacity: 0.18,
+              shadowRadius: 20,
+              shadowOffset: { width: 0, height: 10 },
+              elevation: 5,
+            }}
           >
-            <Text style={styles.timerLabel}>Temps restant</Text>
-            <Text style={styles.timerValue}>
-              {formatTime(secondsRemaining)}
-            </Text>
-            <Text style={styles.timerHelp}>
-              Tentative démarrée le {formatAttemptDate(activeAttempt)}
-            </Text>
-          </View>
+            <View className="absolute -right-12 -top-14 h-44 w-44 rounded-full bg-violet-500/20" />
+            <View className="absolute right-20 top-20 h-24 w-24 rounded-full bg-blue-400/10" />
+            <View className="absolute -left-12 bottom-2 h-36 w-36 rounded-full bg-indigo-300/10" />
 
-          <View style={styles.progressCard}>
-            <Text style={styles.progressTitle}>
-              Questions répondues
-            </Text>
-            <Text style={styles.progressValue}>
-              {answeredCount} / {quiz.questions.length}
-            </Text>
-            <Text style={styles.progressHelp}>
-              Les réponses non soumises ne sont pas enregistrées si tu
-              quittes cette page.
-            </Text>
-          </View>
-
-          {quiz.questions.map((question, questionIndex) => (
-            <QuestionBlock
-              key={question.id}
-              question={{ ...question, orderIndex: questionIndex + 1 }}
-              answer={
-                selected[question.id] ?? { questionId: question.id }
-              }
-              onChange={changeAnswer}
-            />
-          ))}
-
-          <AppButton
-            title={
-              submitting
-                ? "Soumission en cours..."
-                : "Soumettre le quiz"
-            }
-            onPress={requestSubmit}
-            disabled={
-              submitting ||
-              (secondsRemaining !== null &&
-                secondsRemaining <= 0)
-            }
-          />
-        </>
-      ) : (
-        <View style={styles.startCard}>
-          <Text style={styles.startTitle}>
-            Prêt à commencer ?
-          </Text>
-          <Text style={styles.startText}>
-            Le chrono démarre au lancement de la tentative.
-          </Text>
-
-          <AppButton
-            title={
-              starting
-                ? "Démarrage en cours..."
-                : "Commencer une tentative"
-            }
-            onPress={start}
-            disabled={
-              starting ||
-              (remainingAttempts !== null &&
-                remainingAttempts <= 0)
-            }
-          />
-        </View>
-      )}
-
-      <View style={styles.historySection}>
-        <Text style={styles.historyTitle}>Historique des tentatives</Text>
-
-        {attempts.length === 0 ? (
-          <Text style={styles.emptyHistory}>
-            Aucune tentative pour ce quiz.
-          </Text>
-        ) : (
-          attempts.map((attempt, index) => {
-            const score = attempt.score ?? 0;
-            const total = attempt.totalPoints ?? 0;
-
-            return (
-              <View key={attempt.id} style={styles.historyCard}>
-                <View style={styles.historyTop}>
-                  <Text style={styles.historyAttempt}>
-                    Tentative {attempts.length - index}
-                  </Text>
-                  <Text style={styles.historyStatus}>
-                    {attemptStatusLabel(attempt.status)}
-                  </Text>
-                </View>
-
-                <Text style={styles.historyMeta}>
-                  Début : {formatAttemptDate(attempt)}
+            <View className="flex-row items-start gap-3">
+              <View className="min-w-0 flex-1">
+                <Text
+                  maxFontSizeMultiplier={1}
+                  className="text-[11px] font-black uppercase tracking-[2px]"
+                  style={{ color: "#C7D2FE" }}
+                >
+                  Quiz interactif
                 </Text>
-
-                {attempt.status === "SUBMITTED" ? (
-                  <Text style={styles.historyScore}>
-                    Score : {score} / {total}
-                    {attempt.success === true
-                      ? " · Réussi"
-                      : " · Non validé"}
+                <Text className="mt-2 text-[25px] font-black leading-[30px]"
+                  style={{ color: "#FFFFFF" }}>
+                  {quiz.title}
+                </Text>
+                {quiz.description ? (
+                  <Text className="mt-2 text-[13px] leading-[20px]"
+                    style={{ color: "rgba(255,255,255,0.74)" }}>
+                    {quiz.description}
                   </Text>
                 ) : null}
               </View>
-            );
-          })
-        )}
-      </View>
+
+              <View className="h-[72px] w-[72px] shrink-0 items-center justify-center rounded-[22px] border border-white/10 bg-white/10">
+                <Text
+                  maxFontSizeMultiplier={1}
+                  className="text-[28px] font-black"
+                  style={{ color: "#C7D2FE" }}
+                >
+                  &lt;/&gt;
+                </Text>
+              </View>
+            </View>
+
+            <View className="mt-4 flex-row rounded-[18px] bg-white/10 px-1 py-2.5">
+              <View className="min-w-0 flex-1 items-center border-r border-white/10 px-1">
+                <Text maxFontSizeMultiplier={1} className="text-[16px] font-black" style={{ color: "#FFFFFF" }}>
+                  {quiz.questions.length}
+                </Text>
+                <Text maxFontSizeMultiplier={1} className="mt-0.5 text-[9px] font-bold" style={{ color: "rgba(255,255,255,0.65)" }}>
+                  Questions
+                </Text>
+              </View>
+              <View className="min-w-0 flex-1 items-center border-r border-white/10 px-1">
+                <Text maxFontSizeMultiplier={1} className="text-[16px] font-black" style={{ color: "#FFFFFF" }}>
+                  {hasTimeLimit ? `${quiz.timeLimitMinutes} min` : "Libre"}
+                </Text>
+                <Text maxFontSizeMultiplier={1} className="mt-0.5 text-[9px] font-bold" style={{ color: "rgba(255,255,255,0.65)" }}>
+                  Durée
+                </Text>
+              </View>
+              <View className="min-w-0 flex-1 items-center border-r border-white/10 px-1">
+                <Text maxFontSizeMultiplier={1} className="text-[16px] font-black" style={{ color: "#FFFFFF" }}>
+                  {quiz.passingScore}%
+                </Text>
+                <Text maxFontSizeMultiplier={1} className="mt-0.5 text-[9px] font-bold" style={{ color: "rgba(255,255,255,0.65)" }}>
+                  Score requis
+                </Text>
+              </View>
+              <View className="min-w-0 flex-1 items-center px-1">
+                <Text maxFontSizeMultiplier={1} className="text-[16px] font-black" style={{ color: "#FFFFFF" }}>
+                  {quiz.maxAttempts}
+                </Text>
+                <Text maxFontSizeMultiplier={1} className="mt-0.5 text-[9px] font-bold" style={{ color: "rgba(255,255,255,0.65)" }}>
+                  Tentatives max
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          {error ? (
+            <View className="mt-4">
+              <ErrorMessage message={error} onRetry={refresh} />
+            </View>
+          ) : null}
+
+          {activeAttempt ? (
+            <>
+              <View
+                className="mt-5 overflow-hidden rounded-[24px] border"
+                style={{
+                  backgroundColor: theme.colors.surface,
+                  borderColor: dangerTimer ? "#FCA5A5" : theme.colors.border,
+                  shadowColor: theme.colors.shadow,
+                  shadowOpacity: 0.04,
+                  shadowRadius: 12,
+                  shadowOffset: { width: 0, height: 5 },
+                  elevation: 1,
+                }}
+              >
+                <View className="flex-row items-stretch">
+                  <View
+                    className="min-w-0 flex-[1.15] px-4 py-4"
+                    style={{ backgroundColor: dangerTimer ? "#FEF2F2" : theme.colors.surface }}
+                  >
+                    <Text
+                      maxFontSizeMultiplier={1}
+                      numberOfLines={1}
+                      className="text-[10px] font-black uppercase tracking-[1.2px]"
+                      style={{ color: dangerTimer ? "#DC2626" : theme.colors.foregroundMuted }}
+                    >
+                      Temps restant
+                    </Text>
+                    <Text
+                      maxFontSizeMultiplier={1}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.78}
+                      className="mt-1 text-[28px] font-black leading-[31px]"
+                      style={{ color: dangerTimer ? "#DC2626" : theme.colors.foreground }}
+                    >
+                      {formatTime(secondsRemaining)}
+                    </Text>
+                  </View>
+
+                  <View
+                    className="w-px self-stretch"
+                    style={{ backgroundColor: theme.colors.border }}
+                  />
+
+                  <View className="min-w-0 flex-1 px-4 py-4">
+                    <Text
+                      maxFontSizeMultiplier={1}
+                      numberOfLines={1}
+                      className="text-[10px] font-black uppercase tracking-[1.2px]"
+                      style={{ color: theme.colors.foregroundMuted }}
+                    >
+                      Progression
+                    </Text>
+                    <Text
+                      maxFontSizeMultiplier={1}
+                      numberOfLines={1}
+                      className="mt-1 text-[28px] font-black leading-[31px]"
+                      style={{ color: theme.colors.accent }}
+                    >
+                      {answeredCount}/{quiz.questions.length}
+                    </Text>
+                  </View>
+                </View>
+
+                <View
+                  className="h-1.5 w-full"
+                  style={{ backgroundColor: theme.colors.surfaceSoft }}
+                >
+                  <View
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${quiz.questions.length > 0 ? Math.min(100, (answeredCount / quiz.questions.length) * 100) : 0}%`,
+                      backgroundColor: theme.colors.accent,
+                    }}
+                  />
+                </View>
+              </View>
+
+              <View
+                className="mt-3 rounded-[18px] px-4 py-3"
+                style={{ backgroundColor: theme.colors.surfaceSoft }}
+              >
+                <Text
+                  className="text-[12px] leading-[18px]"
+                  style={{ color: theme.colors.foregroundMuted }}
+                >
+                  Tentative démarrée le {formatAttemptDate(activeAttempt)}. Les réponses non soumises ne sont pas enregistrées si tu quittes cette page.
+                </Text>
+              </View>
+
+              <View className="mb-3 mt-6">
+                <Text
+                  className="text-[24px] font-black"
+                  style={{ color: theme.colors.foreground }}
+                >
+                  Questions
+                </Text>
+                <Text
+                  className="mt-1 text-[14px] leading-[21px]"
+                  style={{ color: theme.colors.foregroundMuted }}
+                >
+                  Réponds à toutes les questions avant de soumettre.
+                </Text>
+              </View>
+
+              {quiz.questions.map((question, questionIndex) => (
+                <QuestionBlock
+                  key={question.id}
+                  question={{ ...question, orderIndex: questionIndex + 1 }}
+                  answer={
+                    selected[question.id] ?? { questionId: question.id }
+                  }
+                  onChange={changeAnswer}
+                />
+              ))}
+
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Soumettre le quiz"
+                onPress={requestSubmit}
+                disabled={
+                  submitting ||
+                  (secondsRemaining !== null && secondsRemaining <= 0)
+                }
+                className="mt-1 items-center rounded-[18px] px-4 py-4 active:opacity-85 disabled:opacity-50"
+                style={{ backgroundColor: theme.colors.accent }}
+              >
+                <Text
+                  className="text-[16px] font-black"
+                  style={{ color: theme.colors.accentForeground }}
+                >
+                  {submitting ? "Soumission en cours..." : "Soumettre le quiz"}
+                </Text>
+              </Pressable>
+            </>
+          ) : (
+            <>
+              <View
+                className="mt-5 rounded-[26px] border p-4"
+                style={{
+                  backgroundColor: theme.colors.surface,
+                  borderColor: theme.colors.border,
+                  shadowColor: theme.colors.shadow,
+                  shadowOpacity: 0.045,
+                  shadowRadius: 14,
+                  shadowOffset: { width: 0, height: 7 },
+                  elevation: 2,
+                }}
+              >
+                <View className="mb-3 flex-row items-center gap-3">
+                  <View
+                    className="h-11 w-11 items-center justify-center rounded-[14px]"
+                    style={{ backgroundColor: theme.colors.surfaceSoft }}
+                  >
+                    <Text className="text-[20px]" style={{ color: theme.colors.accent }}>▤</Text>
+                  </View>
+                  <View className="min-w-0 flex-1">
+                    <Text
+                      className="text-[20px] font-black"
+                      style={{ color: theme.colors.foreground }}
+                    >
+                      Règles du quiz
+                    </Text>
+                    <Text
+                      className="mt-0.5 text-[12px]"
+                      style={{ color: theme.colors.foregroundMuted }}
+                    >
+                      Tout ce qu’il faut savoir avant de commencer.
+                    </Text>
+                  </View>
+                </View>
+
+                <View
+                  className="overflow-hidden rounded-[18px]"
+                  style={{ backgroundColor: theme.colors.surfaceSoft }}
+                >
+                  <View className="flex-row items-center border-b px-4 py-3.5" style={{ borderColor: theme.colors.border }}>
+                    <Text className="mr-3 text-[18px]" style={{ color: "#16A34A" }}>✓</Text>
+                    <Text className="flex-1 text-[13px] font-bold" style={{ color: theme.colors.foreground }}>
+                      Réponds à toutes les questions
+                    </Text>
+                  </View>
+                  <View className="flex-row items-center border-b px-4 py-3.5" style={{ borderColor: theme.colors.border }}>
+                    <Text className="mr-3 text-[18px]" style={{ color: "#F59E0B" }}>◷</Text>
+                    <Text className="flex-1 text-[13px] font-bold" style={{ color: theme.colors.foreground }}>
+                      {hasTimeLimit ? `Le temps est limité à ${quiz.timeLimitMinutes} minutes` : "Aucune limite de temps"}
+                    </Text>
+                  </View>
+                  <View className="flex-row items-center border-b px-4 py-3.5" style={{ borderColor: theme.colors.border }}>
+                    <Text className="mr-3 text-[18px]" style={{ color: "#0EA5E9" }}>↻</Text>
+                    <Text className="flex-1 text-[13px] font-bold" style={{ color: theme.colors.foreground }}>
+                      {quiz.maxAttempts} tentative{quiz.maxAttempts > 1 ? "s" : ""} maximum
+                    </Text>
+                  </View>
+                  <View className="flex-row items-center px-4 py-3.5">
+                    <Text className="mr-3 text-[18px]" style={{ color: "#EAB308" }}>★</Text>
+                    <Text className="flex-1 text-[13px] font-bold" style={{ color: theme.colors.foreground }}>
+                      Obtiens au moins {quiz.passingScore}% pour réussir
+                    </Text>
+                  </View>
+                </View>
+
+                <View className="mt-4 flex-row gap-2">
+                  <View
+                    className="min-w-0 flex-1 rounded-[15px] px-3 py-2.5"
+                    style={{ backgroundColor: theme.colors.surfaceSoft }}
+                  >
+                    <Text className="text-[10px] font-bold" style={{ color: theme.colors.foregroundMuted }}>
+                      Utilisées
+                    </Text>
+                    <Text className="mt-0.5 text-[16px] font-black" style={{ color: theme.colors.foreground }}>
+                      {consumedAttempts}/{quiz.maxAttempts}
+                    </Text>
+                  </View>
+                  <View
+                    className="min-w-0 flex-1 rounded-[15px] px-3 py-2.5"
+                    style={{ backgroundColor: theme.colors.surfaceSoft }}
+                  >
+                    <Text className="text-[10px] font-bold" style={{ color: theme.colors.foregroundMuted }}>
+                      Restantes
+                    </Text>
+                    <Text className="mt-0.5 text-[16px] font-black" style={{ color: theme.colors.accent }}>
+                      {remainingAttempts ?? 0}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Commencer une tentative"
+                onPress={() => void start()}
+                disabled={
+                  starting ||
+                  (remainingAttempts !== null && remainingAttempts <= 0)
+                }
+                className="mt-4 flex-row items-center justify-center rounded-[18px] px-4 py-4 active:opacity-85 disabled:opacity-50"
+                style={{ backgroundColor: theme.colors.accent }}
+              >
+                <Text
+                  className="mr-2 text-[18px] font-black"
+                  style={{ color: theme.colors.accentForeground }}
+                >
+                  ▶
+                </Text>
+                <Text
+                  className="text-[16px] font-black"
+                  style={{ color: theme.colors.accentForeground }}
+                >
+                  {starting ? "Démarrage en cours..." : "Commencer une tentative"}
+                </Text>
+              </Pressable>
+            </>
+          )}
+
+          <View className="mb-3 mt-7 flex-row items-end justify-between gap-3">
+            <View className="min-w-0 flex-1">
+              <Text
+                className="text-[22px] font-black"
+                style={{ color: theme.colors.foreground }}
+              >
+                Historique des tentatives
+              </Text>
+              <Text
+                className="mt-1 text-[13px] leading-[19px]"
+                style={{ color: theme.colors.foregroundMuted }}
+              >
+                Consulte tes essais précédents et leurs résultats.
+              </Text>
+            </View>
+            <View
+              className="h-9 min-w-9 items-center justify-center rounded-full px-2.5"
+              style={{ backgroundColor: theme.colors.surfaceSoft }}
+            >
+              <Text
+                maxFontSizeMultiplier={1}
+                className="text-[13px] font-black"
+                style={{ color: theme.colors.accent }}
+              >
+                {attempts.length}
+              </Text>
+            </View>
+          </View>
+
+          {attempts.length === 0 ? (
+            <View
+              className="rounded-[22px] border px-4 py-5"
+              style={{
+                backgroundColor: theme.colors.surface,
+                borderColor: theme.colors.border,
+              }}
+            >
+              <Text
+                className="text-center text-[13px]"
+                style={{ color: theme.colors.foregroundMuted }}
+              >
+                Aucune tentative pour ce quiz.
+              </Text>
+            </View>
+          ) : (
+            <View className="gap-3">
+              {visibleAttempts.map((attempt, index) => {
+                const score = attempt.score ?? 0;
+                const total = attempt.totalPoints ?? 0;
+                const submitted = attempt.status === "SUBMITTED";
+                const success = attempt.success === true;
+                const statusColor = submitted
+                  ? success
+                    ? "#16A34A"
+                    : "#DC2626"
+                  : attempt.status === "STARTED"
+                    ? "#F59E0B"
+                    : "#DC2626";
+
+                return (
+                  <View
+                    key={attempt.id}
+                    className="rounded-[22px] border p-4"
+                    style={{
+                      backgroundColor: theme.colors.surface,
+                      borderColor: theme.colors.border,
+                    }}
+                  >
+                    <View className="flex-row items-start justify-between gap-3">
+                      <View className="min-w-0 flex-1">
+                        <Text
+                          className="text-[16px] font-black"
+                          style={{ color: theme.colors.foreground }}
+                        >
+                          Tentative {attempts.length - ((safeHistoryPage - 1) * HISTORY_PAGE_SIZE + index)}
+                        </Text>
+                        <Text
+                          className="mt-1 text-[12px]"
+                          style={{ color: theme.colors.foregroundMuted }}
+                        >
+                          {formatAttemptDate(attempt)}
+                        </Text>
+                      </View>
+
+                      <View
+                        className="rounded-full px-3 py-1.5"
+                        style={{ backgroundColor: `${statusColor}15` }}
+                      >
+                        <Text
+                          maxFontSizeMultiplier={1}
+                          className="text-[10px] font-black"
+                          style={{ color: statusColor }}
+                        >
+                          {attemptStatusLabel(attempt.status)}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {submitted ? (
+                      <View
+                        className="mt-3 flex-row items-center justify-between rounded-[15px] px-3 py-2.5"
+                        style={{ backgroundColor: theme.colors.surfaceSoft }}
+                      >
+                        <Text
+                          className="text-[12px] font-bold"
+                          style={{ color: theme.colors.foregroundMuted }}
+                        >
+                          Score
+                        </Text>
+                        <Text
+                          className="text-[14px] font-black"
+                          style={{ color: statusColor }}
+                        >
+                          {score}/{total} · {success ? "Réussi" : "Non validé"}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
+                );
+              })}
+
+              {historyTotalPages > 1 ? (
+                <View
+                  className="mt-1 flex-row items-center justify-between rounded-[18px] border px-3 py-2.5"
+                  style={{
+                    backgroundColor: theme.colors.surface,
+                    borderColor: theme.colors.border,
+                  }}
+                >
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Page précédente des tentatives"
+                    disabled={safeHistoryPage <= 1}
+                    onPress={() => setHistoryPage((current) => Math.max(1, current - 1))}
+                    className="h-10 w-10 items-center justify-center rounded-[12px] disabled:opacity-30"
+                    style={{ backgroundColor: theme.colors.surfaceSoft }}
+                  >
+                    <Text
+                      maxFontSizeMultiplier={1}
+                      className="text-[22px] font-black"
+                      style={{ color: theme.colors.foreground }}
+                    >
+                      ‹
+                    </Text>
+                  </Pressable>
+
+                  <Text
+                    maxFontSizeMultiplier={1}
+                    className="text-[12px] font-extrabold"
+                    style={{ color: theme.colors.foregroundMuted }}
+                  >
+                    Page {safeHistoryPage} sur {historyTotalPages}
+                  </Text>
+
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Page suivante des tentatives"
+                    disabled={safeHistoryPage >= historyTotalPages}
+                    onPress={() =>
+                      setHistoryPage((current) =>
+                        Math.min(historyTotalPages, current + 1),
+                      )
+                    }
+                    className="h-10 w-10 items-center justify-center rounded-[12px] disabled:opacity-30"
+                    style={{ backgroundColor: theme.colors.surfaceSoft }}
+                  >
+                    <Text
+                      maxFontSizeMultiplier={1}
+                      className="text-[22px] font-black"
+                      style={{ color: theme.colors.foreground }}
+                    >
+                      ›
+                    </Text>
+                  </Pressable>
+                </View>
+              ) : null}
+            </View>
+          )}
+        </View>
       </ScrollView>
     </ScreenContainer>
   );
-}
-
-function makeStyles(theme: ReturnType<typeof useSmartTrainingTheme>["theme"]) {
-  return StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  content: {
-    padding: 14,
-    paddingBottom: theme.shape.cardPadding * 2,
-  },
-  title: {
-    color: theme.colors.foreground,
-    fontSize: 24,
-    fontWeight: "900",
-    marginTop: 18,
-  },
-  description: {
-    color: theme.colors.foregroundMuted,
-    lineHeight: 21,
-    marginTop: 8,
-  },
-  rulesCard: {
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.shape.cardRadius,
-    padding: 18,
-    marginTop: 18,
-    marginBottom: 14,
-    gap: 5,
-  },
-  rulesTitle: {
-    color: theme.colors.foreground,
-    fontWeight: "900",
-    fontSize: 16,
-    marginBottom: 5,
-  },
-  rule: {
-    color: theme.colors.foregroundSubtle,
-    fontWeight: "700",
-  },
-  timerCard: {
-    backgroundColor: theme.colors.surfaceElevated,
-    borderRadius: theme.shape.cardRadius,
-    padding: 18,
-    marginVertical: 14,
-  },
-  timerDanger: {
-    backgroundColor: theme.colors.surfaceElevated,
-  },
-  timerLabel: {
-    color: theme.colors.foregroundSubtle,
-    fontWeight: "800",
-  },
-  timerValue: {
-    color: theme.colors.foreground,
-    fontSize: 34,
-    fontWeight: "900",
-    marginTop: 5,
-  },
-  timerHelp: {
-    color: theme.colors.foregroundMuted,
-    marginTop: 5,
-  },
-  progressCard: {
-    backgroundColor: theme.colors.surfaceSoft,
-    borderRadius: theme.shape.cardRadius,
-    padding: 18,
-    marginBottom: 14,
-  },
-  progressTitle: {
-    color: theme.colors.foreground,
-    fontWeight: "900",
-  },
-  progressValue: {
-    color: theme.colors.accent,
-    fontSize: 24,
-    fontWeight: "900",
-    marginTop: 5,
-  },
-  progressHelp: {
-    color: theme.colors.foregroundMuted,
-    lineHeight: 19,
-    marginTop: 8,
-  },
-  startCard: {
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.shape.cardRadius,
-    padding: theme.shape.cardPadding,
-    marginVertical: 14,
-  },
-  startTitle: {
-    color: theme.colors.foreground,
-    fontSize: 19,
-    fontWeight: "900",
-  },
-  startText: {
-    color: theme.colors.foregroundMuted,
-    lineHeight: 20,
-    marginTop: 8,
-    marginBottom: 18,
-  },
-  historySection: {
-    marginTop: theme.shape.cardPadding,
-  },
-  historyTitle: {
-    color: theme.colors.foreground,
-    fontSize: 19,
-    fontWeight: "900",
-    marginBottom: 14,
-  },
-  emptyHistory: {
-    color: theme.colors.foregroundMuted,
-    textAlign: "center",
-    padding: 18,
-  },
-  historyCard: {
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.shape.controlRadius,
-    padding: 14,
-    marginBottom: 8,
-  },
-  historyTop: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 8,
-  },
-  historyAttempt: {
-    color: theme.colors.foreground,
-    fontWeight: "900",
-  },
-  historyStatus: {
-    color: theme.colors.accent,
-    fontWeight: "800",
-  },
-  historyMeta: {
-    color: theme.colors.foregroundMuted,
-    marginTop: 5,
-  },
-  historyScore: {
-    color: theme.colors.foregroundSubtle,
-    fontWeight: "800",
-    marginTop: 8,
-  },
-});
 }

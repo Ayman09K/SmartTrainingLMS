@@ -1,10 +1,11 @@
+import { SymbolView } from "expo-symbols";
+import { type ComponentProps } from "react";
 import {
-  StyleSheet,
+  Pressable,
   Text,
   View,
 } from "react-native";
 
-import AppButton from "../AppButton";
 import {
   useSmartTrainingTheme,
 } from "../../theme/provider/SmartTrainingThemeProvider";
@@ -17,34 +18,27 @@ type Props = {
   onOpenTraining: () => void;
 };
 
-function clamp(value?: number | null): number {
-  if (typeof value !== "number" || Number.isNaN(value)) {
+type SymbolName = ComponentProps<typeof SymbolView>["name"];
+
+function clamp(
+  value?: number | null,
+): number {
+  if (
+    typeof value !== "number" ||
+    Number.isNaN(value)
+  ) {
     return 0;
   }
 
-  return Math.max(0, Math.min(100, Math.round(value)));
+  return Math.max(
+    0,
+    Math.min(100, Math.round(value)),
+  );
 }
 
-function statusLabel(
-  status: string | undefined,
-  percentage: number,
+function formatDate(
+  value?: string | null,
 ): string {
-  if (status === "COMPLETED" || percentage >= 100) {
-    return "Termin\u00E9e";
-  }
-
-  if (status === "AT_RISK") {
-    return "\u00C0 reprendre";
-  }
-
-  if (status === "IN_PROGRESS" || percentage > 0) {
-    return "En cours";
-  }
-
-  return "Pas commenc\u00E9e";
-}
-
-function formatDate(value?: string | null): string {
   if (!value) {
     return "";
   }
@@ -55,9 +49,63 @@ function formatDate(value?: string | null): string {
     return "";
   }
 
-  return new Intl.DateTimeFormat("fr-FR", {
-    dateStyle: "medium",
-  }).format(date);
+  return new Intl.DateTimeFormat(
+    "fr-FR",
+    {
+      dateStyle: "medium",
+    },
+  ).format(date);
+}
+
+function MetaPill({
+  icon,
+  label,
+  value,
+  tint,
+  background,
+}: {
+  icon: SymbolName;
+  label: string;
+  value: string;
+  tint: string;
+  background: string;
+}) {
+  return (
+    <View
+      className="min-h-[42px] max-w-[49%] grow basis-[145px] rounded-[12px] border border-[#EEE9F0] bg-[#FBFAFC] px-[7px] flex-row items-center"
+    >
+      <View
+        className="w-[27px] h-[27px] rounded-[9px] mr-[6px] items-center justify-center" style={{
+            backgroundColor:
+              background,
+          }}
+      >
+        <SymbolView
+          name={icon}
+          tintColor={tint}
+          size={11}
+          weight="bold"
+        />
+      </View>
+
+      <View
+        className="flex-1 min-w-[0px]"
+      >
+        <Text
+          className="text-[#98A2B3] text-[9px] leading-[11px] font-extrabold"
+        >
+          {label}
+        </Text>
+
+        <Text
+          numberOfLines={1}
+          className="mt-[1px] text-[#344054] text-[10px] leading-[13px] font-black"
+        >
+          {value}
+        </Text>
+      </View>
+    </View>
+  );
 }
 
 export default function LearnerProgressCard({
@@ -66,267 +114,316 @@ export default function LearnerProgressCard({
   progress,
   onOpenTraining,
 }: Props) {
-  const { theme } = useSmartTrainingTheme();
+  const { theme } =
+    useSmartTrainingTheme();
 
   const percentage = clamp(
-    progress?.progressPercentage ?? fallbackPercentage,
-  );
-  const status = statusLabel(progress?.status, percentage);
-  const lastActivity = formatDate(
-    progress?.lastActivityAt,
+    progress?.progressPercentage ??
+      fallbackPercentage,
   );
 
+  const completed =
+    progress?.status ===
+      "COMPLETED" ||
+    percentage >= 100;
+
+  const atRisk =
+    progress?.status === "AT_RISK";
+
+  const inProgress =
+    progress?.status ===
+      "IN_PROGRESS" ||
+    (!completed &&
+      !atRisk &&
+      percentage > 0);
+
+  const status =
+    completed
+      ? "Terminée"
+      : atRisk
+        ? "À reprendre"
+        : inProgress
+          ? "En cours"
+          : "À commencer";
+
+  const statusColor =
+    atRisk
+      ? theme.colors.warning
+      : completed
+        ? theme.colors.success
+        : inProgress
+          ? "#2563EB"
+          : theme.colors.accent;
+
+  const statusSoft =
+    atRisk
+      ? "#FFF7ED"
+      : completed
+        ? "#ECFDF3"
+        : inProgress
+          ? "#EFF6FF"
+          : "#F3EEFF";
+
+  const lastActivity =
+    formatDate(
+      progress?.lastActivityAt,
+    );
+
   const hasLessonCounters =
-    typeof progress?.completedLessons === "number" &&
-    typeof progress?.totalLessons === "number" &&
+    typeof progress?.completedLessons ===
+      "number" &&
+    typeof progress?.totalLessons ===
+      "number" &&
     progress.totalLessons > 0;
 
   const hasQuizCounters =
-    typeof progress?.completedQuizzes === "number" &&
-    typeof progress?.totalQuizzes === "number" &&
+    typeof progress?.completedQuizzes ===
+      "number" &&
+    typeof progress?.totalQuizzes ===
+      "number" &&
     progress.totalQuizzes > 0;
 
   const hasScore =
-    typeof progress?.averageScore === "number" &&
-    Number.isFinite(progress.averageScore);
+    typeof progress?.averageScore ===
+      "number" &&
+    Number.isFinite(
+      progress.averageScore,
+    );
 
-  const statusColor =
-    progress?.status === "AT_RISK"
-      ? theme.colors.warning
-      : percentage >= 100
-        ? theme.colors.success
-        : percentage > 0
-          ? theme.colors.accent
-          : theme.colors.foregroundSubtle;
+  const eyebrow =
+    completed
+      ? "FORMATION TERMINÉE"
+      : atRisk
+        ? "À REPRENDRE"
+        : inProgress
+          ? "CONTINUER"
+          : "DÉMARRER";
+
+  const actionTitle =
+    completed
+      ? "Consulter la formation"
+      : inProgress || atRisk
+        ? "Continuer la formation"
+        : "Commencer la formation";
 
   return (
     <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: theme.colors.surface,
-          borderColor: theme.colors.border,
-          borderRadius: theme.shape.cardRadius,
-          borderWidth: theme.shape.borderWidth,
-          padding: theme.shape.cardPadding,
-        },
-      ]}
+      className="rounded-[20px] border bg-[#FFFFFF] p-[11px]" style={[{ shadowOpacity: 0.035, shadowRadius: 8, shadowOffset: {
+      width: 0,
+      height: 3,
+    }, elevation: 1 }, {
+          borderColor:
+            theme.colors.border,
+          shadowColor:
+            theme.colors.shadow,
+        }]}
     >
-      <View style={styles.headingRow}>
-        <View style={styles.headingText}>
+      <View
+        className="flex-row items-center justify-between"
+      >
+        <View
+          className="min-h-[29px] px-[9px] rounded-full flex-row items-center" style={{
+              backgroundColor:
+                statusSoft,
+            }}
+        >
+          <View
+            className="w-[7px] h-[7px] mr-[6px] rounded-[4px]" style={{
+                backgroundColor:
+                  statusColor,
+              }}
+          />
           <Text
-            style={[
-              styles.title,
-              { color: theme.colors.foreground },
-            ]}
+            className="text-[11px] font-black" style={{
+                color:
+                  statusColor,
+              }}
           >
-            {trainingTitle}
+            {status}
           </Text>
+        </View>
 
-          <View style={styles.statusRow}>
-            <View
-              style={[
-                styles.statusDot,
-                { backgroundColor: statusColor },
-              ]}
-            />
-            <Text
-              style={[
-                styles.status,
-                { color: theme.colors.foregroundMuted },
-              ]}
-            >
-              {status}
-            </Text>
-          </View>
+        <View
+          className="min-w-[50px] min-h-[30px] px-[9px] rounded-full bg-[#111827] items-center justify-center"
+        >
+          <Text
+            className="text-[#FFFFFF] text-[11px] font-black"
+          >
+            {percentage}%
+          </Text>
+        </View>
+      </View>
+
+      <Text
+        numberOfLines={2}
+        className="mt-[9px] text-[16px] leading-[21px] font-black tracking-[-0.15px]" style={{
+            color:
+              theme.colors.foreground,
+          }}
+      >
+        {trainingTitle}
+      </Text>
+
+      <View
+        className="mt-[10px] min-h-[24px] flex-row items-center"
+      >
+        <Text
+          className="w-[74px] text-[#667085] text-[11px] font-extrabold"
+        >
+          Progression
+        </Text>
+
+        <View
+          className="flex-1 h-[7px] overflow-hidden rounded-full bg-[#E9E4EC]"
+        >
+          <View
+            className="h-full rounded-full" style={{
+                width: `${percentage}%`,
+                backgroundColor:
+                  statusColor,
+              }}
+          />
         </View>
 
         <Text
-          style={[
-            styles.percentage,
-            { color: statusColor },
-          ]}
+          className="w-[44px] ml-[8px] text-right text-[11px] font-black" style={{
+              color:
+                statusColor,
+            }}
         >
-          {percentage} %
+          {percentage}%
         </Text>
       </View>
 
-      <View
-        style={[
-          styles.track,
-          { backgroundColor: theme.colors.border },
-        ]}
-      >
+      {hasLessonCounters ||
+      hasQuizCounters ||
+      hasScore ||
+      lastActivity ? (
         <View
-          style={[
-            styles.fill,
-            {
-              width: `${percentage}%`,
-              backgroundColor: statusColor,
-            },
-          ]}
-        />
-      </View>
+          className="mt-[9px] flex-row flex-wrap gap-[6px]"
+        >
+          {hasLessonCounters ? (
+            <MetaPill
+              icon={{
+                ios: "book.pages.fill",
+                android: "menu_book",
+                web: "menu_book",
+              }}
+              label="Leçons"
+              value={`${progress?.completedLessons} / ${progress?.totalLessons}`}
+              tint="#7C3AED"
+              background="#F3EEFF"
+            />
+          ) : null}
 
-      <View style={styles.metaGrid}>
-        {hasLessonCounters ? (
-          <MetaItem
-            label={"Le\u00E7ons"}
-            value={`${progress?.completedLessons} / ${progress?.totalLessons}`}
-          />
-        ) : null}
+          {hasQuizCounters ? (
+            <MetaPill
+              icon={{
+                ios: "checklist",
+                android: "fact_check",
+                web: "fact_check",
+              }}
+              label="Évaluations"
+              value={`${progress?.completedQuizzes} / ${progress?.totalQuizzes}`}
+              tint="#2563EB"
+              background="#EFF6FF"
+            />
+          ) : null}
 
-        {hasQuizCounters ? (
-          <MetaItem
-            label={"\u00C9valuations"}
-            value={`${progress?.completedQuizzes} / ${progress?.totalQuizzes}`}
-          />
-        ) : null}
+          {hasScore ? (
+            <MetaPill
+              icon={{
+                ios: "star.fill",
+                android: "star",
+                web: "star",
+              }}
+              label="Score"
+              value={`${Math.round(progress?.averageScore ?? 0)}%`}
+              tint="#D97706"
+              background="#FFF7ED"
+            />
+          ) : null}
 
-        {hasScore ? (
-          <MetaItem
-            label="Score moyen"
-            value={`${Math.round(progress?.averageScore ?? 0)} %`}
-          />
-        ) : null}
+          {lastActivity ? (
+            <MetaPill
+              icon={{
+                ios: "clock.fill",
+                android: "schedule",
+                web: "schedule",
+              }}
+              label="Dernière activité"
+              value={lastActivity}
+              tint="#667085"
+              background="#F2F4F7"
+            />
+          ) : null}
+        </View>
+      ) : null}
 
-        {lastActivity ? (
-          <MetaItem
-            label={"Derni\u00E8re activit\u00E9"}
-            value={lastActivity}
-          />
-        ) : null}
-      </View>
-
-      <AppButton
-        title={
-          percentage >= 100
-            ? "Voir la formation"
-            : percentage > 0
-              ? "Reprendre la formation"
-              : "Ouvrir la formation"
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={
+          actionTitle
         }
         onPress={onOpenTraining}
-        variant="secondary"
-        style={styles.action}
-      />
+        android_ripple={{
+          color: "transparent",
+        }}
+        className={`mt-[10px] min-h-[52px] rounded-[15px] border px-[7px] flex-row items-center ${(completed ? "border-[#5B21B6] bg-[#5B21B6]" : (atRisk ? "border-[#B45309] bg-[#B45309]" : "border-[#7C3AED] bg-[#7C3AED]"))}`}
+      >
+        <View
+          className="w-[36px] h-[36px] rounded-[12px] mr-[9px] bg-[rgba(255,255,255,0.16)] items-center justify-center"
+        >
+          <SymbolView
+            name={{
+              ios: completed
+                ? "eye.fill"
+                : "play.fill",
+              android: completed
+                ? "visibility"
+                : "play_arrow",
+              web: completed
+                ? "visibility"
+                : "play_arrow",
+            }}
+            tintColor="#FFFFFF"
+            size={13}
+            weight="bold"
+          />
+        </View>
+
+        <View
+          className="flex-1 min-w-[0px]"
+        >
+          <Text
+            className="text-[rgba(255,255,255,0.78)] text-[9px] leading-[11px] font-black tracking-[0.45px]"
+          >
+            {eyebrow}
+          </Text>
+
+          <Text
+            numberOfLines={1}
+            className="mt-[2px] text-[#FFFFFF] text-[12px] leading-[16px] font-black"
+          >
+            {actionTitle}
+          </Text>
+        </View>
+
+        <View
+          className="w-[30px] h-[30px] rounded-[15px] bg-[rgba(255,255,255,0.16)] items-center justify-center"
+        >
+          <SymbolView
+            name={{
+              ios: "chevron.right",
+              android: "chevron_right",
+              web: "chevron_right",
+            }}
+            tintColor="#FFFFFF"
+            size={11}
+            weight="bold"
+          />
+        </View>
+      </Pressable>
     </View>
   );
-
-  function MetaItem({
-    label,
-    value,
-  }: {
-    label: string;
-    value: string;
-  }) {
-    return (
-      <View
-        style={[
-          styles.metaItem,
-          {
-            backgroundColor: theme.colors.surfaceSoft,
-            borderRadius: theme.shape.controlRadius,
-          },
-        ]}
-      >
-        <Text
-          style={[
-            styles.metaLabel,
-            { color: theme.colors.foregroundSubtle },
-          ]}
-        >
-          {label}
-        </Text>
-        <Text
-          style={[
-            styles.metaValue,
-            { color: theme.colors.foreground },
-          ]}
-        >
-          {value}
-        </Text>
-      </View>
-    );
-  }
 }
-
-const styles = StyleSheet.create({
-  card: {
-    marginBottom: 14,
-  },
-  headingRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    gap: 14,
-    marginBottom: 14,
-  },
-  headingText: {
-    flex: 1,
-    minWidth: 0,
-  },
-  title: {
-    fontSize: 17,
-    lineHeight: 23,
-    fontWeight: "900",
-  },
-  statusRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 7,
-    marginTop: 6,
-  },
-  statusDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 999,
-  },
-  status: {
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  percentage: {
-    fontSize: 21,
-    lineHeight: 26,
-    fontWeight: "900",
-  },
-  track: {
-    height: 9,
-    borderRadius: 999,
-    overflow: "hidden",
-    marginBottom: 15,
-  },
-  fill: {
-    height: "100%",
-    borderRadius: 999,
-  },
-  metaGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  metaItem: {
-    flexGrow: 1,
-    flexBasis: 145,
-    minWidth: 0,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  metaLabel: {
-    fontSize: 10,
-    lineHeight: 14,
-    fontWeight: "800",
-    letterSpacing: 0.3,
-  },
-  metaValue: {
-    fontSize: 13,
-    lineHeight: 18,
-    fontWeight: "800",
-    marginTop: 3,
-  },
-  action: {
-    alignSelf: "flex-start",
-    marginTop: 15,
-  },
-});

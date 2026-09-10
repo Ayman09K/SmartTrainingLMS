@@ -1,21 +1,20 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { SymbolView } from "expo-symbols";
+import type { ComponentProps } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
+  Keyboard,
+  KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
 
-import AppButton from "../../components/AppButton";
-import ErrorMessage from "../../components/ErrorMessage";
 import LoadingState from "../../components/LoadingState";
 import ScreenContainer from "../../components/ScreenContainer";
-import SectionHeader from "../../components/SectionHeader";
-import StatusBadge from "../../components/StatusBadge";
 import LearningPathAssignmentProgressPanel from "./LearningPathAssignmentProgressPanel";
 import { getAdminTrainings } from "../../features/admin/adminTrainingService";
 import {
@@ -48,6 +47,7 @@ import type {
 } from "../../types/learningPath";
 
 type Role = "FORMATEUR" | "ADMIN";
+type SymbolName = ComponentProps<typeof SymbolView>["name"];
 
 type Props = {
   role: Role;
@@ -70,20 +70,64 @@ const VISIBILITIES: readonly LearningPathVisibility[] = [
   "PRIVATE",
 ];
 
-function statusLabel(status: string): string {
-  if (status === "DRAFT") return "Brouillon";
-  if (status === "PUBLISHED") return "Publié";
-  if (status === "ARCHIVED") return "Archivé";
-
-  return status;
-}
-
 function visibilityLabel(value: string): string {
   if (value === "PUBLIC") return "Public";
   if (value === "ASSIGNED_ONLY") return "Sur affectation";
   if (value === "PRIVATE") return "Privé";
 
   return value;
+}
+
+
+function statusVisual(status: string): {
+  label: string;
+  color: string;
+  soft: string;
+} {
+  if (status === "PUBLISHED") {
+    return { label: "Publié", color: "#16845A", soft: "#EAFBF3" };
+  }
+
+  if (status === "DRAFT") {
+    return { label: "Brouillon", color: "#B45309", soft: "#FFF4E5" };
+  }
+
+  if (status === "ARCHIVED") {
+    return { label: "Archivé", color: "#667085", soft: "#F2F4F7" };
+  }
+
+  return { label: status, color: "#667085", soft: "#F2F4F7" };
+}
+
+function visibilityIcon(value: LearningPathVisibility): SymbolName {
+  if (value === "PUBLIC") {
+    return {
+      ios: "globe",
+      android: "public",
+      web: "public",
+    };
+  }
+
+  if (value === "PRIVATE") {
+    return {
+      ios: "lock.fill",
+      android: "lock",
+      web: "lock",
+    };
+  }
+
+  return {
+    ios: "person.2.fill",
+    android: "group",
+    web: "group",
+  };
+}
+
+function trainingStatusLabel(value?: string | null): string {
+  if (value === "PUBLISHED") return "Publiée";
+  if (value === "DRAFT") return "Brouillon";
+  if (value === "ARCHIVED") return "Archivée";
+  return value || "Statut inconnu";
 }
 
 function sortSteps(steps: LearningPathStep[]): LearningPathStep[] {
@@ -94,11 +138,16 @@ export default function LearningPathManagerEditorScreen({
   role,
   userId,
   pathId,
-  onBack,
   onPathCreated,
   onPathDeleted,
 }: Props) {
   const { theme } = useSmartTrainingTheme();
+  const scrollRef = useRef<ScrollView | null>(null);
+  const infoTopRef = useRef(0);
+  const trainingTopRef = useRef(0);
+  const focusedYRef = useRef<number | null>(null);
+
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [path, setPath] = useState<LearningPathManager | null>(null);
   const [steps, setSteps] = useState<LearningPathStep[]>([]);
   const [versions, setVersions] = useState<LearningPathManager[]>([]);
@@ -229,6 +278,50 @@ export default function LearningPathManagerEditorScreen({
       active = false;
     };
   }, [applyPath, loadTrainingChoices, pathId]);
+
+  useEffect(() => {
+    const showEvent =
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent =
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+
+    const showSubscription = Keyboard.addListener(showEvent, (event) => {
+      setKeyboardHeight(event.endCoordinates.height);
+
+      if (focusedYRef.current === null) return;
+
+      const y = Math.max(0, focusedYRef.current - 110);
+
+      setTimeout(() => {
+        scrollRef.current?.scrollTo({ y, animated: true });
+      }, 80);
+
+      setTimeout(() => {
+        scrollRef.current?.scrollTo({ y, animated: true });
+      }, 240);
+    });
+
+    const hideSubscription = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
+
+  function focusAt(y: number) {
+    focusedYRef.current = y;
+
+    setTimeout(() => {
+      scrollRef.current?.scrollTo({
+        y: Math.max(0, y - 110),
+        animated: true,
+      });
+    }, 60);
+  }
+
 
   const existingTrainingIds = useMemo(
     () => new Set(steps.map((step) => step.trainingId)),
@@ -694,963 +787,1473 @@ export default function LearningPathManagerEditorScreen({
     }
   }
 
+
   if (loading) {
     return <LoadingState message="Chargement du parcours..." />;
   }
 
+  const currentStatus = path ? statusVisual(path.status) : null;
+  const sortedSteps = sortSteps(steps);
+
   return (
-    <ScreenContainer>
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled"
+    <ScreenContainer
+      edges={["left", "right", "bottom"]}
+      style={{ padding: 0, backgroundColor: "#F8F6F3" }}
+    >
+      <KeyboardAvoidingView
+        className="flex-1"
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={16}
       >
-        <View style={styles.page}>
-          <AppButton
-            title="← Retour aux parcours"
-            variant="secondary"
-            disabled={working}
-            onPress={onBack}
-            style={styles.backToPathsButton}
-          />
-
-          <SectionHeader
-            title={path ? path.title : "Nouveau parcours"}
-            subtitle={
-              path
-                ? "Gérez les informations, l’ordre des formations et le cycle de vie."
-                : "Créez d’abord le parcours, puis ajoutez les formations existantes."
-            }
-          />
-
-          {path ? (
-            <View style={styles.statusRow}>
-              <StatusBadge
-                label={`V${path.versionNumber || 1}`}
-                variant="info"
-              />
-              <StatusBadge
-                label={statusLabel(path.status)}
-                variant={
-                  path.status === "PUBLISHED"
-                    ? "success"
-                    : path.status === "DRAFT"
-                      ? "warning"
-                      : "info"
-                }
-              />
-              <Text
-                style={[
-                  styles.visibilityMeta,
-                  { color: theme.colors.foregroundSubtle },
-                ]}
-              >
-                {visibilityLabel(path.visibility)}
-              </Text>
-            </View>
-          ) : null}
-
-          {error ? <ErrorMessage message={error} /> : null}
-
-          {isHistoricalPublished ? (
+        <ScrollView
+          ref={scrollRef}
+          className="flex-1"
+          contentContainerStyle={{
+            paddingHorizontal: 14,
+            paddingTop: 14,
+            paddingBottom:
+              Platform.OS === "android" && keyboardHeight > 0
+                ? keyboardHeight + 28
+                : 28,
+          }}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+          showsVerticalScrollIndicator={false}
+        >
+          <View className="mx-auto w-full max-w-[760px]">
+            {/* HERO */}
             <View
-              style={[
-                styles.infoNotice,
-                {
-                  backgroundColor: theme.colors.surfaceSoft,
-                  borderColor: theme.colors.border,
-                },
-              ]}
+              className="overflow-hidden rounded-[24px] border bg-white"
+              style={{
+                borderColor: "#E5DFE8",
+                shadowColor: "#0F172A",
+                shadowOffset: { width: 0, height: 3 },
+                shadowOpacity: 0.05,
+                shadowRadius: 10,
+                elevation: 2,
+              }}
             >
-              <Text
-                style={[
-                  styles.infoNoticeTitle,
-                  { color: theme.colors.foreground },
-                ]}
-              >
-                Version historique
-              </Text>
-              <Text
-                style={[
-                  styles.infoNoticeText,
-                  { color: theme.colors.foregroundMuted },
-                ]}
-              >
-                Cette version reste accessible pour les apprenants déjà affectés. Les nouvelles affectations utilisent la dernière version publiée.
-              </Text>
-            </View>
-          ) : null}
+              <View className="h-1.5 bg-[#7C3AED]" />
 
-          {isPublished && draftVersion ? (
-            <AppButton
-              title={`Ouvrir le brouillon V${draftVersion.versionNumber || 1}`}
-              onPress={() => onPathCreated(draftVersion.id)}
-              style={styles.versionPrimaryAction}
-            />
-          ) : null}
-
-          {isPublished &&
-          !draftVersion &&
-          isLatestPublished ? (
-            <AppButton
-              title="Créer une nouvelle version"
-              loading={working}
-              onPress={confirmCreateVersion}
-              style={styles.versionPrimaryAction}
-            />
-          ) : null}
-
-          <View
-            style={[
-              styles.sectionCard,
-              {
-                backgroundColor: theme.colors.surface,
-                borderColor: theme.colors.border,
-                borderRadius: theme.shape.cardRadius,
-              },
-            ]}
-          >
-            <Text
-              style={[
-                styles.sectionTitle,
-                { color: theme.colors.foreground },
-              ]}
-            >
-              Informations
-            </Text>
-
-
-            <FieldLabel label="Description du parcours" />
-            <TextInput
-              value={description}
-              editable={isDraft && !working}
-              maxLength={2000}
-              onChangeText={setDescription}
-              multiline
-              placeholder="Contexte et contenu du parcours"
-              placeholderTextColor={theme.colors.foregroundSubtle}
-              style={[
-                styles.input,
-                styles.multiline,
-                {
-                  color: theme.colors.foreground,
-                  backgroundColor: theme.colors.background,
-                  borderColor: theme.colors.border,
-                },
-              ]}
-            />
-
-            <FieldLabel label="Objectifs" />
-            <TextInput
-              value={objectives}
-              editable={isDraft && !working}
-              maxLength={2000}
-              onChangeText={setObjectives}
-              multiline
-              placeholder="Compétences et objectifs pédagogiques"
-              placeholderTextColor={theme.colors.foregroundSubtle}
-              style={[
-                styles.input,
-                styles.multiline,
-                {
-                  color: theme.colors.foreground,
-                  backgroundColor: theme.colors.background,
-                  borderColor: theme.colors.border,
-                },
-              ]}
-            />
-
-            {path &&
-            path.status === "DRAFT" &&
-            (path.versionNumber || 1) > 1 ? (
-              <>
-                <FieldLabel label="Note de version / Changements apportés" />
-                <TextInput
-                  value={versionNote}
-                  editable={!working}
-                  maxLength={1500}
-                  onChangeText={setVersionNote}
-                  multiline
-                  placeholder="Ex. ajout d’une formation, nouvel ordre, mise à jour des objectifs..."
-                  placeholderTextColor={theme.colors.foregroundSubtle}
-                  style={[
-                    styles.input,
-                    styles.multilineSmall,
-                    {
-                      color: theme.colors.foreground,
-                      backgroundColor: theme.colors.background,
-                      borderColor: theme.colors.border,
-                    },
-                  ]}
+              <View className="relative overflow-hidden p-3.5">
+                <View
+                  pointerEvents="none"
+                  className="absolute -right-8 -top-10 h-[128px] w-[128px] rounded-full bg-[#F3EEFF]"
                 />
-                <Text
-                  style={[
-                    styles.versionNoteHelp,
-                    {
-                      color:
-                        theme.colors.foregroundSubtle,
-                    },
-                  ]}
+
+                <View className="flex-row items-start">
+                  <View className="h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-[#F1E9FF]">
+                    <SymbolView
+                      name={{
+                        ios: path ? "point.topleft.down.to.point.bottomright.curvepath.fill" : "plus.circle.fill",
+                        android: path ? "route" : "add_circle",
+                        web: path ? "route" : "add_circle",
+                      }}
+                      tintColor="#7C3AED"
+                      size={18}
+                      weight="bold"
+                    />
+                  </View>
+
+                  <View className="ml-3 min-w-0 flex-1 pr-4">
+                    <Text className="text-[9px] font-black uppercase tracking-[0.8px] text-[#7C3AED]">
+                      {path ? "Gestion pédagogique" : "Création pédagogique"}
+                    </Text>
+
+                    <Text
+                      accessibilityRole="header"
+                      className={
+                        path
+                          ? "mt-1 text-[20px] font-black leading-[24px] tracking-[-0.35px]"
+                          : "mt-1 text-[22px] font-black leading-[27px] tracking-[-0.4px]"
+                      }
+                      style={{ color: theme.colors.foreground }}
+                    >
+                      {path ? path.title : "Créer un parcours"}
+                    </Text>
+
+                    <Text
+                      className={
+                        path
+                          ? "mt-1 text-[10px] leading-[15px]"
+                          : "mt-1.5 text-[11px] leading-[17px]"
+                      }
+                      style={{ color: theme.colors.foregroundMuted }}
+                    >
+                      {path
+                        ? "Organisez les formations, gérez les versions et contrôlez le cycle de publication."
+                        : "Définissez les informations essentielles avant d’ajouter les formations du parcours."}
+                    </Text>
+                  </View>
+                </View>
+
+                {path && currentStatus ? (
+                  <>
+                    <View className="mt-3 flex-row flex-wrap gap-1.5">
+                      <InfoPill
+                        icon={{
+                          ios: "number.circle.fill",
+                          android: "tag",
+                          web: "tag",
+                        }}
+                        label={`V${path.versionNumber || 1}`}
+                        color="#2563EB"
+                        soft="#EFF6FF"
+                      />
+
+                      <InfoPill
+                        icon={
+                          path.status === "PUBLISHED"
+                            ? {
+                                ios: "checkmark.circle.fill",
+                                android: "check_circle",
+                                web: "check_circle",
+                              }
+                            : path.status === "DRAFT"
+                              ? {
+                                  ios: "pencil.circle.fill",
+                                  android: "edit",
+                                  web: "edit",
+                                }
+                              : {
+                                  ios: "archivebox.fill",
+                                  android: "inventory_2",
+                                  web: "inventory_2",
+                                }
+                        }
+                        label={currentStatus.label}
+                        color={currentStatus.color}
+                        soft={currentStatus.soft}
+                      />
+
+                      <InfoPill
+                        icon={visibilityIcon(path.visibility)}
+                        label={visibilityLabel(path.visibility)}
+                        color="#7C3AED"
+                        soft="#F3EEFF"
+                      />
+                    </View>
+
+                    <View className="mt-2.5 flex-row gap-2">
+                      <MiniMetric
+                        value={String(steps.length)}
+                        label="Formations"
+                        icon={{
+                          ios: "books.vertical.fill",
+                          android: "menu_book",
+                          web: "menu_book",
+                        }}
+                      />
+                      <MiniMetric
+                        value={String(versions.length || 1)}
+                        label="Versions"
+                        icon={{
+                          ios: "square.stack.3d.up.fill",
+                          android: "layers",
+                          web: "layers",
+                        }}
+                      />
+                    </View>
+                  </>
+                ) : (
+                  <View className="mt-4 flex-row flex-wrap gap-2">
+                    <InfoPill
+                      icon={{
+                        ios: "pencil.and.list.clipboard",
+                        android: "edit_note",
+                        web: "edit_note",
+                      }}
+                      label="Brouillon initial"
+                      color="#B45309"
+                      soft="#FFF4E5"
+                    />
+                    <InfoPill
+                      icon={{
+                        ios: "square.stack.3d.up.fill",
+                        android: "layers",
+                        web: "layers",
+                      }}
+                      label="Formations ajoutées après création"
+                      color="#7C3AED"
+                      soft="#F3EEFF"
+                    />
+                  </View>
+                )}
+              </View>
+            </View>
+
+            {error ? (
+              <View
+                className="mt-3 flex-row items-start rounded-[16px] border px-3.5 py-3.5"
+                style={{
+                  backgroundColor: "#FFF4F2",
+                  borderColor: "#F2C6C3",
+                }}
+              >
+                <View className="h-9 w-9 shrink-0 items-center justify-center rounded-[11px] bg-white">
+                  <SymbolView
+                    name={{
+                      ios: "exclamationmark.triangle.fill",
+                      android: "error",
+                      web: "error",
+                    }}
+                    tintColor="#C2413D"
+                    size={14}
+                    weight="bold"
+                  />
+                </View>
+
+                <View className="ml-3 min-w-0 flex-1">
+                  <Text className="text-[11px] font-black text-[#C2413D]">
+                    Erreur
+                  </Text>
+                  <Text
+                    className="mt-1 text-[10px] leading-[15px]"
+                    style={{ color: theme.colors.foregroundMuted }}
+                  >
+                    {error}
+                  </Text>
+                </View>
+              </View>
+            ) : null}
+
+            {isHistoricalPublished ? (
+              <NoticeCard
+                icon={{
+                  ios: "clock.arrow.circlepath",
+                  android: "history",
+                  web: "history",
+                }}
+                title="Version historique"
+                text="Cette version reste accessible pour les apprenants déjà affectés. Les nouvelles affectations utilisent la dernière version publiée."
+                color="#667085"
+                soft="#F2F4F7"
+              />
+            ) : null}
+
+            {isPublished && draftVersion ? (
+              <View className="mt-3">
+                <PrimaryAction
+                  icon={{
+                    ios: "pencil.and.list.clipboard",
+                    android: "edit_note",
+                    web: "edit_note",
+                  }}
+                  label={`Ouvrir le brouillon V${draftVersion.versionNumber || 1}`}
+                  disabled={working}
+                  onPress={() => onPathCreated(draftVersion.id)}
+                />
+              </View>
+            ) : null}
+
+            {isPublished && !draftVersion && isLatestPublished ? (
+              <View className="mt-3">
+                <PrimaryAction
+                  icon={{
+                    ios: "plus.rectangle.on.rectangle",
+                    android: "library_add",
+                    web: "library_add",
+                  }}
+                  label={working ? "Création..." : "Créer une nouvelle version"}
+                  disabled={working}
+                  onPress={confirmCreateVersion}
+                />
+              </View>
+            ) : null}
+
+            {/* INFORMATIONS */}
+            <View
+              onLayout={(event) => {
+                infoTopRef.current = event.nativeEvent.layout.y;
+              }}
+            >
+              <SectionTitle
+                eyebrow="Configuration"
+                title="Informations du parcours"
+                icon={{
+                  ios: "doc.text.fill",
+                  android: "description",
+                  web: "description",
+                }}
+              />
+
+              <View
+                className="rounded-[20px] border bg-white p-3"
+                style={{ borderColor: "#E5DFE8" }}
+              >
+                <FieldLabel
+                  label="Titre du parcours"
+                  required
+                  counter={`${title.length}`}
+                />
+                <TextInput
+                  value={title}
+                  editable={isDraft && !working}
+                  onChangeText={setTitle}
+                  onFocus={() => focusAt(infoTopRef.current + 25)}
+                  placeholder="Ex. Parcours Data & IA"
+                  placeholderTextColor={theme.colors.foregroundSubtle}
+                  className={
+                    path
+                      ? "h-[46px] rounded-[13px] border px-3 text-[12px]"
+                      : "h-[50px] rounded-[14px] border px-3.5 text-[13px]"
+                  }
+                  style={{
+                    color: theme.colors.foreground,
+                    backgroundColor: isDraft ? "#FCFBFD" : "#F5F3F6",
+                    borderColor: "#E5DFE8",
+                    opacity: isDraft ? 1 : 0.72,
+                  }}
+                />
+
+                <View className="mt-3">
+                  <FieldLabel
+                    label="Description du parcours"
+                    counter={`${description.length}/2000`}
+                  />
+                  <TextInput
+                    value={description}
+                    editable={isDraft && !working}
+                    maxLength={2000}
+                    onChangeText={setDescription}
+                    onFocus={() => focusAt(infoTopRef.current + 110)}
+                    multiline
+                    textAlignVertical="top"
+                    placeholder="Contexte, public cible et contenu du parcours"
+                    placeholderTextColor={theme.colors.foregroundSubtle}
+                    className={
+                      path
+                        ? "min-h-[76px] rounded-[13px] border px-3 py-2.5 text-[12px]"
+                        : "min-h-[92px] rounded-[14px] border px-3.5 py-3 text-[13px]"
+                    }
+                    style={{
+                      color: theme.colors.foreground,
+                      backgroundColor: isDraft ? "#FCFBFD" : "#F5F3F6",
+                      borderColor: "#E5DFE8",
+                      opacity: isDraft ? 1 : 0.72,
+                    }}
+                  />
+                </View>
+
+                <View className="mt-3">
+                  <FieldLabel
+                    label="Objectifs pédagogiques"
+                    counter={`${objectives.length}/2000`}
+                  />
+                  <TextInput
+                    value={objectives}
+                    editable={isDraft && !working}
+                    maxLength={2000}
+                    onChangeText={setObjectives}
+                    onFocus={() => focusAt(infoTopRef.current + 250)}
+                    multiline
+                    textAlignVertical="top"
+                    placeholder="Compétences et résultats attendus"
+                    placeholderTextColor={theme.colors.foregroundSubtle}
+                    className={
+                      path
+                        ? "min-h-[76px] rounded-[13px] border px-3 py-2.5 text-[12px]"
+                        : "min-h-[92px] rounded-[14px] border px-3.5 py-3 text-[13px]"
+                    }
+                    style={{
+                      color: theme.colors.foreground,
+                      backgroundColor: isDraft ? "#FCFBFD" : "#F5F3F6",
+                      borderColor: "#E5DFE8",
+                      opacity: isDraft ? 1 : 0.72,
+                    }}
+                  />
+                </View>
+
+                {path &&
+                path.status === "DRAFT" &&
+                (path.versionNumber || 1) > 1 ? (
+                  <View className="mt-3">
+                    <FieldLabel
+                      label="Note de version"
+                      counter={`${versionNote.length}/1500`}
+                    />
+                    <TextInput
+                      value={versionNote}
+                      editable={!working}
+                      maxLength={1500}
+                      onChangeText={setVersionNote}
+                      onFocus={() => focusAt(infoTopRef.current + 390)}
+                      multiline
+                      textAlignVertical="top"
+                      placeholder="Décrivez brièvement les changements de cette version"
+                      placeholderTextColor={theme.colors.foregroundSubtle}
+                      className="min-h-[72px] rounded-[13px] border bg-[#FCFBFD] px-3 py-2.5 text-[12px]"
+                      style={{
+                        color: theme.colors.foreground,
+                        borderColor: "#E5DFE8",
+                      }}
+                    />
+                    <Text
+                      className="mt-1.5 text-[9px] leading-[14px]"
+                      style={{ color: theme.colors.foregroundSubtle }}
+                    >
+                      Cette note sera visible dans l’historique des versions.
+                    </Text>
+                  </View>
+                ) : null}
+
+                <View className="mt-4">
+                  <FieldLabel label="Visibilité" />
+
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={{ gap: 8, paddingRight: 4 }}
+                  >
+                    {VISIBILITIES.map((item) => {
+                      const selected = visibility === item;
+
+                      return (
+                        <Pressable
+                          key={item}
+                          accessibilityRole="button"
+                          accessibilityState={{ selected }}
+                          disabled={!isDraft || working}
+                          onPress={() => setVisibility(item)}
+                          android_ripple={{ color: "transparent" }}
+                          className="h-[38px] flex-row items-center rounded-[11px] border px-2.5"
+                          style={{
+                            backgroundColor: selected
+                              ? theme.colors.accent
+                              : theme.colors.surface,
+                            borderColor: selected
+                              ? theme.colors.accent
+                              : theme.colors.border,
+                            opacity: !isDraft || working ? 0.55 : 1,
+                          }}
+                        >
+                          <SymbolView
+                            name={visibilityIcon(item)}
+                            tintColor={
+                              selected
+                                ? theme.colors.accentForeground
+                                : theme.colors.foregroundSubtle
+                            }
+                            size={12}
+                            weight="bold"
+                          />
+                          <Text
+                            className="ml-1.5 text-[10px] font-black"
+                            style={{
+                              color: selected
+                                ? theme.colors.accentForeground
+                                : theme.colors.foregroundMuted,
+                            }}
+                          >
+                            {visibilityLabel(item)}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </ScrollView>
+                </View>
+
+                {isDraft ? (
+                  <View className="mt-4">
+                    <PrimaryAction
+                      icon={{
+                        ios: path ? "checkmark.circle.fill" : "plus.circle.fill",
+                        android: path ? "save" : "add_circle",
+                        web: path ? "save" : "add_circle",
+                      }}
+                      label={
+                        working
+                          ? "Enregistrement..."
+                          : path
+                            ? "Enregistrer les modifications"
+                            : "Créer le parcours"
+                      }
+                      disabled={working}
+                      onPress={() => void savePath()}
+                    />
+                  </View>
+                ) : (
+                  <NoticeCard
+                    compact
+                    icon={{
+                      ios: "lock.fill",
+                      android: "lock",
+                      web: "lock",
+                    }}
+                    title="Version en lecture seule"
+                    text="Pour modifier le contenu d’une version publiée, créez une nouvelle version brouillon."
+                    color="#667085"
+                    soft="#F2F4F7"
+                  />
+                )}
+              </View>
+            </View>
+
+            {/* FORMATIONS */}
+            {path ? (
+              <View
+                onLayout={(event) => {
+                  trainingTopRef.current = event.nativeEvent.layout.y;
+                }}
+              >
+                <SectionTitle
+                  eyebrow="Structure"
+                  title="Formations du parcours"
+                  icon={{
+                    ios: "books.vertical.fill",
+                    android: "menu_book",
+                    web: "menu_book",
+                  }}
+                  trailing={`${steps.length}`}
+                />
+
+                <View
+                  className="rounded-[22px] border bg-white p-3.5"
+                  style={{ borderColor: "#E5DFE8" }}
                 >
-                  {versionNote.length}/1500 · Cette note sera visible dans l’historique des versions.
-                </Text>
+                  <Text
+                    className="text-[10px] leading-[16px]"
+                    style={{ color: theme.colors.foregroundMuted }}
+                  >
+                    L’ordre ci-dessous définit la progression pédagogique. Une formation
+                    peut être réutilisée dans plusieurs parcours.
+                  </Text>
+
+                  {sortedSteps.length === 0 ? (
+                    <View className="mt-3 items-center rounded-[17px] bg-[#FAF8FB] px-4 py-6">
+                      <View className="h-11 w-11 items-center justify-center rounded-[14px] bg-[#F1E9FF]">
+                        <SymbolView
+                          name={{
+                            ios: "books.vertical",
+                            android: "menu_book",
+                            web: "menu_book",
+                          }}
+                          tintColor="#7C3AED"
+                          size={18}
+                          weight="bold"
+                        />
+                      </View>
+                      <Text
+                        className="mt-3 text-[12px] font-black"
+                        style={{ color: theme.colors.foreground }}
+                      >
+                        Aucune formation ajoutée
+                      </Text>
+                      <Text
+                        className="mt-1 text-center text-[9px] leading-[14px]"
+                        style={{ color: theme.colors.foregroundMuted }}
+                      >
+                        Recherchez une formation ci-dessous pour construire ce parcours.
+                      </Text>
+                    </View>
+                  ) : (
+                    <View className="mt-3 gap-2.5">
+                      {sortedSteps.map((step, index) => (
+                        <View
+                          key={step.id}
+                          className="overflow-hidden rounded-[15px] border bg-[#FCFBFD]"
+                          style={{ borderColor: "#E8E2EA" }}
+                        >
+                          <View className="p-2.5">
+                            <View className="flex-row items-start">
+                              <View className="h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-[#F1E9FF]">
+                                <Text className="text-[11px] font-black text-[#7C3AED]">
+                                  {index + 1}
+                                </Text>
+                              </View>
+
+                              <View className="ml-2.5 min-w-0 flex-1">
+                                <Text
+                                  className="text-[11px] font-black leading-[15px]"
+                                  style={{ color: theme.colors.foreground }}
+                                >
+                                  {step.trainingMissing
+                                    ? "Formation indisponible"
+                                    : step.trainingTitle ??
+                                      `Formation #${step.trainingId}`}
+                                </Text>
+
+                                <View className="mt-2 flex-row flex-wrap gap-1.5">
+                                  <SmallPill
+                                    label={
+                                      step.required ? "Obligatoire" : "Facultative"
+                                    }
+                                    color={
+                                      step.required ? "#7C3AED" : "#667085"
+                                    }
+                                    soft={
+                                      step.required ? "#F3EEFF" : "#F2F4F7"
+                                    }
+                                  />
+                                  {step.trainingStatus ? (
+                                    <SmallPill
+                                      label={trainingStatusLabel(step.trainingStatus)}
+                                      color={
+                                        step.trainingStatus === "PUBLISHED"
+                                          ? "#16845A"
+                                          : "#B45309"
+                                      }
+                                      soft={
+                                        step.trainingStatus === "PUBLISHED"
+                                          ? "#EAFBF3"
+                                          : "#FFF4E5"
+                                      }
+                                    />
+                                  ) : null}
+                                </View>
+                              </View>
+                            </View>
+
+                            {isDraft ? (
+                              <View className="mt-3 flex-row flex-wrap gap-2">
+                                <MiniAction
+                                  icon={{
+                                    ios: step.required
+                                      ? "checkmark.circle.fill"
+                                      : "circle",
+                                    android: step.required
+                                      ? "check_circle"
+                                      : "radio_button_unchecked",
+                                    web: step.required
+                                      ? "check_circle"
+                                      : "radio_button_unchecked",
+                                  }}
+                                  label={
+                                    step.required ? "Facultative" : "Obligatoire"
+                                  }
+                                  disabled={working}
+                                  onPress={() => void toggleRequired(step)}
+                                />
+                                <IconAction
+                                  icon={{
+                                    ios: "arrow.up",
+                                    android: "arrow_upward",
+                                    web: "arrow_upward",
+                                  }}
+                                  label="Monter"
+                                  disabled={working || index === 0}
+                                  onPress={() => void moveStep(step.id, -1)}
+                                />
+                                <IconAction
+                                  icon={{
+                                    ios: "arrow.down",
+                                    android: "arrow_downward",
+                                    web: "arrow_downward",
+                                  }}
+                                  label="Descendre"
+                                  disabled={
+                                    working || index === sortedSteps.length - 1
+                                  }
+                                  onPress={() => void moveStep(step.id, 1)}
+                                />
+                                <IconAction
+                                  icon={{
+                                    ios: "trash.fill",
+                                    android: "delete",
+                                    web: "delete",
+                                  }}
+                                  label="Retirer"
+                                  danger
+                                  disabled={working}
+                                  onPress={() => confirmRemoveStep(step)}
+                                />
+                              </View>
+                            ) : null}
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+
+                  {isDraft ? (
+                    <View className="mt-4 border-t border-[#EEE9F0] pt-4">
+                      <View className="flex-row items-center">
+                        <View className="h-8 w-8 items-center justify-center rounded-[10px] bg-[#F1E9FF]">
+                          <SymbolView
+                            name={{
+                              ios: "plus",
+                              android: "add",
+                              web: "add",
+                            }}
+                            tintColor="#7C3AED"
+                            size={13}
+                            weight="bold"
+                          />
+                        </View>
+                        <View className="ml-2.5 min-w-0 flex-1">
+                          <Text
+                            className="text-[12px] font-black"
+                            style={{ color: theme.colors.foreground }}
+                          >
+                            Ajouter une formation
+                          </Text>
+                          <Text
+                            className="mt-0.5 text-[9px]"
+                            style={{ color: theme.colors.foregroundMuted }}
+                          >
+                            Sélectionnez une formation existante de la plateforme.
+                          </Text>
+                        </View>
+                      </View>
+
+                      <View
+                        className="mt-3 flex-row items-center rounded-[14px] border bg-[#FCFBFD] px-3"
+                        style={{ borderColor: "#E5DFE8" }}
+                      >
+                        <SymbolView
+                          name={{
+                            ios: "magnifyingglass",
+                            android: "search",
+                            web: "search",
+                          }}
+                          tintColor={theme.colors.foregroundSubtle}
+                          size={14}
+                        />
+                        <TextInput
+                          value={trainingQuery}
+                          onChangeText={setTrainingQuery}
+                          onFocus={() => focusAt(trainingTopRef.current + 410)}
+                          placeholder="Rechercher une formation..."
+                          placeholderTextColor={theme.colors.foregroundSubtle}
+                          className="ml-2 h-[48px] min-w-0 flex-1 text-[12px]"
+                          style={{ color: theme.colors.foreground }}
+                          returnKeyType="search"
+                        />
+                        {trainingQuery ? (
+                          <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel="Effacer la recherche"
+                            onPress={() => setTrainingQuery("")}
+                            className="h-8 w-8 items-center justify-center rounded-full"
+                          >
+                            <SymbolView
+                              name={{
+                                ios: "xmark.circle.fill",
+                                android: "cancel",
+                                web: "cancel",
+                              }}
+                              tintColor={theme.colors.foregroundSubtle}
+                              size={14}
+                            />
+                          </Pressable>
+                        ) : null}
+                      </View>
+
+                      <View className="mt-2.5 gap-2">
+                        {availableTrainings.length === 0 ? (
+                          <Text
+                            className="rounded-[14px] bg-[#FAF8FB] px-3 py-4 text-center text-[9px]"
+                            style={{ color: theme.colors.foregroundMuted }}
+                          >
+                            Aucune formation disponible pour cet ajout.
+                          </Text>
+                        ) : (
+                          availableTrainings.slice(0, 20).map((training) => {
+                            const selected =
+                              selectedTrainingId === training.id;
+
+                            return (
+                              <Pressable
+                                key={training.id}
+                                accessibilityRole="button"
+                                accessibilityState={{ selected }}
+                                disabled={working}
+                                onPress={() =>
+                                  setSelectedTrainingId(
+                                    selected ? null : training.id,
+                                  )
+                                }
+                                android_ripple={{ color: "transparent" }}
+                                className="flex-row items-center rounded-[14px] border px-3 py-3"
+                                style={{
+                                  backgroundColor: selected
+                                    ? "#F7F2FF"
+                                    : "#FCFBFD",
+                                  borderColor: selected
+                                    ? "#7C3AED"
+                                    : "#E5DFE8",
+                                  opacity: working ? 0.55 : 1,
+                                }}
+                              >
+                                <View
+                                  className="h-7 w-7 items-center justify-center rounded-full border"
+                                  style={{
+                                    borderColor: selected
+                                      ? "#7C3AED"
+                                      : "#D7D0DB",
+                                    backgroundColor: selected
+                                      ? "#7C3AED"
+                                      : "#FFFFFF",
+                                  }}
+                                >
+                                  {selected ? (
+                                    <SymbolView
+                                      name={{
+                                        ios: "checkmark",
+                                        android: "check",
+                                        web: "check",
+                                      }}
+                                      tintColor="#FFFFFF"
+                                      size={11}
+                                      weight="bold"
+                                    />
+                                  ) : null}
+                                </View>
+
+                                <View className="ml-2.5 min-w-0 flex-1">
+                                  <Text
+                                    className="text-[11px] font-black"
+                                    style={{ color: theme.colors.foreground }}
+                                  >
+                                    {training.title}
+                                  </Text>
+                                  <Text
+                                    className="mt-0.5 text-[8px] font-bold"
+                                    style={{
+                                      color:
+                                        training.status === "PUBLISHED"
+                                          ? "#16845A"
+                                          : "#B45309",
+                                    }}
+                                  >
+                                    {trainingStatusLabel(training.status)}
+                                  </Text>
+                                </View>
+                              </Pressable>
+                            );
+                          })
+                        )}
+                      </View>
+
+                      <View className="mt-3">
+                        <PrimaryAction
+                          icon={{
+                            ios: "plus.circle.fill",
+                            android: "add_circle",
+                            web: "add_circle",
+                          }}
+                          label={
+                            working
+                              ? "Ajout..."
+                              : selectedTrainingId
+                                ? "Ajouter la formation sélectionnée"
+                                : "Sélectionnez une formation"
+                          }
+                          disabled={working || !selectedTrainingId}
+                          onPress={() => void addStep()}
+                        />
+                      </View>
+                    </View>
+                  ) : null}
+                </View>
+              </View>
+            ) : null}
+
+            {/* CYCLE DE VIE */}
+            {path ? (
+              <>
+                <SectionTitle
+                  eyebrow="Publication"
+                  title="Cycle de vie"
+                  icon={{
+                    ios: "arrow.triangle.2.circlepath",
+                    android: "sync_alt",
+                    web: "sync_alt",
+                  }}
+                />
+
+                <View
+                  className="rounded-[22px] border bg-white p-3.5"
+                  style={{ borderColor: "#E5DFE8" }}
+                >
+                  <Text
+                    className="text-[10px] leading-[16px]"
+                    style={{ color: theme.colors.foregroundMuted }}
+                  >
+                    Contrôlez la disponibilité du parcours sans modifier les
+                    formations qui le composent.
+                  </Text>
+
+                  <View className="mt-3 gap-2">
+                    {isDraft ? (
+                      <LifecycleAction
+                        icon={{
+                          ios: "paperplane.fill",
+                          android: "publish",
+                          web: "publish",
+                        }}
+                        title="Publier le parcours"
+                        description={
+                          steps.length === 0
+                            ? "Ajoutez au moins une formation avant publication."
+                            : "Rendre cette version disponible pour les affectations."
+                        }
+                        color="#16845A"
+                        soft="#EAFBF3"
+                        disabled={working || steps.length === 0}
+                        onPress={confirmPublish}
+                      />
+                    ) : null}
+
+                    {isPublished ? (
+                      <LifecycleAction
+                        icon={{
+                          ios: "archivebox.fill",
+                          android: "inventory_2",
+                          web: "inventory_2",
+                        }}
+                        title="Archiver"
+                        description="Retirer cette version des nouvelles affectations."
+                        color="#B45309"
+                        soft="#FFF4E5"
+                        disabled={working}
+                        onPress={confirmArchive}
+                      />
+                    ) : null}
+
+                    {isArchived ? (
+                      <LifecycleAction
+                        icon={{
+                          ios: "arrow.uturn.backward.circle.fill",
+                          android: "restore",
+                          web: "restore",
+                        }}
+                        title="Désarchiver"
+                        description="Rendre de nouveau cette version publiée et affectable."
+                        color="#2563EB"
+                        soft="#EFF6FF"
+                        disabled={working}
+                        onPress={confirmUnarchive}
+                      />
+                    ) : null}
+
+                    {isDraft || isArchived ? (
+                      <LifecycleAction
+                        icon={{
+                          ios: "trash.fill",
+                          android: "delete",
+                          web: "delete",
+                        }}
+                        title="Supprimer le parcours"
+                        description="Supprimer cette version et ses données de parcours."
+                        color="#C2413D"
+                        soft="#FFF1F0"
+                        disabled={working}
+                        onPress={confirmDelete}
+                      />
+                    ) : null}
+                  </View>
+                </View>
               </>
             ) : null}
 
-            <FieldLabel label="Visibilité" />
-            <View style={styles.choiceRow}>
-              {VISIBILITIES.map((item) => {
-                const selected = visibility === item;
+            {/* VERSIONS */}
+            {path && versions.length > 0 ? (
+              <>
+                <SectionTitle
+                  eyebrow="Historique"
+                  title="Versions du parcours"
+                  icon={{
+                    ios: "square.stack.3d.up.fill",
+                    android: "layers",
+                    web: "layers",
+                  }}
+                  trailing={`${versions.length}`}
+                />
 
-                return (
-                  <Pressable
-                    key={item}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected }}
-                    disabled={!isDraft || working}
-                    onPress={() => setVisibility(item)}
-                    style={[
-                      styles.choice,
-                      {
-                        backgroundColor: selected
-                          ? theme.colors.accent
-                          : theme.colors.surfaceSoft,
-                        borderColor: selected
-                          ? theme.colors.accent
-                          : theme.colors.border,
-                        opacity:
-                          !isDraft || working ? 0.6 : 1,
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={{
-                        color: selected
-                          ? theme.colors.accentForeground
-                          : theme.colors.foreground,
-                        fontWeight: "800",
-                        fontSize: 12,
-                      }}
-                    >
-                      {visibilityLabel(item)}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
+                <View className="gap-2.5">
+                  {versions.map((version) => {
+                    const visual = statusVisual(version.status);
+                    const current = version.id === path.id;
 
-            {isDraft ? (
-              <AppButton
-                title={path ? "Enregistrer" : "Créer le parcours"}
-                loading={working}
-                onPress={() => void savePath()}
-                style={styles.primaryAction}
-              />
-            ) : (
-              <Text
-                style={[
-                  styles.readOnlyNotice,
-                  { color: theme.colors.foregroundMuted },
-                ]}
-              >
-                Cette version publiée est en lecture seule. Pour faire évoluer son contenu, créez une nouvelle version.
-              </Text>
-            )}
-          </View>
-
-          {path ? (
-            <View
-              style={[
-                styles.sectionCard,
-                {
-                  backgroundColor: theme.colors.surface,
-                  borderColor: theme.colors.border,
-                  borderRadius: theme.shape.cardRadius,
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.sectionTitle,
-                  { color: theme.colors.foreground },
-                ]}
-              >
-                Formations du parcours
-              </Text>
-
-              <Text
-                style={[
-                  styles.helpText,
-                  { color: theme.colors.foregroundMuted },
-                ]}
-              >
-                Une même formation peut être réutilisée dans plusieurs parcours. L’ordre ci-dessous est l’ordre pédagogique du parcours.
-              </Text>
-
-              {steps.length === 0 ? (
-                <Text
-                  style={[
-                    styles.emptyText,
-                    { color: theme.colors.foregroundMuted },
-                  ]}
-                >
-                  Aucune formation ajoutée.
-                </Text>
-              ) : (
-                <View style={styles.steps}>
-                  {sortSteps(steps).map((step, index) => (
-                    <View
-                      key={step.id}
-                      style={[
-                        styles.stepCard,
-                        {
-                          backgroundColor:
-                            theme.colors.surfaceSoft,
-                          borderColor: theme.colors.border,
-                        },
-                      ]}
-                    >
-                      <View style={styles.stepHeader}>
-                        <View style={styles.stepCopy}>
-                          <Text
-                            style={[
-                              styles.stepTitle,
-                              { color: theme.colors.foreground },
-                            ]}
-                          >
-                            {index + 1}.{" "}
-                            {step.trainingMissing
-                              ? "Formation indisponible"
-                              : step.trainingTitle ??
-                                `Formation #${step.trainingId}`}
-                          </Text>
-                          <Text
-                            style={[
-                              styles.stepMeta,
-                              {
-                                color:
-                                  theme.colors.foregroundMuted,
-                              },
-                            ]}
-                          >
-                            {step.required
-                              ? "Obligatoire"
-                              : "Facultative"}
-                            {step.trainingStatus
-                              ? ` · ${step.trainingStatus}`
-                              : ""}
-                          </Text>
-                        </View>
-                      </View>
-
-                      {isDraft ? (
-                        <View style={styles.stepActions}>
-                          <AppButton
-                            title={step.required
-                              ? "Rendre facultative"
-                              : "Rendre obligatoire"}
-                            variant="secondary"
-                            disabled={working}
-                            onPress={() =>
-                              void toggleRequired(step)
-                            }
-                            style={styles.smallAction}
-                          />
-                          <AppButton
-                            title="↑"
-                            variant="secondary"
-                            disabled={working || index === 0}
-                            onPress={() =>
-                              void moveStep(step.id, -1)
-                            }
-                            style={styles.orderAction}
-                          />
-                          <AppButton
-                            title="↓"
-                            variant="secondary"
-                            disabled={
-                              working ||
-                              index === steps.length - 1
-                            }
-                            onPress={() =>
-                              void moveStep(step.id, 1)
-                            }
-                            style={styles.orderAction}
-                          />
-                          <AppButton
-                            title="Retirer"
-                            variant="danger"
-                            disabled={working}
-                            onPress={() =>
-                              confirmRemoveStep(step)
-                            }
-                            style={styles.smallAction}
-                          />
-                        </View>
-                      ) : null}
-                    </View>
-                  ))}
-                </View>
-              )}
-
-              {isDraft ? (
-                <View style={styles.addArea}>
-                  <Text
-                    style={[
-                      styles.subTitle,
-                      { color: theme.colors.foreground },
-                    ]}
-                  >
-                    Ajouter une formation existante
-                  </Text>
-
-                  <TextInput
-                    value={trainingQuery}
-                    onChangeText={setTrainingQuery}
-                    placeholder="Rechercher une formation..."
-                    placeholderTextColor={
-                      theme.colors.foregroundSubtle
-                    }
-                    style={[
-                      styles.input,
-                      {
-                        color: theme.colors.foreground,
-                        backgroundColor:
-                          theme.colors.background,
-                        borderColor: theme.colors.border,
-                      },
-                    ]}
-                  />
-
-                  <View style={styles.trainingChoices}>
-                    {availableTrainings.length === 0 ? (
-                      <Text
-                        style={[
-                          styles.emptyText,
-                          {
-                            color:
-                              theme.colors.foregroundMuted,
-                          },
-                        ]}
+                    return (
+                      <View
+                        key={version.id}
+                        className="overflow-hidden rounded-[16px] border bg-white"
+                        style={{
+                          borderColor: current ? "#7C3AED" : "#E5DFE8",
+                        }}
                       >
-                        Aucune formation disponible pour cet ajout.
-                      </Text>
-                    ) : (
-                      availableTrainings
-                        .slice(0, 20)
-                        .map((training) => {
-                          const selected =
-                            selectedTrainingId === training.id;
+                        {current ? (
+                          <View className="h-1 bg-[#7C3AED]" />
+                        ) : null}
 
-                          return (
-                            <Pressable
-                              key={training.id}
-                              accessibilityRole="button"
-                              accessibilityState={{ selected }}
-                              disabled={working}
-                              onPress={() =>
-                                setSelectedTrainingId(
-                                  selected
-                                    ? null
-                                    : training.id,
-                                )
-                              }
-                              style={[
-                                styles.trainingChoice,
-                                {
-                                  backgroundColor: selected
-                                    ? theme.colors.surfaceElevated
-                                    : theme.colors.background,
-                                  borderColor: selected
-                                    ? theme.colors.accent
-                                    : theme.colors.border,
-                                },
-                              ]}
-                            >
-                              <Text
-                                style={[
-                                  styles.trainingChoiceTitle,
-                                  {
-                                    color:
-                                      theme.colors.foreground,
-                                  },
-                                ]}
-                              >
-                                {training.title}
+                        <View className="p-3">
+                          <View className="flex-row items-start">
+                            <View className="h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-[#F1E9FF]">
+                              <Text className="text-[10px] font-black text-[#7C3AED]">
+                                V{version.versionNumber || 1}
                               </Text>
+                            </View>
+
+                            <View className="ml-3 min-w-0 flex-1">
+                              <View className="flex-row items-start justify-between gap-2">
+                                <Text
+                                  className="min-w-0 flex-1 text-[12px] font-black leading-[17px]"
+                                  style={{ color: theme.colors.foreground }}
+                                >
+                                  {version.title}
+                                </Text>
+
+                                <SmallPill
+                                  label={visual.label}
+                                  color={visual.color}
+                                  soft={visual.soft}
+                                />
+                              </View>
+
                               <Text
-                                style={[
-                                  styles.trainingChoiceMeta,
-                                  {
-                                    color:
-                                      training.status ===
-                                      "PUBLISHED"
-                                        ? theme.colors.success
-                                        : theme.colors.warning,
-                                  },
-                                ]}
+                                className="mt-1.5 text-[9px] leading-[14px]"
+                                style={{ color: theme.colors.foregroundMuted }}
                               >
-                                {training.status ||
-                                  "Statut inconnu"}
+                                {(version.versionNumber || 1) === 1
+                                  ? "Version initiale"
+                                  : version.versionNote?.trim() ||
+                                    "Aucune note de version renseignée."}
                               </Text>
-                            </Pressable>
-                          );
-                        })
-                    )}
-                  </View>
 
-                  <Text
-                    style={[
-                      styles.helpText,
-                      { color: theme.colors.foregroundMuted },
-                    ]}
-                  >
-                    Une formation non publiée peut empêcher le parcours d’être visible dans le catalogue apprenant. Le backend reste l’autorité sur les règles d’ajout et de publication.
-                  </Text>
-
-                  <AppButton
-                    title="Ajouter au parcours"
-                    loading={working}
-                    disabled={!selectedTrainingId}
-                    onPress={() => void addStep()}
-                  />
-                </View>
-              ) : null}
-            </View>
-          ) : null}
-
-          {path ? (
-            <View
-              style={[
-                styles.sectionCard,
-                {
-                  backgroundColor: theme.colors.surface,
-                  borderColor: theme.colors.border,
-                  borderRadius: theme.shape.cardRadius,
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.sectionTitle,
-                  { color: theme.colors.foreground },
-                ]}
-              >
-                Cycle de vie
-              </Text>
-
-              <View style={styles.lifecycleActions}>
-                {isDraft ? (
-                  <AppButton
-                    title="Publier"
-                    loading={working}
-                    disabled={steps.length === 0}
-                    onPress={confirmPublish}
-                    style={styles.lifecycleButton}
-                  />
-                ) : null}
-
-                {isPublished ? (
-                  <AppButton
-                    title="Archiver"
-                    variant="secondary"
-                    loading={working}
-                    onPress={confirmArchive}
-                    style={styles.lifecycleButton}
-                  />
-                ) : null}
-
-                {isArchived ? (
-                  <AppButton
-                    title="Désarchiver"
-                    variant="secondary"
-                    loading={working}
-                    onPress={confirmUnarchive}
-                    style={styles.lifecycleButton}
-                  />
-                ) : null}
-
-                {isDraft || isArchived ? (
-                  <AppButton
-                    title="Supprimer"
-                    variant="danger"
-                    loading={working}
-                    onPress={confirmDelete}
-                    style={styles.lifecycleButton}
-                  />
-                ) : null}
-              </View>
-            </View>
-          ) : null}
-
-          {path && versions.length > 0 ? (
-            <View
-              style={[
-                styles.sectionCard,
-                {
-                  backgroundColor: theme.colors.surface,
-                  borderColor: theme.colors.border,
-                  borderRadius: theme.shape.cardRadius,
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.sectionTitle,
-                  { color: theme.colors.foreground },
-                ]}
-              >
-                Versions du parcours
-              </Text>
-
-              <Text
-                style={[
-                  styles.helpText,
-                  { color: theme.colors.foregroundMuted },
-                ]}
-              >
-                Les versions publiées restent stables. Les évolutions se préparent dans une nouvelle version brouillon.
-              </Text>
-
-              <View style={styles.versionList}>
-                {versions.map((version) => (
-                  <View
-                    key={version.id}
-                    style={[
-                      styles.versionCard,
-                      {
-                        backgroundColor:
-                          version.id === path.id
-                            ? theme.colors.surfaceElevated
-                            : theme.colors.surfaceSoft,
-                        borderColor:
-                          version.id === path.id
-                            ? theme.colors.accent
-                            : theme.colors.border,
-                      },
-                    ]}
-                  >
-                    <View style={styles.versionCardHeader}>
-                      <View style={styles.versionCardCopy}>
-                        <Text
-                          style={[
-                            styles.versionTitle,
-                            { color: theme.colors.foreground },
-                          ]}
-                        >
-                          V{version.versionNumber || 1} · {version.title}
-                        </Text>
-
-                        <View style={styles.versionStatusRow}>
-                          <StatusBadge
-                            label={statusLabel(version.status)}
-                            variant={
-                              version.status === "PUBLISHED"
-                                ? "success"
-                                : version.status === "DRAFT"
-                                  ? "warning"
-                                  : "info"
-                            }
-                          />
-
-                          {version.id === path.id ? (
-                            <Text
-                              style={[
-                                styles.currentVersionText,
-                                {
-                                  color: theme.colors.accent,
-                                },
-                              ]}
-                            >
-                              Version affichée
-                            </Text>
-                          ) : null}
+                              {current ? (
+                                <Text className="mt-2 text-[8px] font-black uppercase tracking-[0.5px] text-[#7C3AED]">
+                                  Version affichée
+                                </Text>
+                              ) : (
+                                <Pressable
+                                  accessibilityRole="button"
+                                  disabled={working}
+                                  onPress={() => onPathCreated(version.id)}
+                                  android_ripple={{ color: "transparent" }}
+                                  className="mt-2.5 self-start flex-row items-center rounded-[11px] bg-[#F7F2FF] px-2.5 py-2"
+                                  style={{ opacity: working ? 0.5 : 1 }}
+                                >
+                                  <Text className="text-[9px] font-black text-[#7C3AED]">
+                                    {version.status === "DRAFT"
+                                      ? "Modifier"
+                                      : "Ouvrir"}
+                                  </Text>
+                                  <SymbolView
+                                    name={{
+                                      ios: "chevron.right",
+                                      android: "chevron_right",
+                                      web: "chevron_right",
+                                    }}
+                                    tintColor="#7C3AED"
+                                    size={9}
+                                    weight="bold"
+                                  />
+                                </Pressable>
+                              )}
+                            </View>
+                          </View>
                         </View>
-
-                        <Text
-                          style={[
-                            styles.versionNoteText,
-                            {
-                              color:
-                                theme.colors.foregroundMuted,
-                            },
-                          ]}
-                        >
-                          {(version.versionNumber || 1) === 1
-                            ? "Version initiale"
-                            : version.versionNote?.trim() ||
-                              "Aucune note de version renseignée."}
-                        </Text>
                       </View>
+                    );
+                  })}
+                </View>
+              </>
+            ) : null}
 
-                      {version.id !== path.id ? (
-                        <AppButton
-                          title={
-                            version.status === "DRAFT"
-                              ? "Modifier"
-                              : "Ouvrir"
-                          }
-                          variant="secondary"
-                          disabled={working}
-                          onPress={() => onPathCreated(version.id)}
-                          style={styles.versionOpenButton}
-                        />
-                      ) : null}
-                    </View>
-                  </View>
-                ))}
+            {path ? (
+              <View className="mt-5">
+                <LearningPathAssignmentProgressPanel
+                  role={role}
+                  pathId={path.id}
+                  pathStatus={path.status}
+                />
               </View>
-            </View>
-          ) : null}
+            ) : null}
 
-          {path ? (
-            <LearningPathAssignmentProgressPanel
-              role={role}
-              pathId={path.id}
-              pathStatus={path.status}
-            />
-          ) : null}
-        </View>
-      </ScrollView>
+            <View className="h-2" />
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </ScreenContainer>
   );
 
-  function FieldLabel({ label }: { label: string }) {
+  function SectionTitle({
+    eyebrow,
+    title: sectionTitle,
+    icon,
+    trailing,
+  }: {
+    eyebrow: string;
+    title: string;
+    icon: SymbolName;
+    trailing?: string;
+  }) {
     return (
-      <Text
-        style={[
-          styles.label,
-          { color: theme.colors.foregroundMuted },
-        ]}
+      <View className="mb-2 mt-4 flex-row items-center">
+        <View className="h-8 w-8 items-center justify-center rounded-[10px] bg-[#F1E9FF]">
+          <SymbolView
+            name={icon}
+            tintColor="#7C3AED"
+            size={14}
+            weight="bold"
+          />
+        </View>
+
+        <View className="ml-2.5 min-w-0 flex-1">
+          <Text
+            className="text-[9px] font-black uppercase tracking-[0.7px]"
+            style={{ color: theme.colors.foregroundSubtle }}
+          >
+            {eyebrow}
+          </Text>
+          <Text
+            className="mt-0.5 text-[15px] font-black"
+            style={{ color: theme.colors.foreground }}
+          >
+            {sectionTitle}
+          </Text>
+        </View>
+
+        {trailing ? (
+          <View className="rounded-full bg-[#F3EEFF] px-2.5 py-1">
+            <Text className="text-[9px] font-black text-[#7C3AED]">
+              {trailing}
+            </Text>
+          </View>
+        ) : null}
+      </View>
+    );
+  }
+
+  function FieldLabel({
+    label,
+    required = false,
+    counter,
+  }: {
+    label: string;
+    required?: boolean;
+    counter?: string;
+  }) {
+    return (
+      <View className="mb-1.5 flex-row items-center justify-between">
+        <Text
+          className="text-[11px] font-black"
+          style={{ color: theme.colors.foreground }}
+        >
+          {label}
+          {required ? <Text className="text-[#C2413D]"> *</Text> : null}
+        </Text>
+        {counter ? (
+          <Text
+            className="text-[8px] font-bold"
+            style={{ color: theme.colors.foregroundSubtle }}
+          >
+            {counter}
+          </Text>
+        ) : null}
+      </View>
+    );
+  }
+
+  function InfoPill({
+    icon,
+    label,
+    color,
+    soft,
+  }: {
+    icon: SymbolName;
+    label: string;
+    color: string;
+    soft: string;
+  }) {
+    return (
+      <View
+        className="flex-row items-center rounded-full px-2.5 py-1.5"
+        style={{ backgroundColor: soft }}
       >
-        {label}
-      </Text>
+        <SymbolView
+          name={icon}
+          tintColor={color}
+          size={10}
+          weight="bold"
+        />
+        <Text
+          className="ml-1.5 text-[9px] font-black"
+          style={{ color }}
+        >
+          {label}
+        </Text>
+      </View>
+    );
+  }
+
+  function MiniMetric({
+    value,
+    label,
+    icon,
+  }: {
+    value: string;
+    label: string;
+    icon: SymbolName;
+  }) {
+    return (
+      <View className="min-w-0 flex-1 flex-row items-center rounded-[14px] bg-[#FAF8FB] px-3 py-2.5">
+        <View className="h-8 w-8 items-center justify-center rounded-[10px] bg-white">
+          <SymbolView
+            name={icon}
+            tintColor="#7C3AED"
+            size={12}
+            weight="bold"
+          />
+        </View>
+        <View className="ml-2.5">
+          <Text
+            className="text-[14px] font-black"
+            style={{ color: theme.colors.foreground }}
+          >
+            {value}
+          </Text>
+          <Text
+            className="text-[8px] font-bold"
+            style={{ color: theme.colors.foregroundMuted }}
+          >
+            {label}
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  function SmallPill({
+    label,
+    color,
+    soft,
+  }: {
+    label: string;
+    color: string;
+    soft: string;
+  }) {
+    return (
+      <View className="rounded-full px-2 py-1" style={{ backgroundColor: soft }}>
+        <Text className="text-[8px] font-black" style={{ color }}>
+          {label}
+        </Text>
+      </View>
+    );
+  }
+
+  function PrimaryAction({
+    icon,
+    label,
+    disabled,
+    onPress,
+  }: {
+    icon: SymbolName;
+    label: string;
+    disabled: boolean;
+    onPress: () => void;
+  }) {
+    return (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ disabled }}
+        disabled={disabled}
+        onPress={onPress}
+        android_ripple={{ color: "transparent" }}
+        className={
+          !path
+            ? "h-[48px] w-full flex-row items-center justify-center rounded-[14px] bg-[#7C3AED]"
+            : "h-[44px] w-full flex-row items-center justify-center rounded-[13px] bg-[#7C3AED]"
+        }
+        style={{ opacity: disabled ? 0.48 : 1 }}
+      >
+        <SymbolView
+          name={icon}
+          tintColor="#FFFFFF"
+          size={14}
+          weight="bold"
+        />
+        <Text className="ml-2 text-[10px] font-black text-white">
+          {label}
+        </Text>
+      </Pressable>
+    );
+  }
+
+  function NoticeCard({
+    icon,
+    title: noticeTitle,
+    text,
+    color,
+    soft,
+    compact = false,
+  }: {
+    icon: SymbolName;
+    title: string;
+    text: string;
+    color: string;
+    soft: string;
+    compact?: boolean;
+  }) {
+    return (
+      <View
+        className={`${compact ? "mt-3" : "mt-2.5"} flex-row items-start rounded-[14px] border px-2.5 py-2.5`}
+        style={{
+          backgroundColor: soft,
+          borderColor: `${color}35`,
+        }}
+      >
+        <View className="h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-white">
+          <SymbolView
+            name={icon}
+            tintColor={color}
+            size={12}
+            weight="bold"
+          />
+        </View>
+        <View className="ml-2.5 min-w-0 flex-1">
+          <Text className="text-[10px] font-black" style={{ color }}>
+            {noticeTitle}
+          </Text>
+          <Text
+            className="mt-1 text-[9px] leading-[14px]"
+            style={{ color: theme.colors.foregroundMuted }}
+          >
+            {text}
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  function MiniAction({
+    icon,
+    label,
+    disabled,
+    onPress,
+  }: {
+    icon: SymbolName;
+    label: string;
+    disabled: boolean;
+    onPress: () => void;
+  }) {
+    return (
+      <Pressable
+        accessibilityRole="button"
+        disabled={disabled}
+        onPress={onPress}
+        className="flex-row items-center rounded-[10px] border bg-white px-2.5 py-2"
+        style={{
+          borderColor: "#E5DFE8",
+          opacity: disabled ? 0.42 : 1,
+        }}
+      >
+        <SymbolView
+          name={icon}
+          tintColor="#7C3AED"
+          size={10}
+          weight="bold"
+        />
+        <Text
+          className="ml-1.5 text-[8px] font-black"
+          style={{ color: theme.colors.foregroundMuted }}
+        >
+          {label}
+        </Text>
+      </Pressable>
+    );
+  }
+
+  function IconAction({
+    icon,
+    label,
+    disabled,
+    danger = false,
+    onPress,
+  }: {
+    icon: SymbolName;
+    label: string;
+    disabled: boolean;
+    danger?: boolean;
+    onPress: () => void;
+  }) {
+    const color = danger ? "#C2413D" : "#667085";
+
+    return (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        disabled={disabled}
+        onPress={onPress}
+        className="h-8 w-8 items-center justify-center rounded-[10px] border bg-white"
+        style={{
+          borderColor: danger ? "#F2C6C3" : "#E5DFE8",
+          opacity: disabled ? 0.38 : 1,
+        }}
+      >
+        <SymbolView
+          name={icon}
+          tintColor={color}
+          size={11}
+          weight="bold"
+        />
+      </Pressable>
+    );
+  }
+
+  function LifecycleAction({
+    icon,
+    title: actionTitle,
+    description: actionDescription,
+    color,
+    soft,
+    disabled,
+    onPress,
+  }: {
+    icon: SymbolName;
+    title: string;
+    description: string;
+    color: string;
+    soft: string;
+    disabled: boolean;
+    onPress: () => void;
+  }) {
+    return (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ disabled }}
+        disabled={disabled}
+        onPress={onPress}
+        android_ripple={{ color: "transparent" }}
+        className="flex-row items-center rounded-[14px] border px-2.5 py-2.5"
+        style={{
+          backgroundColor: soft,
+          borderColor: `${color}35`,
+          opacity: disabled ? 0.48 : 1,
+        }}
+      >
+        <View className="h-9 w-9 shrink-0 items-center justify-center rounded-[11px] bg-white">
+          <SymbolView
+            name={icon}
+            tintColor={color}
+            size={14}
+            weight="bold"
+          />
+        </View>
+        <View className="ml-2.5 min-w-0 flex-1">
+          <Text className="text-[10px] font-black" style={{ color }}>
+            {actionTitle}
+          </Text>
+          <Text
+            className="mt-0.5 text-[8px] leading-[13px]"
+            style={{ color: theme.colors.foregroundMuted }}
+          >
+            {actionDescription}
+          </Text>
+        </View>
+        <SymbolView
+          name={{
+            ios: "chevron.right",
+            android: "chevron_right",
+            web: "chevron_right",
+          }}
+          tintColor={color}
+          size={10}
+          weight="bold"
+        />
+      </Pressable>
     );
   }
 }
-
-const styles = StyleSheet.create({
-  scroll: {
-    flex: 1,
-    minHeight: 0,
-  },
-  content: {
-    flexGrow: 1,
-    paddingBottom: 40,
-  },
-  page: {
-    width: "100%",
-    maxWidth: 980,
-    alignSelf: "center",
-  },
-  backToPathsButton: {
-    alignSelf: "flex-start",
-    marginBottom: 14,
-  },
-  statusRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "center",
-    gap: 10,
-    marginBottom: 14,
-  },
-  visibilityMeta: {
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  sectionCard: {
-    borderWidth: 1,
-    padding: 16,
-    marginBottom: 14,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "900",
-    marginBottom: 12,
-  },
-  subTitle: {
-    fontSize: 15,
-    fontWeight: "900",
-    marginBottom: 8,
-  },
-  label: {
-    fontSize: 12,
-    fontWeight: "800",
-    marginTop: 10,
-    marginBottom: 6,
-  },
-  input: {
-    minHeight: 48,
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 13,
-    paddingVertical: 10,
-    fontSize: 14,
-  },
-  multilineSmall: {
-    minHeight: 76,
-    textAlignVertical: "top",
-  },
-  multiline: {
-    minHeight: 110,
-    textAlignVertical: "top",
-  },
-  choiceRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  choice: {
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  primaryAction: {
-    marginTop: 16,
-  },
-  versionPrimaryAction: {
-    marginBottom: 14,
-  },
-  infoNotice: {
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 14,
-  },
-  infoNoticeTitle: {
-    fontSize: 14,
-    fontWeight: "900",
-    marginBottom: 4,
-  },
-  infoNoticeText: {
-    fontSize: 12,
-    lineHeight: 18,
-  },
-  versionList: {
-    gap: 8,
-  },
-  versionCard: {
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-  },
-  versionCardHeader: {
-    flexDirection: "row",
-    gap: 10,
-    alignItems: "center",
-  },
-  versionCardCopy: {
-    flex: 1,
-    minWidth: 0,
-  },
-  versionTitle: {
-    fontSize: 14,
-    fontWeight: "900",
-  },
-  versionStatusRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    alignItems: "center",
-    marginTop: 7,
-  },
-  currentVersionText: {
-    fontSize: 11,
-    fontWeight: "900",
-  },
-  versionNoteHelp: {
-    fontSize: 11,
-    lineHeight: 16,
-    marginTop: 5,
-  },
-  versionNoteText: {
-    fontSize: 12,
-    lineHeight: 18,
-    marginTop: 8,
-  },
-  versionOpenButton: {
-    minWidth: 92,
-  },
-  readOnlyNotice: {
-    fontSize: 12,
-    lineHeight: 18,
-    marginTop: 12,
-  },
-  helpText: {
-    fontSize: 12,
-    lineHeight: 18,
-    marginBottom: 12,
-  },
-  emptyText: {
-    fontSize: 13,
-    lineHeight: 19,
-  },
-  steps: {
-    gap: 10,
-  },
-  stepCard: {
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-  },
-  stepHeader: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 10,
-  },
-  stepCopy: {
-    flex: 1,
-    minWidth: 0,
-  },
-  stepTitle: {
-    fontSize: 15,
-    fontWeight: "900",
-  },
-  stepMeta: {
-    fontSize: 11,
-    lineHeight: 16,
-    marginTop: 4,
-  },
-  stepActions: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 7,
-    marginTop: 10,
-  },
-  smallAction: {
-    minWidth: 128,
-  },
-  orderAction: {
-    minWidth: 54,
-  },
-  addArea: {
-    marginTop: 18,
-  },
-  trainingChoices: {
-    gap: 8,
-    marginVertical: 10,
-  },
-  trainingChoice: {
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 11,
-  },
-  trainingChoiceTitle: {
-    fontSize: 14,
-    fontWeight: "800",
-  },
-  trainingChoiceMeta: {
-    fontSize: 10,
-    fontWeight: "900",
-    marginTop: 4,
-  },
-  lifecycleActions: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  lifecycleButton: {
-    minWidth: 120,
-  },
-});

@@ -1,24 +1,22 @@
-import {
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+/* eslint-disable react/no-unescaped-entities */
+import { SymbolView } from "expo-symbols";
+import type { ComponentProps } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Alert,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
 
-import AppButton from "../../components/AppButton";
 import ErrorMessage from "../../components/ErrorMessage";
 import LoadingState from "../../components/LoadingState";
 import ScreenContainer from "../../components/ScreenContainer";
-import SectionHeader from "../../components/SectionHeader";
 import {
   addTrainerGroupMembers,
   assignTrainingToTrainerGroup,
@@ -27,39 +25,23 @@ import {
   removeTrainerGroupMember,
   searchTrainerGroupDirectory,
 } from "../../features/trainer/trainerGroupService";
-import {
-  getTrainerTrainings,
-} from "../../features/trainer/trainerTrainingService";
-import {
-  useSmartTrainingTheme,
-} from "../../theme/provider/SmartTrainingThemeProvider";
-import {
-  TrainerLearnerGroup,
+import { getTrainerTrainings } from "../../features/trainer/trainerTrainingService";
+import { useSmartTrainingTheme } from "../../theme/provider/SmartTrainingThemeProvider";
+import type {
   TrainerGroupTrainingAssignmentResponse,
+  TrainerLearnerGroup,
   TrainerLearnerGroupMember,
 } from "../../types/trainerGroupMobile";
-import type {
-  TrainerLearnerIdentity,
-} from "../../types/trainerLearnerMobile";
-import type {
-  TrainerTraining,
-} from "../../types/trainerMobile";
+import type { TrainerLearnerIdentity } from "../../types/trainerLearnerMobile";
+import type { TrainerTraining } from "../../types/trainerMobile";
 
-type Props = {
-  groupId: number;
-};
+type Props = { groupId: number };
+type SymbolName = ComponentProps<typeof SymbolView>["name"];
 
 function formatDateTime(value?: string | null): string {
-  if (!value) {
-    return "-";
-  }
-
+  if (!value) return "Non disponible";
   const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-
+  if (Number.isNaN(date.getTime())) return value;
   return new Intl.DateTimeFormat("fr-FR", {
     dateStyle: "medium",
     timeStyle: "short",
@@ -67,79 +49,51 @@ function formatDateTime(value?: string | null): string {
 }
 
 function ownerRoleLabel(value?: string | null): string {
-  if (value === "ADMIN") {
-    return "Administrateur";
-  }
-
-  if (value === "FORMATEUR") {
-    return "Formateur";
-  }
-
+  if (value === "ADMIN") return "Administrateur";
+  if (value === "FORMATEUR") return "Formateur";
   return "Gestionnaire";
 }
 
-function learnerName(
-  learner: TrainerLearnerIdentity,
-): string {
-  const combined = [
-    learner.firstName,
-    learner.lastName,
-  ]
+function learnerName(learner: TrainerLearnerIdentity): string {
+  const combined = [learner.firstName, learner.lastName]
     .filter(Boolean)
     .join(" ")
     .trim();
-
-  return (
-    learner.fullName ||
-    combined ||
-    learner.email
-  );
+  return learner.fullName || combined || learner.email;
 }
 
-function memberName(
-  member: TrainerLearnerGroupMember,
-): string {
-  return (
-    member.fullName ||
-    member.email ||
-    "Membre du groupe"
-  );
+function memberName(member: TrainerLearnerGroupMember): string {
+  return member.fullName || member.email || "Membre du groupe";
 }
 
+function initials(value: string): string {
+  const parts = value.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "M";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0] ?? ""}${parts[parts.length - 1][0] ?? ""}`.toUpperCase();
+}
 
 function trainingStatusLabel(value?: string | null): string {
-  if (value === "PUBLISHED") {
-    return "Publiee";
-  }
-
-  if (value === "DRAFT") {
-    return "Brouillon";
-  }
-
-  if (value === "ARCHIVED") {
-    return "Archivee";
-  }
-
-  return value || "Statut non renseigne";
+  if (value === "PUBLISHED") return "Publiée";
+  if (value === "DRAFT") return "Brouillon";
+  if (value === "ARCHIVED") return "Archivée";
+  return value || "Statut non renseigné";
 }
 
-function toApiDueAt(
-  value: string,
-): string | null | undefined {
-  const trimmed = value.trim();
+function trainingStatusTone(value?: string | null) {
+  if (value === "PUBLISHED") return { color: "#16845A", soft: "#EAFBF3" };
+  if (value === "DRAFT") return { color: "#B45309", soft: "#FFF4E5" };
+  if (value === "ARCHIVED") return { color: "#667085", soft: "#F2F4F7" };
+  return { color: "#667085", soft: "#F2F4F7" };
+}
 
-  if (!trimmed) {
-    return undefined;
-  }
+function toApiDueAt(value: string): string | null | undefined {
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
 
   const match =
-    /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?$/.exec(
-      trimmed,
-    );
-
-  if (!match) {
-    return null;
-  }
+    /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?$/.exec(trimmed);
+  if (!match) return null;
 
   const year = Number(match[1]);
   const month = Number(match[2]);
@@ -148,15 +102,7 @@ function toApiDueAt(
   const minute = Number(match[5]);
   const second = Number(match[6] || "0");
 
-  const parsed = new Date(
-    year,
-    month - 1,
-    day,
-    hour,
-    minute,
-    second,
-    0,
-  );
+  const parsed = new Date(year, month - 1, day, hour, minute, second, 0);
 
   if (
     parsed.getFullYear() !== year ||
@@ -169,65 +115,40 @@ function toApiDueAt(
     return null;
   }
 
-  const pad = (item: number) =>
-    String(item).padStart(2, "0");
-
-  return (
-    `${year}-${pad(month)}-${pad(day)}` +
-    `T${pad(hour)}:${pad(minute)}:${pad(second)}`
-  );
+  const pad = (item: number) => String(item).padStart(2, "0");
+  return `${year}-${pad(month)}-${pad(day)}T${pad(hour)}:${pad(minute)}:${pad(second)}`;
 }
 
-export default function TrainerGroupDetailScreen({
-  groupId,
-}: Props) {
+export default function TrainerGroupDetailScreen({ groupId }: Props) {
   const { theme } = useSmartTrainingTheme();
 
-  const [group, setGroup] =
-    useState<TrainerLearnerGroup | null>(null);
-
-  const [members, setMembers] =
-    useState<TrainerLearnerGroupMember[]>([]);
-
-  const [directoryResults, setDirectoryResults] =
-    useState<TrainerLearnerIdentity[]>([]);
-
+  const [group, setGroup] = useState<TrainerLearnerGroup | null>(null);
+  const [members, setMembers] = useState<TrainerLearnerGroupMember[]>([]);
+  const [directoryResults, setDirectoryResults] = useState<TrainerLearnerIdentity[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [assignableTrainings, setAssignableTrainings] =
-    useState<TrainerTraining[]>([]);
-  const [selectedTrainingId, setSelectedTrainingId] =
-    useState<number | null>(null);
-  const [assignmentDueAt, setAssignmentDueAt] =
-    useState("");
+  const [assignableTrainings, setAssignableTrainings] = useState<TrainerTraining[]>([]);
+  const [selectedTrainingId, setSelectedTrainingId] = useState<number | null>(null);
+  const [assignmentDueAt, setAssignmentDueAt] = useState("");
   const [assignmentResult, setAssignmentResult] =
-    useState<TrainerGroupTrainingAssignmentResponse | null>(
-      null,
-    );
+    useState<TrainerGroupTrainingAssignmentResponse | null>(null);
+
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searching, setSearching] = useState(false);
-  const [loadingTrainings, setLoadingTrainings] =
-    useState(false);
-  const [assigningTraining, setAssigningTraining] =
-    useState(false);
-
-  const [mutationLearnerId, setMutationLearnerId] =
-    useState<number | null>(null);
+  const [loadingTrainings, setLoadingTrainings] = useState(false);
+  const [assigningTraining, setAssigningTraining] = useState(false);
+  const [mutationLearnerId, setMutationLearnerId] = useState<number | null>(null);
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [searchMessage, setSearchMessage] =
-    useState("");
-  const [assignmentMessage, setAssignmentMessage] =
-    useState("");
+  const [searchMessage, setSearchMessage] = useState("");
+  const [assignmentMessage, setAssignmentMessage] = useState("");
 
   async function loadAll() {
-    const [loadedGroup, loadedMembers] =
-      await Promise.all([
-        getTrainerGroup(groupId),
-        getTrainerGroupMembers(groupId),
-      ]);
-
+    const [loadedGroup, loadedMembers] = await Promise.all([
+      getTrainerGroup(groupId),
+      getTrainerGroupMembers(groupId),
+    ]);
     setGroup(loadedGroup);
     setMembers(loadedMembers);
   }
@@ -238,7 +159,6 @@ export default function TrainerGroupDetailScreen({
     if (!Number.isFinite(groupId) || groupId <= 0) {
       setError("Groupe invalide.");
       setLoading(false);
-
       return () => {
         active = false;
       };
@@ -249,10 +169,7 @@ export default function TrainerGroupDetailScreen({
       getTrainerGroupMembers(groupId),
     ])
       .then(([loadedGroup, loadedMembers]) => {
-        if (!active) {
-          return;
-        }
-
+        if (!active) return;
         setGroup(loadedGroup);
         setMembers(loadedMembers);
         setError("");
@@ -260,14 +177,12 @@ export default function TrainerGroupDetailScreen({
       .catch(() => {
         if (active) {
           setError(
-            "Impossible de charger ce groupe ou vous n'avez pas acces a sa gestion.",
+            "Impossible de charger ce groupe ou vous n'avez pas accès à sa gestion.",
           );
         }
       })
       .finally(() => {
-        if (active) {
-          setLoading(false);
-        }
+        if (active) setLoading(false);
       });
 
     return () => {
@@ -282,34 +197,24 @@ export default function TrainerGroupDetailScreen({
     }
 
     let active = true;
-
     setLoadingTrainings(true);
     setAssignmentMessage("");
 
     void getTrainerTrainings(group.ownerId)
       .then((loaded) => {
-        if (!active) {
-          return;
-        }
-
+        if (!active) return;
         setAssignableTrainings(
-          [...loaded].sort((a, b) =>
-            a.title.localeCompare(b.title, "fr"),
-          ),
+          [...loaded].sort((a, b) => a.title.localeCompare(b.title, "fr")),
         );
       })
       .catch(() => {
         if (active) {
           setAssignableTrainings([]);
-          setAssignmentMessage(
-            "Impossible de charger les formations affectables.",
-          );
+          setAssignmentMessage("Impossible de charger les formations affectables.");
         }
       })
       .finally(() => {
-        if (active) {
-          setLoadingTrainings(false);
-        }
+        if (active) setLoadingTrainings(false);
       });
 
     return () => {
@@ -319,177 +224,120 @@ export default function TrainerGroupDetailScreen({
 
   async function refresh() {
     setRefreshing(true);
-
     try {
       await loadAll();
       setError("");
     } catch {
-      setError(
-        "Impossible d'actualiser ce groupe.",
-      );
+      setError("Impossible d'actualiser ce groupe.");
     } finally {
       setRefreshing(false);
     }
   }
 
   const memberIds = useMemo(
-    () =>
-      new Set(
-        members.map((member) => member.learnerId),
-      ),
+    () => new Set(members.map((member) => member.learnerId)),
     [members],
   );
 
   const availableDirectoryResults = useMemo(
-    () =>
-      directoryResults.filter(
-        (candidate) => !memberIds.has(candidate.id),
-      ),
+    () => directoryResults.filter((candidate) => !memberIds.has(candidate.id)),
     [directoryResults, memberIds],
   );
 
   async function searchDirectory() {
     const query = searchQuery.trim();
-
     setSuccess("");
     setSearchMessage("");
 
     if (query.length < 2) {
       setDirectoryResults([]);
-      setSearchMessage(
-        "Saisissez au moins 2 caracteres du nom ou de l'e-mail.",
-      );
+      setSearchMessage("Saisissez au moins 2 caractères du nom ou de l'e-mail.");
       return;
     }
 
     setSearching(true);
-
     try {
-      const results =
-        await searchTrainerGroupDirectory(query, 60);
-
+      const results = await searchTrainerGroupDirectory(query, 60);
       setDirectoryResults(results);
-
       if (results.length === 0) {
-        setSearchMessage(
-          "Aucun utilisateur actif correspondant.",
-        );
+        setSearchMessage("Aucun utilisateur actif correspondant.");
       }
     } catch {
       setDirectoryResults([]);
-      setSearchMessage(
-        "La recherche dans l'annuaire a echoue.",
-      );
+      setSearchMessage("La recherche dans l'annuaire a échoué.");
     } finally {
       setSearching(false);
     }
   }
 
-  async function addMember(
-    candidate: TrainerLearnerIdentity,
-  ) {
+  async function addMember(candidate: TrainerLearnerIdentity) {
     setMutationLearnerId(candidate.id);
     setError("");
     setSuccess("");
 
     try {
-      const updatedMembers =
-        await addTrainerGroupMembers(
-          groupId,
-          [candidate.id],
-        );
-
+      const updatedMembers = await addTrainerGroupMembers(groupId, [candidate.id]);
       setMembers(updatedMembers);
 
-      const updatedGroup =
-        await getTrainerGroup(groupId);
-
+      const updatedGroup = await getTrainerGroup(groupId);
       setGroup(updatedGroup);
 
       setDirectoryResults((current) =>
-        current.filter(
-          (item) => item.id !== candidate.id,
-        ),
+        current.filter((item) => item.id !== candidate.id),
       );
 
-      setSuccess(
-        `${learnerName(candidate)} a ete ajoute au groupe.`,
-      );
+      setSuccess(`${learnerName(candidate)} a été ajouté au groupe.`);
     } catch {
-      setError(
-        "Impossible d'ajouter cette personne au groupe.",
-      );
+      setError("Impossible d'ajouter cette personne au groupe.");
     } finally {
       setMutationLearnerId(null);
     }
   }
 
-  async function removeMember(
-    member: TrainerLearnerGroupMember,
-  ) {
+  async function removeMember(member: TrainerLearnerGroupMember) {
     setMutationLearnerId(member.learnerId);
     setError("");
     setSuccess("");
 
     try {
-      await removeTrainerGroupMember(
-        groupId,
-        member.learnerId,
-      );
+      await removeTrainerGroupMember(groupId, member.learnerId);
 
-      const [updatedMembers, updatedGroup] =
-        await Promise.all([
-          getTrainerGroupMembers(groupId),
-          getTrainerGroup(groupId),
-        ]);
+      const [updatedMembers, updatedGroup] = await Promise.all([
+        getTrainerGroupMembers(groupId),
+        getTrainerGroup(groupId),
+      ]);
 
       setMembers(updatedMembers);
       setGroup(updatedGroup);
-
-      setSuccess(
-        `${memberName(member)} a ete retire du groupe.`,
-      );
+      setSuccess(`${memberName(member)} a été retiré du groupe.`);
     } catch {
-      setError(
-        "Impossible de retirer ce membre du groupe.",
-      );
+      setError("Impossible de retirer ce membre du groupe.");
     } finally {
       setMutationLearnerId(null);
     }
   }
 
   async function assignTraining() {
-    if (!group) {
-      return;
-    }
+    if (!group) return;
 
     if (
       selectedTrainingId === null ||
       !Number.isInteger(selectedTrainingId) ||
       selectedTrainingId <= 0
     ) {
-      setAssignmentMessage(
-        "Selectionnez une formation par son titre.",
-      );
+      setAssignmentMessage("Sélectionnez une formation par son titre.");
       return;
     }
 
     const dueAt = toApiDueAt(assignmentDueAt);
 
     if (dueAt === null) {
-      setAssignmentMessage(
-        "Format attendu pour l'echeance : AAAA-MM-JJ HH:mm.",
-      );
+      setAssignmentMessage("Format attendu pour l'échéance : AAAA-MM-JJ HH:mm.");
       return;
     }
 
-    if (
-      dueAt &&
-      new Date(dueAt).getTime() <= Date.now()
-    ) {
-      setAssignmentMessage(
-        "L'echeance doit etre dans le futur.",
-      );
+    if (dueAt && new Date(dueAt).getTime() <= Date.now()) {
+      setAssignmentMessage("L'échéance doit être dans le futur.");
       return;
     }
 
@@ -500,60 +348,44 @@ export default function TrainerGroupDetailScreen({
     setSuccess("");
 
     try {
-      const result =
-        await assignTrainingToTrainerGroup(
-          group.id,
-          {
-            trainingId: selectedTrainingId,
-            dueAt,
-          },
-        );
-
+      const result = await assignTrainingToTrainerGroup(group.id, {
+        trainingId: selectedTrainingId,
+        dueAt,
+      });
       setAssignmentResult(result);
       setAssignmentMessage(
-        "Affectation terminee. Consultez le resultat ci-dessous.",
+        "Affectation terminée. Consultez le résultat ci-dessous.",
       );
     } catch {
-      setAssignmentMessage(
-        "Impossible d'affecter cette formation au groupe.",
-      );
+      setAssignmentMessage("Impossible d'affecter cette formation au groupe.");
     } finally {
       setAssigningTraining(false);
     }
   }
 
-  function confirmRemove(
-    member: TrainerLearnerGroupMember,
-  ) {
+  function confirmRemove(member: TrainerLearnerGroupMember) {
     Alert.alert(
       "Retirer ce membre ?",
       `${memberName(member)} ne fera plus partie de ce groupe.`,
       [
-        {
-          text: "Annuler",
-          style: "cancel",
-        },
+        { text: "Annuler", style: "cancel" },
         {
           text: "Retirer",
           style: "destructive",
-          onPress: () => {
-            void removeMember(member);
-          },
+          onPress: () => void removeMember(member),
         },
       ],
     );
   }
 
   if (loading) {
-    return (
-      <LoadingState message="Chargement du groupe..." />
-    );
+    return <LoadingState message="Chargement du groupe..." />;
   }
 
   if (!group) {
     return (
       <ScreenContainer>
-        <View style={styles.fallback}>
+        <View className="mx-auto w-full max-w-[720px] pt-6">
           <ErrorMessage
             message={error || "Groupe indisponible."}
             onRetry={() => void refresh()}
@@ -564,832 +396,790 @@ export default function TrainerGroupDetailScreen({
   }
 
   return (
-    <ScreenContainer>
-      <ScrollView
-        style={styles.scrollArea}
-        contentContainerStyle={[
-          styles.content,
-          {
-            paddingBottom:
-              theme.shape.cardPadding * 2,
-          },
-        ]}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={() => void refresh()}
-            tintColor={theme.colors.accent}
-          />
-        }
-        showsVerticalScrollIndicator={false}
+    <ScreenContainer
+      edges={["left", "right", "bottom"]}
+      style={{ padding: 0, backgroundColor: "#F8F6F3" }}
+    >
+      <KeyboardAvoidingView
+        className="flex-1"
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <View style={styles.page}>
-          <SectionHeader
-            title={group.name}
-            subtitle="Gerez les membres de ce groupe depuis le mobile."
-          />
-
-          {error ? (
-            <ErrorMessage
-              message={error}
-              onRetry={() => void refresh()}
+        <ScrollView
+          className="flex-1"
+          contentContainerStyle={{ paddingBottom: 36 }}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => void refresh()}
+              tintColor={theme.colors.accent}
+              colors={[theme.colors.accent]}
             />
-          ) : null}
-
-          {success ? (
+          }
+          showsVerticalScrollIndicator={false}
+        >
+          <View className="mx-auto w-full max-w-[760px] px-4">
             <View
-              style={[
-                styles.successBox,
-                {
-                  backgroundColor:
-                    theme.colors.surfaceSoft,
-                  borderColor: theme.colors.accent,
-                  borderRadius:
-                    theme.shape.controlRadius,
-                },
-              ]}
+              className="mt-4 overflow-hidden rounded-[24px] border bg-white"
+              style={{
+                borderColor: "#E5DFE8",
+                shadowColor: "#0F172A",
+                shadowOffset: { width: 0, height: 3 },
+                shadowOpacity: 0.05,
+                shadowRadius: 9,
+                elevation: 2,
+              }}
             >
-              <Text
-                style={[
-                  styles.successText,
-                  { color: theme.colors.foreground },
-                ]}
-              >
-                {success}
-              </Text>
-            </View>
-          ) : null}
+              <View className="h-1.5 w-full" style={{ backgroundColor: "#7C3AED" }} />
+              <View className="p-4">
+                <View className="flex-row items-start">
+                  <View
+                    className="h-12 w-12 items-center justify-center rounded-[16px]"
+                    style={{ backgroundColor: "#F1E9FF" }}
+                  >
+                    <SymbolView
+                      name={{ ios: "person.3.fill", android: "groups", web: "groups" }}
+                      tintColor="#7C3AED"
+                      size={20}
+                      weight="bold"
+                    />
+                  </View>
 
-          <View style={styles.metricGrid}>
-            <Metric
-              value={String(group.memberCount)}
-              label="Membres"
-            />
-            <Metric
-              value={ownerRoleLabel(group.ownerRole)}
-              label="Gestionnaire"
-            />
-          </View>
+                  <View className="ml-3 min-w-0 flex-1">
+                    <Text
+                      className="text-[20px] font-black leading-[24px]"
+                      style={{ color: theme.colors.foreground }}
+                    >
+                      {group.name}
+                    </Text>
+                    <Text
+                      className="mt-1 text-[12px] leading-[15px]"
+                      style={{ color: theme.colors.foregroundMuted }}
+                    >
+                      {group.description || "Aucune description renseignée."}
+                    </Text>
+                  </View>
+                </View>
 
-          <View
-            style={[
-              styles.section,
-              {
-                backgroundColor: theme.colors.surface,
-                borderColor: theme.colors.border,
-                borderRadius: theme.shape.cardRadius,
-                borderWidth: theme.shape.borderWidth,
-                padding: theme.shape.cardPadding,
-              },
-            ]}
-          >
-            <Text
-              style={[
-                styles.sectionTitle,
-                { color: theme.colors.foreground },
-              ]}
-            >
-              Description
-            </Text>
-
-            <Text
-              style={[
-                styles.sectionText,
-                {
-                  color:
-                    theme.colors.foregroundMuted,
-                },
-              ]}
-            >
-              {group.description ||
-                "Aucune description renseignee."}
-            </Text>
-          </View>
-
-          <View
-            style={[
-              styles.section,
-              {
-                backgroundColor: theme.colors.surface,
-                borderColor: theme.colors.border,
-                borderRadius: theme.shape.cardRadius,
-                borderWidth: theme.shape.borderWidth,
-                padding: theme.shape.cardPadding,
-              },
-            ]}
-          >
-            <View style={styles.sectionHeadingRow}>
-              <View style={styles.sectionHeadingCopy}>
-                <Text
-                  style={[
-                    styles.sectionTitle,
-                    { color: theme.colors.foreground },
-                  ]}
-                >
-                  Membres du groupe
-                </Text>
-                <Text
-                  style={[
-                    styles.sectionHelper,
-                    {
-                      color:
-                        theme.colors.foregroundMuted,
-                    },
-                  ]}
-                >
-                  {members.length} membre(s) actuellement.
-                </Text>
+                <View className="mt-4 flex-row gap-2">
+                  <Metric
+                    icon={{ ios: "person.2.fill", android: "group", web: "group" }}
+                    value={String(group.memberCount)}
+                    label="Membres"
+                  />
+                  <Metric
+                    icon={{ ios: "person.badge.key.fill", android: "badge", web: "badge" }}
+                    value={ownerRoleLabel(group.ownerRole)}
+                    label="Gestionnaire"
+                  />
+                </View>
               </View>
             </View>
 
-            {members.length === 0 ? (
-              <Text
-                style={[
-                  styles.emptyText,
-                  {
-                    color:
-                      theme.colors.foregroundMuted,
-                  },
-                ]}
+            {error ? (
+              <View className="mt-3">
+                <ErrorMessage message={error} onRetry={() => void refresh()} />
+              </View>
+            ) : null}
+
+            {success ? (
+              <View
+                className="mt-3 flex-row items-center rounded-[15px] px-3 py-2.5"
+                style={{ backgroundColor: "#EAFBF3" }}
               >
-                Ce groupe ne contient encore aucun membre.
-              </Text>
+                <SymbolView
+                  name={{ ios: "checkmark.circle.fill", android: "check_circle", web: "check_circle" }}
+                  tintColor="#16845A"
+                  size={15}
+                  weight="bold"
+                />
+                <Text className="ml-2 flex-1 text-[12px] font-bold" style={{ color: "#16845A" }}>
+                  {success}
+                </Text>
+              </View>
+            ) : null}
+
+            <SectionTitle
+              eyebrow="Cohorte"
+              title="Membres du groupe"
+              subtitle={`${members.length} membre(s) actuellement`}
+              icon={{ ios: "person.2.fill", android: "group", web: "group" }}
+            />
+
+            {members.length === 0 ? (
+              <EmptyCard
+                icon={{ ios: "person.2.slash.fill", android: "group_off", web: "group_off" }}
+                title="Aucun membre"
+                text="Ce groupe ne contient encore aucun membre."
+              />
             ) : (
-              <View style={styles.memberList}>
+              <View className="gap-2">
                 {members.map((member) => (
                   <View
                     key={member.learnerId}
-                    style={[
-                      styles.memberCard,
-                      {
-                        backgroundColor:
-                          theme.colors.surfaceSoft,
-                        borderColor:
-                          theme.colors.border,
-                        borderRadius:
-                          theme.shape.controlRadius,
-                      },
-                    ]}
+                    className="flex-row items-center rounded-[18px] border bg-white p-3"
+                    style={{ borderColor: "#E5DFE8" }}
                   >
-                    <View style={styles.memberCopy}>
+                    <View
+                      className="h-10 w-10 shrink-0 items-center justify-center rounded-full"
+                      style={{ backgroundColor: "#F1E9FF" }}
+                    >
+                      <Text className="text-[12px] font-black" style={{ color: "#7C3AED" }}>
+                        {initials(memberName(member))}
+                      </Text>
+                    </View>
+
+                    <View className="ml-2.5 min-w-0 flex-1">
                       <Text
-                        style={[
-                          styles.memberName,
-                          {
-                            color:
-                              theme.colors.foreground,
-                          },
-                        ]}
+                        numberOfLines={1}
+                        className="text-[13px] font-black"
+                        style={{ color: theme.colors.foreground }}
                       >
                         {memberName(member)}
                       </Text>
-
                       {member.email ? (
                         <Text
-                          style={[
-                            styles.memberEmail,
-                            {
-                              color:
-                                theme.colors
-                                  .foregroundMuted,
-                            },
-                          ]}
+                          numberOfLines={1}
+                          className="mt-0.5 text-[10px]"
+                          style={{ color: theme.colors.foregroundMuted }}
                         >
                           {member.email}
                         </Text>
                       ) : null}
-
                       {member.addedAt ? (
                         <Text
-                          style={[
-                            styles.memberMeta,
-                            {
-                              color:
-                                theme.colors
-                                  .foregroundSubtle,
-                            },
-                          ]}
+                          className="mt-0.5 text-[9px]"
+                          style={{ color: theme.colors.foregroundSubtle }}
                         >
-                          Ajoute le{" "}
-                          {formatDateTime(
-                            member.addedAt,
-                          )}
+                          Ajouté le {formatDateTime(member.addedAt)}
                         </Text>
                       ) : null}
                     </View>
 
-                    <AppButton
-                      title="Retirer"
-                      variant="danger"
-                      disabled={
-                        mutationLearnerId !== null
-                      }
-                      loading={
-                        mutationLearnerId ===
-                        member.learnerId
-                      }
-                      onPress={() =>
-                        confirmRemove(member)
-                      }
-                      style={styles.memberButton}
+                    <CompactButton
+                      label={mutationLearnerId === member.learnerId ? "..." : "Retirer"}
+                      icon={{ ios: "person.badge.minus", android: "person_remove", web: "person_remove" }}
+                      tone="danger"
+                      disabled={mutationLearnerId !== null}
+                      onPress={() => confirmRemove(member)}
                     />
                   </View>
                 ))}
               </View>
             )}
-          </View>
 
-          <View
-            style={[
-              styles.section,
-              {
-                backgroundColor: theme.colors.surface,
-                borderColor: theme.colors.border,
-                borderRadius: theme.shape.cardRadius,
-                borderWidth: theme.shape.borderWidth,
-                padding: theme.shape.cardPadding,
-              },
-            ]}
-          >
-            <Text
-              style={[
-                styles.sectionTitle,
-                { color: theme.colors.foreground },
-              ]}
-            >
-              Ajouter des membres
-            </Text>
-
-            <Text
-              style={[
-                styles.sectionHelper,
-                {
-                  color:
-                    theme.colors.foregroundMuted,
-                },
-              ]}
-            >
-              Recherchez une personne par son nom ou son e-mail.
-              {"Aucun identifiant technique n\'est a saisir."}
-            </Text>
-
-            <TextInput
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              onSubmitEditing={() =>
-                void searchDirectory()
-              }
-              autoCapitalize="none"
-              autoCorrect={false}
-              returnKeyType="search"
-              accessibilityLabel="Nom ou e-mail"
-              placeholder="Nom ou e-mail"
-              placeholderTextColor={
-                theme.colors.foregroundSubtle
-              }
-              style={[
-                styles.searchInput,
-                {
-                  backgroundColor:
-                    theme.colors.background,
-                  borderColor:
-                    theme.colors.border,
-                  borderRadius:
-                    theme.shape.controlRadius,
-                  borderWidth:
-                    theme.shape.borderWidth,
-                  color:
-                    theme.colors.foreground,
-                },
-              ]}
+            <SectionTitle
+              eyebrow="Gestion"
+              title="Ajouter des membres"
+              subtitle="Recherchez une personne par son nom ou son e-mail"
+              icon={{ ios: "person.badge.plus", android: "person_add", web: "person_add" }}
             />
 
-            <AppButton
-              title="Rechercher"
-              onPress={() =>
-                void searchDirectory()
-              }
-              loading={searching}
-              disabled={
-                searching ||
-                mutationLearnerId !== null
-              }
-              style={styles.searchButton}
-            />
-
-            {searchMessage ? (
-              <Text
-                style={[
-                  styles.searchMessage,
-                  {
-                    color:
-                      theme.colors.foregroundMuted,
-                  },
-                ]}
+            <View
+              className="rounded-[20px] border bg-white p-3.5"
+              style={{ borderColor: "#E5DFE8" }}
+            >
+              <View
+                className="flex-row items-center rounded-[15px] border px-3"
+                style={{ borderColor: "#E5DFE8", backgroundColor: "#FCFBFD" }}
               >
-                {searchMessage}
-              </Text>
-            ) : null}
+                <SymbolView
+                  name={{ ios: "magnifyingglass", android: "search", web: "search" }}
+                  tintColor={theme.colors.foregroundSubtle}
+                  size={16}
+                />
+                <TextInput
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  onSubmitEditing={() => void searchDirectory()}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  returnKeyType="search"
+                  accessibilityLabel="Nom ou e-mail"
+                  placeholder="Nom ou e-mail"
+                  placeholderTextColor={theme.colors.foregroundSubtle}
+                  className="ml-2 min-h-[48px] flex-1 text-[13px]"
+                  style={{ color: theme.colors.foreground }}
+                />
+              </View>
 
-            {availableDirectoryResults.length > 0 ? (
-              <View style={styles.directoryList}>
-                {availableDirectoryResults.map(
-                  (candidate) => (
+              <View className="mt-2.5">
+                <PrimaryButton
+                  label={searching ? "Recherche..." : "Rechercher"}
+                  icon={{ ios: "magnifyingglass", android: "search", web: "search" }}
+                  disabled={searching || mutationLearnerId !== null}
+                  onPress={() => void searchDirectory()}
+                />
+              </View>
+
+              {searchMessage ? <MessageBox text={searchMessage} tone="neutral" /> : null}
+
+              {availableDirectoryResults.length > 0 ? (
+                <View className="mt-3 gap-2">
+                  {availableDirectoryResults.map((candidate) => (
                     <View
                       key={candidate.id}
-                      style={[
-                        styles.directoryCard,
-                        {
-                          backgroundColor:
-                            theme.colors.surfaceSoft,
-                          borderColor:
-                            theme.colors.border,
-                          borderRadius:
-                            theme.shape.controlRadius,
-                        },
-                      ]}
+                      className="flex-row items-center rounded-[16px] border p-3"
+                      style={{ backgroundColor: "#FCFBFD", borderColor: "#EEE9F0" }}
                     >
                       <View
-                        style={styles.directoryCopy}
+                        className="h-9 w-9 shrink-0 items-center justify-center rounded-full"
+                        style={{ backgroundColor: "#F1E9FF" }}
                       >
+                        <Text className="text-[11px] font-black" style={{ color: "#7C3AED" }}>
+                          {initials(learnerName(candidate))}
+                        </Text>
+                      </View>
+
+                      <View className="ml-2.5 min-w-0 flex-1">
                         <Text
-                          style={[
-                            styles.memberName,
-                            {
-                              color:
-                                theme.colors
-                                  .foreground,
-                            },
-                          ]}
+                          numberOfLines={1}
+                          className="text-[12px] font-black"
+                          style={{ color: theme.colors.foreground }}
                         >
                           {learnerName(candidate)}
                         </Text>
-
                         <Text
-                          style={[
-                            styles.memberEmail,
-                            {
-                              color:
-                                theme.colors
-                                  .foregroundMuted,
-                            },
-                          ]}
+                          numberOfLines={1}
+                          className="mt-0.5 text-[10px]"
+                          style={{ color: theme.colors.foregroundMuted }}
                         >
                           {candidate.email}
                         </Text>
-
                         {candidate.role ? (
                           <Text
-                            style={[
-                              styles.memberMeta,
-                              {
-                                color:
-                                  theme.colors
-                                    .foregroundSubtle,
-                              },
-                            ]}
+                            className="mt-0.5 text-[9px]"
+                            style={{ color: theme.colors.foregroundSubtle }}
                           >
                             {candidate.role}
                           </Text>
                         ) : null}
                       </View>
 
-                      <AppButton
-                        title="Ajouter"
-                        disabled={
-                          mutationLearnerId !== null
-                        }
-                        loading={
-                          mutationLearnerId ===
-                          candidate.id
-                        }
-                        onPress={() =>
-                          void addMember(candidate)
-                        }
-                        style={
-                          styles.directoryButton
-                        }
+                      <CompactButton
+                        label={mutationLearnerId === candidate.id ? "..." : "Ajouter"}
+                        icon={{ ios: "plus", android: "add", web: "add" }}
+                        tone="primary"
+                        disabled={mutationLearnerId !== null}
+                        onPress={() => void addMember(candidate)}
                       />
                     </View>
-                  ),
-                )}
-              </View>
-            ) : null}
-          </View>
-
-          <View
-            style={[
-              styles.section,
-              {
-                backgroundColor: theme.colors.surface,
-                borderColor: theme.colors.border,
-                borderRadius: theme.shape.cardRadius,
-                borderWidth: theme.shape.borderWidth,
-                padding: theme.shape.cardPadding,
-              },
-            ]}
-          >
-            <Text
-              style={[
-                styles.sectionTitle,
-                { color: theme.colors.foreground },
-              ]}
-            >
-              Affectation collective
-            </Text>
-
-            <Text
-              style={[
-                styles.sectionHelper,
-                {
-                  color:
-                    theme.colors.foregroundMuted,
-                },
-              ]}
-            >
-              Selectionnez une formation par son titre puis
-              ajoutez une echeance optionnelle.
-            </Text>
-
-            {members.length === 0 ? (
-              <View
-                style={[
-                  styles.assignmentNotice,
-                  {
-                    backgroundColor:
-                      theme.colors.surfaceSoft,
-                    borderColor:
-                      theme.colors.border,
-                    borderRadius:
-                      theme.shape.controlRadius,
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.assignmentNoticeText,
-                    {
-                      color:
-                        theme.colors.foregroundMuted,
-                    },
-                  ]}
-                >
-                  Ce groupe est vide. Une affectation
-                  retournera simplement zero membre traite.
-                </Text>
-              </View>
-            ) : null}
-
-            {loadingTrainings ? (
-              <Text
-                style={[
-                  styles.assignmentMessage,
-                  {
-                    color:
-                      theme.colors.foregroundMuted,
-                  },
-                ]}
-              >
-                Chargement des formations...
-              </Text>
-            ) : null}
-
-            {!loadingTrainings &&
-            assignableTrainings.length === 0 ? (
-              <Text
-                style={[
-                  styles.assignmentMessage,
-                  {
-                    color:
-                      theme.colors.foregroundMuted,
-                  },
-                ]}
-              >
-                Aucune formation gerable disponible.
-              </Text>
-            ) : null}
-
-            <View style={styles.trainingChoiceList}>
-              {assignableTrainings.map((training) => {
-                const selected =
-                  selectedTrainingId === training.id;
-
-                return (
-                  <Pressable
-                    key={training.id}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected }}
-                    accessibilityLabel={
-                      `Selectionner la formation ${training.title}`
-                    }
-                    onPress={() => {
-                      setSelectedTrainingId(training.id);
-                      setAssignmentResult(null);
-                      setAssignmentMessage("");
-                    }}
-                    style={({ pressed }) => [
-                      styles.trainingChoice,
-                      {
-                        backgroundColor: selected
-                          ? theme.colors.surfaceSoft
-                          : theme.colors.background,
-                        borderColor: selected
-                          ? theme.colors.accent
-                          : theme.colors.border,
-                        borderRadius:
-                          theme.shape.controlRadius,
-                        borderWidth: selected
-                          ? Math.max(
-                              2,
-                              theme.shape.borderWidth,
-                            )
-                          : theme.shape.borderWidth,
-                        opacity: pressed ? 0.9 : 1,
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.trainingChoiceTitle,
-                        {
-                          color:
-                            theme.colors.foreground,
-                        },
-                      ]}
-                    >
-                      {training.title}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.trainingChoiceMeta,
-                        {
-                          color:
-                            theme.colors
-                              .foregroundMuted,
-                        },
-                      ]}
-                    >
-                      {trainingStatusLabel(
-                        training.status,
-                      )}
-                    </Text>
-                  </Pressable>
-                );
-              })}
+                  ))}
+                </View>
+              ) : null}
             </View>
 
-            <Text
-              style={[
-                styles.assignmentLabel,
-                {
-                  color:
-                    theme.colors.foreground,
-                },
-              ]}
-            >
-              Echeance optionnelle
-            </Text>
-
-            <TextInput
-              value={assignmentDueAt}
-              onChangeText={(value) => {
-                setAssignmentDueAt(value);
-                setAssignmentResult(null);
-                setAssignmentMessage("");
+            <SectionTitle
+              eyebrow="Formation"
+              title="Affectation collective"
+              subtitle="Sélectionnez une formation puis ajoutez une échéance optionnelle"
+              icon={{
+                ios: "rectangle.stack.badge.plus",
+                android: "library_add",
+                web: "library_add",
               }}
-              autoCapitalize="none"
-              autoCorrect={false}
-              placeholder="AAAA-MM-JJ HH:mm"
-              placeholderTextColor={
-                theme.colors.foregroundSubtle
-              }
-              accessibilityLabel="Echeance optionnelle"
-              style={[
-                styles.searchInput,
-                {
-                  backgroundColor:
-                    theme.colors.background,
-                  borderColor:
-                    theme.colors.border,
-                  borderRadius:
-                    theme.shape.controlRadius,
-                  borderWidth:
-                    theme.shape.borderWidth,
-                  color:
-                    theme.colors.foreground,
-                },
-              ]}
             />
 
-            <Text
-              style={[
-                styles.assignmentHelp,
-                {
-                  color:
-                    theme.colors.foregroundSubtle,
-                },
-              ]}
+            <View
+              className="rounded-[20px] border bg-white p-3.5"
+              style={{ borderColor: "#E5DFE8" }}
             >
-              Laissez vide si aucune echeance
-              est requise uniquement si necessaire.
-            </Text>
+              {members.length === 0 ? (
+                <MessageBox
+                  text="Ce groupe est vide. Une affectation retournera simplement zéro membre traité."
+                  tone="neutral"
+                />
+              ) : null}
 
-            <AppButton
-              title="Affecter la formation"
-              onPress={() => void assignTraining()}
-              loading={assigningTraining}
-              disabled={
-                assigningTraining ||
-                loadingTrainings ||
-                selectedTrainingId === null
-              }
-              style={styles.assignmentButton}
-            />
+              {loadingTrainings ? (
+                <MessageBox text="Chargement des formations..." tone="neutral" />
+              ) : null}
 
-            {assignmentMessage ? (
+              {!loadingTrainings && assignableTrainings.length === 0 ? (
+                <MessageBox text="Aucune formation gérable disponible." tone="neutral" />
+              ) : null}
+
+              {assignableTrainings.length > 0 ? (
+                <>
+                  <Text
+                    className="mb-2 text-[11px] font-black uppercase tracking-[0.5px]"
+                    style={{ color: theme.colors.foregroundSubtle }}
+                  >
+                    Formation
+                  </Text>
+
+                  <View className="gap-2">
+                    {assignableTrainings.map((training) => {
+                      const selected = selectedTrainingId === training.id;
+                      const tone = trainingStatusTone(training.status);
+
+                      return (
+                        <Pressable
+                          key={training.id}
+                          accessibilityRole="button"
+                          accessibilityState={{ selected }}
+                          accessibilityLabel={`Sélectionner la formation ${training.title}`}
+                          onPress={() => {
+                            setSelectedTrainingId(training.id);
+                            setAssignmentResult(null);
+                            setAssignmentMessage("");
+                          }}
+                          android_ripple={{ color: "transparent" }}
+                          className="flex-row items-center rounded-[16px] border p-3"
+                          style={{
+                            backgroundColor: selected ? "#F7F2FF" : "#FCFBFD",
+                            borderColor: selected ? "#9B6AF3" : "#EEE9F0",
+                          }}
+                        >
+                          <View
+                            className="h-9 w-9 shrink-0 items-center justify-center rounded-[11px]"
+                            style={{
+                              backgroundColor: selected ? "#E9DCFF" : "#F2EEF5",
+                            }}
+                          >
+                            <SymbolView
+                              name={{
+                                ios: selected ? "checkmark.circle.fill" : "book.closed.fill",
+                                android: selected ? "check_circle" : "menu_book",
+                                web: selected ? "check_circle" : "menu_book",
+                              }}
+                              tintColor={
+                                selected ? "#7C3AED" : theme.colors.foregroundSubtle
+                              }
+                              size={14}
+                              weight="bold"
+                            />
+                          </View>
+
+                          <View className="ml-2.5 min-w-0 flex-1">
+                            <Text
+                              numberOfLines={2}
+                              className="text-[12px] font-black leading-[14px]"
+                              style={{ color: theme.colors.foreground }}
+                            >
+                              {training.title}
+                            </Text>
+
+                            <View
+                              className="mt-1 self-start rounded-full px-2 py-1"
+                              style={{ backgroundColor: tone.soft }}
+                            >
+                              <Text
+                                className="text-[9px] font-black"
+                                style={{ color: tone.color }}
+                              >
+                                {trainingStatusLabel(training.status)}
+                              </Text>
+                            </View>
+                          </View>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </>
+              ) : null}
+
               <Text
-                style={[
-                  styles.assignmentMessage,
-                  {
-                    color:
-                      theme.colors.foregroundMuted,
-                  },
-                ]}
+                className="mb-2 mt-4 text-[11px] font-black uppercase tracking-[0.5px]"
+                style={{ color: theme.colors.foregroundSubtle }}
               >
-                {assignmentMessage}
+                Échéance optionnelle
               </Text>
-            ) : null}
 
-            {assignmentResult ? (
               <View
-                style={[
-                  styles.assignmentResult,
-                  {
-                    backgroundColor:
-                      theme.colors.surfaceSoft,
-                    borderColor:
-                      assignmentResult.failed > 0
-                        ? theme.colors.danger
-                        : theme.colors.accent,
-                    borderRadius:
-                      theme.shape.controlRadius,
-                  },
-                ]}
+                className="flex-row items-center rounded-[15px] border px-3"
+                style={{ borderColor: "#E5DFE8", backgroundColor: "#FCFBFD" }}
               >
-                <Text
-                  style={[
-                    styles.assignmentResultTitle,
-                    {
-                      color:
-                        theme.colors.foreground,
-                    },
-                  ]}
-                >
-                  {"Resultat de l'affectation"}
-                </Text>
-
-                <View
-                  style={styles.assignmentResultGrid}
-                >
-                  <ResultMetric
-                    label="Affectes"
-                    value={assignmentResult.assigned}
-                  />
-                  <ResultMetric
-                    label="Deja inscrits"
-                    value={
-                      assignmentResult.alreadyEnrolled
-                    }
-                  />
-                  <ResultMetric
-                    label="Echecs"
-                    value={assignmentResult.failed}
-                  />
-                </View>
-
-                <Text
-                  style={[
-                    styles.assignmentTotal,
-                    {
-                      color:
-                        theme.colors.foregroundMuted,
-                    },
-                  ]}
-                >
-                  {assignmentResult.totalMembers} membre(s)
-                  traite(s) au total.
-                </Text>
+                <SymbolView
+                  name={{ ios: "calendar", android: "calendar_today", web: "calendar_today" }}
+                  tintColor={theme.colors.foregroundSubtle}
+                  size={15}
+                />
+                <TextInput
+                  value={assignmentDueAt}
+                  onChangeText={(value) => {
+                    setAssignmentDueAt(value);
+                    setAssignmentResult(null);
+                    setAssignmentMessage("");
+                  }}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  placeholder="AAAA-MM-JJ HH:mm"
+                  placeholderTextColor={theme.colors.foregroundSubtle}
+                  accessibilityLabel="Échéance optionnelle"
+                  className="ml-2 min-h-[48px] flex-1 text-[13px]"
+                  style={{ color: theme.colors.foreground }}
+                />
               </View>
-            ) : null}
-          </View>
 
-          <View
-            style={[
-              styles.section,
-              {
-                backgroundColor: theme.colors.surface,
-                borderColor: theme.colors.border,
-                borderRadius: theme.shape.cardRadius,
-                borderWidth: theme.shape.borderWidth,
-                padding: theme.shape.cardPadding,
-              },
-            ]}
-          >
-            <Text
-              style={[
-                styles.sectionTitle,
-                { color: theme.colors.foreground },
-              ]}
+              <Text
+                className="mt-1.5 text-[10px] leading-[12px]"
+                style={{ color: theme.colors.foregroundSubtle }}
+              >
+                Laissez vide si aucune échéance n'est requise.
+              </Text>
+
+              <View className="mt-3">
+                <PrimaryButton
+                  label={assigningTraining ? "Affectation..." : "Affecter la formation"}
+                  icon={{ ios: "paperplane.fill", android: "send", web: "send" }}
+                  disabled={
+                    assigningTraining ||
+                    loadingTrainings ||
+                    selectedTrainingId === null
+                  }
+                  onPress={() => void assignTraining()}
+                />
+              </View>
+
+              {assignmentMessage ? (
+                <MessageBox
+                  text={assignmentMessage}
+                  tone={
+                    assignmentResult
+                      ? assignmentResult.failed > 0
+                        ? "warning"
+                        : "success"
+                      : "neutral"
+                  }
+                />
+              ) : null}
+
+              {assignmentResult ? (
+                <View
+                  className="mt-3 rounded-[18px] border p-3"
+                  style={{
+                    backgroundColor: "#FCFBFD",
+                    borderColor:
+                      assignmentResult.failed > 0 ? "#F1C7B8" : "#C7EBD9",
+                  }}
+                >
+                  <Text
+                    className="text-[13px] font-black"
+                    style={{ color: theme.colors.foreground }}
+                  >
+                    Résultat de l'affectation
+                  </Text>
+
+                  <View className="mt-3 flex-row gap-2">
+                    <ResultMetric label="Affectés" value={assignmentResult.assigned} />
+                    <ResultMetric
+                      label="Déjà inscrits"
+                      value={assignmentResult.alreadyEnrolled}
+                    />
+                    <ResultMetric label="Échecs" value={assignmentResult.failed} />
+                  </View>
+
+                  <Text
+                    className="mt-2.5 text-[10px]"
+                    style={{ color: theme.colors.foregroundMuted }}
+                  >
+                    {assignmentResult.totalMembers} membre(s) traité(s) au total.
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+
+            <SectionTitle
+              eyebrow="Détails"
+              title="Informations"
+              subtitle="Informations réelles du groupe"
+              icon={{ ios: "info.circle.fill", android: "info", web: "info" }}
+            />
+
+            <View
+              className="mb-2 overflow-hidden rounded-[20px] border bg-white"
+              style={{ borderColor: "#E5DFE8" }}
             >
-              Informations
-            </Text>
-
-            <InfoLine
-              label="Role proprietaire"
-              value={ownerRoleLabel(group.ownerRole)}
-            />
-            <InfoLine
-              label="Creation"
-              value={formatDateTime(group.createdAt)}
-            />
-            <InfoLine
-              label="Derniere mise a jour"
-              value={formatDateTime(group.updatedAt)}
-            />
+              <InfoLine
+                icon={{ ios: "person.badge.key.fill", android: "badge", web: "badge" }}
+                label="Rôle propriétaire"
+                value={ownerRoleLabel(group.ownerRole)}
+              />
+              <Divider />
+              <InfoLine
+                icon={{ ios: "calendar.badge.plus", android: "event_available", web: "event_available" }}
+                label="Création"
+                value={formatDateTime(group.createdAt)}
+              />
+              <Divider />
+              <InfoLine
+                icon={{ ios: "clock.arrow.circlepath", android: "update", web: "update" }}
+                label="Dernière mise à jour"
+                value={formatDateTime(group.updatedAt)}
+              />
+            </View>
           </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </ScreenContainer>
   );
 
+  function SectionTitle({
+    eyebrow,
+    title,
+    subtitle,
+    icon,
+  }: {
+    eyebrow: string;
+    title: string;
+    subtitle: string;
+    icon: SymbolName;
+  }) {
+    return (
+      <View className="mb-2.5 mt-5 flex-row items-center">
+        <View
+          className="h-9 w-9 items-center justify-center rounded-[11px]"
+          style={{ backgroundColor: "#F1E9FF" }}
+        >
+          <SymbolView name={icon} tintColor="#7C3AED" size={14} weight="bold" />
+        </View>
+        <View className="ml-2.5 min-w-0 flex-1">
+          <Text
+            className="text-[10px] font-black uppercase tracking-[0.6px]"
+            style={{ color: theme.colors.foregroundSubtle }}
+          >
+            {eyebrow}
+          </Text>
+          <Text
+            className="mt-0.5 text-[16px] font-black"
+            style={{ color: theme.colors.foreground }}
+          >
+            {title}
+          </Text>
+          <Text
+            className="mt-0.5 text-[10px]"
+            style={{ color: theme.colors.foregroundMuted }}
+          >
+            {subtitle}
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
   function Metric({
+    icon,
     value,
     label,
   }: {
+    icon: SymbolName;
     value: string;
     label: string;
   }) {
     return (
       <View
-        style={[
-          styles.metric,
-          {
-            backgroundColor: theme.colors.surface,
-            borderColor: theme.colors.border,
-            borderRadius: theme.shape.cardRadius,
-            borderWidth: theme.shape.borderWidth,
-            padding: theme.shape.cardPadding,
-          },
-        ]}
+        className="min-w-0 flex-1 rounded-[14px] border px-3 py-2.5"
+        style={{ backgroundColor: "#F8F6F9", borderColor: "#EEE9F0" }}
       >
+        <View className="flex-row items-center">
+          <SymbolView name={icon} tintColor="#7C3AED" size={11} weight="bold" />
+          <Text
+            className="ml-1.5 text-[10px] font-bold"
+            style={{ color: theme.colors.foregroundMuted }}
+          >
+            {label}
+          </Text>
+        </View>
         <Text
-          style={[
-            styles.metricValue,
-            { color: theme.colors.accent },
-          ]}
+          numberOfLines={1}
+          className="mt-1.5 text-[15px] font-black"
+          style={{ color: theme.colors.foreground }}
         >
           {value}
-        </Text>
-        <Text
-          style={[
-            styles.metricLabel,
-            {
-              color:
-                theme.colors.foregroundMuted,
-            },
-          ]}
-        >
-          {label}
         </Text>
       </View>
     );
   }
 
-  function ResultMetric({
+  function PrimaryButton({
     label,
-    value,
+    icon,
+    disabled,
+    onPress,
   }: {
     label: string;
-    value: number;
+    icon: SymbolName;
+    disabled: boolean;
+    onPress: () => void;
   }) {
     return (
-      <View style={styles.resultMetric}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ disabled }}
+        disabled={disabled}
+        onPress={onPress}
+        android_ripple={{ color: "transparent" }}
+        className="h-[50px] w-full flex-row items-center justify-center rounded-[14px]"
+        style={{
+          backgroundColor: theme.colors.accent,
+          opacity: disabled ? 0.45 : 1,
+        }}
+      >
+        <SymbolView
+          name={icon}
+          tintColor={theme.colors.accentForeground}
+          size={14}
+          weight="bold"
+        />
         <Text
-          style={[
-            styles.resultMetricValue,
-            { color: theme.colors.accent },
-          ]}
+          className="ml-2 text-[13px] font-black"
+          style={{ color: theme.colors.accentForeground }}
         >
+          {label}
+        </Text>
+      </Pressable>
+    );
+  }
+
+  function CompactButton({
+    label,
+    icon,
+    tone,
+    disabled,
+    onPress,
+  }: {
+    label: string;
+    icon: SymbolName;
+    tone: "primary" | "danger";
+    disabled: boolean;
+    onPress: () => void;
+  }) {
+    const danger = tone === "danger";
+
+    return (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ disabled }}
+        disabled={disabled}
+        onPress={onPress}
+        android_ripple={{ color: "transparent" }}
+        className="h-9 flex-row items-center rounded-[11px] border px-2.5"
+        style={{
+          backgroundColor: danger ? "#FFF4F2" : "#F3EEFF",
+          borderColor: danger ? "#F5C9C4" : "#DDCEFA",
+          opacity: disabled ? 0.5 : 1,
+        }}
+      >
+        <SymbolView
+          name={icon}
+          tintColor={danger ? "#C2413A" : "#7C3AED"}
+          size={11}
+          weight="bold"
+        />
+        <Text
+          className="ml-1.5 text-[11px] font-black"
+          style={{ color: danger ? "#C2413A" : "#7C3AED" }}
+        >
+          {label}
+        </Text>
+      </Pressable>
+    );
+  }
+
+  function MessageBox({
+    text,
+    tone,
+  }: {
+    text: string;
+    tone: "neutral" | "success" | "warning";
+  }) {
+    const palette =
+      tone === "success"
+        ? {
+            color: "#16845A",
+            soft: "#EAFBF3",
+            icon: {
+              ios: "checkmark.circle.fill",
+              android: "check_circle",
+              web: "check_circle",
+            } as SymbolName,
+          }
+        : tone === "warning"
+          ? {
+              color: "#B45309",
+              soft: "#FFF4E5",
+              icon: {
+                ios: "exclamationmark.triangle.fill",
+                android: "warning",
+                web: "warning",
+              } as SymbolName,
+            }
+          : {
+              color: "#667085",
+              soft: "#F2F4F7",
+              icon: {
+                ios: "info.circle.fill",
+                android: "info",
+                web: "info",
+              } as SymbolName,
+            };
+
+    return (
+      <View
+        className="mt-3 flex-row items-start rounded-[14px] px-3 py-2.5"
+        style={{ backgroundColor: palette.soft }}
+      >
+        <SymbolView name={palette.icon} tintColor={palette.color} size={13} weight="bold" />
+        <Text
+          className="ml-2 min-w-0 flex-1 text-[11px] leading-[14px]"
+          style={{ color: palette.color }}
+        >
+          {text}
+        </Text>
+      </View>
+    );
+  }
+
+  function EmptyCard({
+    icon,
+    title,
+    text,
+  }: {
+    icon: SymbolName;
+    title: string;
+    text: string;
+  }) {
+    return (
+      <View
+        className="items-center rounded-[20px] border bg-white px-5 py-6"
+        style={{ borderColor: "#E5DFE8" }}
+      >
+        <View
+          className="h-12 w-12 items-center justify-center rounded-full"
+          style={{ backgroundColor: "#F1E9FF" }}
+        >
+          <SymbolView name={icon} tintColor="#7C3AED" size={18} weight="bold" />
+        </View>
+        <Text
+          className="mt-3 text-[14px] font-black"
+          style={{ color: theme.colors.foreground }}
+        >
+          {title}
+        </Text>
+        <Text
+          className="mt-1 text-center text-[11px] leading-[14px]"
+          style={{ color: theme.colors.foregroundMuted }}
+        >
+          {text}
+        </Text>
+      </View>
+    );
+  }
+
+  function ResultMetric({ label, value }: { label: string; value: number }) {
+    return (
+      <View
+        className="min-w-0 flex-1 rounded-[13px] px-2.5 py-2"
+        style={{ backgroundColor: "#F8F6F9" }}
+      >
+        <Text className="text-[16px] font-black" style={{ color: theme.colors.accent }}>
           {value}
         </Text>
         <Text
-          style={[
-            styles.resultMetricLabel,
-            {
-              color:
-                theme.colors.foregroundMuted,
-            },
-          ]}
+          className="mt-0.5 text-[9px] font-bold"
+          style={{ color: theme.colors.foregroundMuted }}
         >
           {label}
         </Text>
@@ -1398,272 +1188,41 @@ export default function TrainerGroupDetailScreen({
   }
 
   function InfoLine({
+    icon,
     label,
     value,
   }: {
+    icon: SymbolName;
     label: string;
     value: string;
   }) {
     return (
-      <View style={styles.infoLine}>
-        <Text
-          style={[
-            styles.infoLabel,
-            {
-              color:
-                theme.colors.foregroundSubtle,
-            },
-          ]}
+      <View className="flex-row items-center px-3.5 py-3">
+        <View
+          className="h-9 w-9 items-center justify-center rounded-[11px]"
+          style={{ backgroundColor: "#F7F3FA" }}
         >
-          {label}
-        </Text>
-        <Text
-          style={[
-            styles.infoValue,
-            { color: theme.colors.foreground },
-          ]}
-        >
-          {value}
-        </Text>
+          <SymbolView name={icon} tintColor="#7C3AED" size={13} weight="bold" />
+        </View>
+        <View className="ml-3 min-w-0 flex-1">
+          <Text
+            className="text-[10px] font-black uppercase tracking-[0.5px]"
+            style={{ color: theme.colors.foregroundSubtle }}
+          >
+            {label}
+          </Text>
+          <Text
+            className="mt-0.5 text-[12px] font-black"
+            style={{ color: theme.colors.foreground }}
+          >
+            {value}
+          </Text>
+        </View>
       </View>
     );
   }
-}
 
-const styles = StyleSheet.create({
-  fallback: {
-    width: "100%",
-    maxWidth: 720,
-    alignSelf: "center",
-    paddingTop: 24,
-  },
-  scrollArea: {
-    flex: 1,
-    minHeight: 0,
-  },
-  content: {
-    flexGrow: 1,
-  },
-  page: {
-    width: "100%",
-    maxWidth: 1080,
-    alignSelf: "center",
-  },
-  successBox: {
-    borderWidth: 1,
-    padding: 12,
-    marginBottom: 14,
-  },
-  successText: {
-    fontSize: 13,
-    fontWeight: "700",
-    lineHeight: 19,
-  },
-  metricGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-    marginBottom: 14,
-  },
-  metric: {
-    flexGrow: 1,
-    flexBasis: 180,
-    minWidth: 0,
-  },
-  metricValue: {
-    fontSize: 22,
-    fontWeight: "900",
-  },
-  metricLabel: {
-    fontSize: 12,
-    lineHeight: 17,
-    marginTop: 4,
-  },
-  section: {
-    marginBottom: 14,
-  },
-  sectionHeadingRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: 10,
-  },
-  sectionHeadingCopy: {
-    flex: 1,
-    minWidth: 0,
-  },
-  sectionTitle: {
-    fontSize: 17,
-    fontWeight: "900",
-    marginBottom: 8,
-  },
-  sectionHelper: {
-    fontSize: 13,
-    lineHeight: 20,
-    marginBottom: 12,
-  },
-  sectionText: {
-    fontSize: 14,
-    lineHeight: 22,
-  },
-  emptyText: {
-    fontSize: 13,
-    lineHeight: 20,
-  },
-  memberList: {
-    gap: 10,
-  },
-  memberCard: {
-    borderWidth: 1,
-    padding: 12,
-    gap: 10,
-  },
-  memberCopy: {
-    flex: 1,
-    minWidth: 0,
-  },
-  memberName: {
-    fontSize: 15,
-    fontWeight: "900",
-  },
-  memberEmail: {
-    fontSize: 12,
-    lineHeight: 18,
-    marginTop: 3,
-  },
-  memberMeta: {
-    fontSize: 11,
-    lineHeight: 17,
-    marginTop: 3,
-  },
-  memberButton: {
-    alignSelf: "flex-start",
-    minWidth: 104,
-  },
-  searchInput: {
-    minHeight: 48,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    fontSize: 14,
-  },
-  searchButton: {
-    marginTop: 10,
-    alignSelf: "flex-start",
-    minWidth: 132,
-  },
-  searchMessage: {
-    fontSize: 12,
-    lineHeight: 18,
-    marginTop: 10,
-  },
-  directoryList: {
-    gap: 10,
-    marginTop: 14,
-  },
-  directoryCard: {
-    borderWidth: 1,
-    padding: 12,
-    gap: 10,
-  },
-  directoryCopy: {
-    flex: 1,
-    minWidth: 0,
-  },
-  directoryButton: {
-    alignSelf: "flex-start",
-    minWidth: 104,
-  },
-  assignmentNotice: {
-    borderWidth: 1,
-    padding: 11,
-    marginBottom: 12,
-  },
-  assignmentNoticeText: {
-    fontSize: 12,
-    lineHeight: 18,
-  },
-  trainingChoiceList: {
-    gap: 8,
-    marginBottom: 14,
-  },
-  trainingChoice: {
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 11,
-  },
-  trainingChoiceTitle: {
-    fontSize: 14,
-    fontWeight: "900",
-  },
-  trainingChoiceMeta: {
-    fontSize: 11,
-    lineHeight: 17,
-    marginTop: 3,
-  },
-  assignmentLabel: {
-    fontSize: 13,
-    fontWeight: "800",
-    marginBottom: 7,
-  },
-  assignmentHelp: {
-    fontSize: 11,
-    lineHeight: 17,
-    marginTop: 6,
-  },
-  assignmentButton: {
-    alignSelf: "flex-start",
-    minWidth: 180,
-    marginTop: 12,
-  },
-  assignmentMessage: {
-    fontSize: 12,
-    lineHeight: 18,
-    marginTop: 10,
-  },
-  assignmentResult: {
-    borderWidth: 1,
-    padding: 12,
-    marginTop: 14,
-  },
-  assignmentResultTitle: {
-    fontSize: 14,
-    fontWeight: "900",
-    marginBottom: 10,
-  },
-  assignmentResultGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-  },
-  resultMetric: {
-    minWidth: 92,
-    flexGrow: 1,
-  },
-  resultMetricValue: {
-    fontSize: 20,
-    fontWeight: "900",
-  },
-  resultMetricLabel: {
-    fontSize: 11,
-    lineHeight: 16,
-    marginTop: 2,
-  },
-  assignmentTotal: {
-    fontSize: 11,
-    lineHeight: 17,
-    marginTop: 10,
-  },
-  infoLine: {
-    gap: 3,
-    marginBottom: 11,
-  },
-  infoLabel: {
-    fontSize: 11,
-    fontWeight: "800",
-    textTransform: "uppercase",
-  },
-  infoValue: {
-    fontSize: 14,
-    lineHeight: 20,
-  },
-});
+  function Divider() {
+    return <View className="mx-3 h-px" style={{ backgroundColor: "#EEE9F0" }} />;
+  }
+}

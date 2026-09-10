@@ -1,8 +1,14 @@
 import { SymbolView } from "expo-symbols";
 import { Href, Tabs, router } from "expo-router";
+import { type ComponentProps, useEffect, useState } from "react";
+import {
+  type ColorValue,
+  Platform,
+  Pressable,
+  Text,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useEffect, useState } from "react";
-import { Pressable, Text } from "react-native";
 
 import RoleHeaderShortcuts from "../../../components/assistant/RoleHeaderShortcuts";
 import { getConnectedUser } from "../../../storage/tokenStorage";
@@ -55,33 +61,105 @@ export default function LearnerTabsLayout() {
     }
   }
 
+  /*
+   * Même protection Android que l'espace formateur :
+   * suffisamment d'espace pour les boutons système,
+   * sans créer de grande bande vide.
+   */
+  const bottomSafeArea = Math.max(
+    insets.bottom,
+    Platform.OS === "android" ? 20 : 8,
+  );
+
   return (
     <Tabs
       screenOptions={{
+        /*
+         * HEADER — même rendu que Formateur
+         */
         headerStyle: {
           backgroundColor: theme.colors.headerBackground,
         },
         headerTintColor: theme.colors.headerForeground,
         headerTitleStyle: {
-          fontWeight: "700",
+          fontSize: 20,
+          fontWeight: "800",
         },
+
+        /*
+         * Supprime le ripple gris Android.
+         */
+        tabBarButton: ({
+          children,
+          style,
+          onPress,
+          onLongPress,
+          accessibilityState,
+          accessibilityLabel,
+          testID,
+        }) => (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={accessibilityState}
+            accessibilityLabel={accessibilityLabel}
+            testID={testID}
+            onPress={onPress}
+            onLongPress={onLongPress}
+            android_ripple={{ color: "transparent" }}
+            android_disableSound
+            className="flex-1 items-center justify-center bg-[transparent]" style={style}
+          >
+            {children}
+          </Pressable>
+        ),
+
+        /*
+         * BARRE DU BAS — copie visuelle du Formateur
+         */
         tabBarStyle: {
-          backgroundColor: theme.colors.headerBackground,
-          borderTopWidth: 0,
-          minHeight: 68,
+          backgroundColor: theme.colors.surface,
+          borderTopWidth: 1,
+          borderTopColor: theme.colors.border,
+          height: 62 + bottomSafeArea,
           paddingTop: 5,
-          paddingBottom: Math.max(9, insets.bottom),
+          paddingBottom: bottomSafeArea,
+          shadowColor: theme.colors.shadow,
+          shadowOffset: {
+            width: 0,
+            height: -3,
+          },
+          shadowOpacity: 0.05,
+          shadowRadius: 10,
+          elevation: 8,
         },
-        tabBarActiveTintColor: theme.colors.accentForeground,
-        tabBarInactiveTintColor: theme.colors.headerForeground,
-        tabBarActiveBackgroundColor: theme.colors.accent,
+        tabBarItemStyle: {
+          flex: 1,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: "transparent",
+        },
+        tabBarActiveTintColor: theme.colors.accent,
+        tabBarInactiveTintColor: theme.colors.foregroundMuted,
+        tabBarActiveBackgroundColor: "transparent",
+        tabBarInactiveBackgroundColor: "transparent",
         tabBarLabelStyle: {
-          fontSize: 12,
+          fontSize: 10,
           fontWeight: "700",
-          lineHeight: 16,
-          marginBottom: 1,
+          lineHeight: 12,
+          marginTop: 1,
+          marginBottom: 0,
+          textAlign: "center",
+        },
+        tabBarIconStyle: {
+          marginTop: 0,
+          marginBottom: 0,
         },
         tabBarHideOnKeyboard: true,
+
+        /*
+         * Si un formateur/admin consulte son espace apprenant,
+         * son retour vers l'espace d'origine reste disponible.
+         */
         headerLeft:
           connectedRole === "FORMATEUR" || connectedRole === "ADMIN"
             ? () => (
@@ -89,20 +167,29 @@ export default function LearnerTabsLayout() {
                   accessibilityRole="button"
                   accessibilityLabel={`Retour vers ${staffReturnLabel}`}
                   onPress={returnToStaffSpace}
-                  style={{ paddingHorizontal: 12, paddingVertical: 8 }}
+                  android_ripple={{ color: "transparent" }}
+                  className="max-w-[140px] min-h-[36px] ml-[8px] px-[8px] rounded-[11px] flex-row items-center"
                 >
-                  <Text
-                    style={{
-                      color: theme.colors.headerForeground,
-                      fontSize: 12,
-                      fontWeight: "800",
+                  <SymbolView
+                    name={{
+                      ios: "chevron.left",
+                      android: "chevron_left",
+                      web: "chevron_left",
                     }}
+                    tintColor={theme.colors.headerForeground}
+                    size={13}
+                    weight="bold"
+                  />
+                  <Text
+                    numberOfLines={1}
+                    className="shrink ml-[3px] text-[10px] font-extrabold" style={{ color: theme.colors.headerForeground }}
                   >
                     {staffReturnLabel}
                   </Text>
                 </Pressable>
               )
             : undefined,
+
         headerRight: () => (
           <RoleHeaderShortcuts
             onAssistantPress={() =>
@@ -118,96 +205,153 @@ export default function LearnerTabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title:
-            connectedRole === "APPRENANT"
-              ? "Accueil"
-              : "Mon apprentissage",
+          title: "Accueil",
           tabBarLabel: "Accueil",
           tabBarAccessibilityLabel: "Accueil apprenant",
-          tabBarIcon: ({ color, size, focused }) => (
-            <SymbolView
-              name={focused
-                ? { ios: "house.fill", android: "home", web: "home" }
-                : { ios: "house", android: "home", web: "home" }}
-              tintColor={color}
-              size={size}
-              weight={focused ? "bold" : "regular"}
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon
+              focused={focused}
+              color={color}
+              icon={
+                focused
+                  ? { ios: "house.fill", android: "home", web: "home" }
+                  : { ios: "house", android: "home", web: "home" }
+              }
             />
           ),
         }}
       />
+
       <Tabs.Screen
         name="my-trainings"
         options={{
-          title: "Mon apprentissage",
+          title: "Mes formations",
           tabBarLabel: "Formations",
-          tabBarAccessibilityLabel: "Mon apprentissage",
-          tabBarIcon: ({ color, size, focused }) => (
-            <SymbolView
-              name={focused
-                ? { ios: "play.circle.fill", android: "play_circle", web: "play_circle" }
-                : { ios: "play.circle", android: "play_circle", web: "play_circle" }}
-              tintColor={color}
-              size={size}
-              weight={focused ? "bold" : "regular"}
+          tabBarAccessibilityLabel: "Mes formations",
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon
+              focused={focused}
+              color={color}
+              icon={
+                focused
+                  ? {
+                      ios: "books.vertical.fill",
+                      android: "library_books",
+                      web: "library_books",
+                    }
+                  : {
+                      ios: "books.vertical",
+                      android: "library_books",
+                      web: "library_books",
+                    }
+              }
             />
           ),
         }}
       />
+
       <Tabs.Screen
         name="catalog"
         options={{
           title: "Explorer",
           tabBarLabel: "Explorer",
           tabBarAccessibilityLabel: "Explorer le catalogue",
-          tabBarIcon: ({ color, size, focused }) => (
-            <SymbolView
-              name={focused
-                ? { ios: "safari.fill", android: "explore", web: "explore" }
-                : { ios: "safari", android: "explore", web: "explore" }}
-              tintColor={color}
-              size={size}
-              weight={focused ? "bold" : "regular"}
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon
+              focused={focused}
+              color={color}
+              icon={
+                focused
+                  ? { ios: "safari.fill", android: "explore", web: "explore" }
+                  : { ios: "safari", android: "explore", web: "explore" }
+              }
             />
           ),
         }}
       />
+
       <Tabs.Screen
         name="progress"
         options={{
           title: "Activité",
           tabBarLabel: "Activité",
           tabBarAccessibilityLabel: "Mon activité et ma progression",
-          tabBarIcon: ({ color, size, focused }) => (
-            <SymbolView
-              name={focused
-                ? { ios: "chart.bar.fill", android: "show_chart", web: "show_chart" }
-                : { ios: "chart.bar", android: "show_chart", web: "show_chart" }}
-              tintColor={color}
-              size={size}
-              weight={focused ? "bold" : "regular"}
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon
+              focused={focused}
+              color={color}
+              icon={
+                focused
+                  ? {
+                      ios: "chart.bar.fill",
+                      android: "show_chart",
+                      web: "show_chart",
+                    }
+                  : {
+                      ios: "chart.bar",
+                      android: "show_chart",
+                      web: "show_chart",
+                    }
+              }
             />
           ),
         }}
       />
+
       <Tabs.Screen
         name="profile"
         options={{
           title: "Mon compte",
           tabBarLabel: "Compte",
           tabBarAccessibilityLabel: "Mon compte",
-          tabBarIcon: ({ color, size, focused }) => (
-            <SymbolView
-              name={focused
-                ? { ios: "person.crop.circle.fill", android: "account_circle", web: "account_circle" }
-                : { ios: "person.crop.circle", android: "account_circle", web: "account_circle" }}
-              tintColor={color}
-              size={size}
-              weight={focused ? "bold" : "regular"}
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon
+              focused={focused}
+              color={color}
+              icon={
+                focused
+                  ? {
+                      ios: "person.crop.circle.fill",
+                      android: "account_circle",
+                      web: "account_circle",
+                    }
+                  : {
+                      ios: "person.crop.circle",
+                      android: "account_circle",
+                      web: "account_circle",
+                    }
+              }
             />
           ),
         }}
       />
     </Tabs>
+  );
+}
+
+function TabIcon({
+  focused,
+  color,
+  icon,
+}: {
+  focused: boolean;
+  color: ColorValue;
+  icon: ComponentProps<typeof SymbolView>["name"];
+}) {
+  const { theme } = useSmartTrainingTheme();
+
+  return (
+    <View
+      className="w-[40px] h-[30px] rounded-[11px] items-center justify-center" style={(focused ? {
+          backgroundColor: theme.colors.surfaceSoft,
+        } : null)}
+    >
+      <SymbolView
+        name={icon}
+        tintColor={color}
+        size={21}
+        weight={focused ? "bold" : "regular"}
+      />
+    </View>
   );
 }

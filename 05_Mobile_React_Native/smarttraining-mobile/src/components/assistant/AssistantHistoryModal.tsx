@@ -1,3 +1,5 @@
+import { SymbolView } from "expo-symbols";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   ActivityIndicator,
   Modal,
@@ -9,11 +11,6 @@ import {
 } from "react-native";
 
 import type { AssistantConversationSummary } from "../../features/assistant/assistantService";
-import {
-  uxSpacing,
-  uxTypography,
-} from "../../theme/design-system/uxSemanticTokens";
-import { useSmartTrainingTheme } from "../../theme/provider/SmartTrainingThemeProvider";
 
 type Props = {
   visible: boolean;
@@ -59,106 +56,122 @@ export default function AssistantHistoryModal({
   onCancelDelete,
   onConfirmDelete,
 }: Props) {
-  const { theme } = useSmartTrainingTheme();
+  const insets = useSafeAreaInsets();
 
   return (
     <Modal
-      animationType="fade"
+      animationType="slide"
       transparent
       visible={visible}
+      statusBarTranslucent
+      navigationBarTranslucent={false}
       onRequestClose={onClose}
     >
       <View style={styles.backdrop}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Fermer l’historique"
+          onPress={onClose}
+          android_ripple={{ color: "transparent" }}
+          style={StyleSheet.absoluteFill}
+        />
+
         <View
           style={[
-            styles.card,
+            styles.sheet,
             {
-              backgroundColor: theme.colors.surface,
-              borderColor: theme.colors.border,
-              borderWidth: theme.shape.borderWidth,
+              paddingBottom: Math.max(insets.bottom + 12, 24),
             },
           ]}
         >
+          <View style={styles.handle} />
+
           <View style={styles.header}>
+            <View style={styles.headerIcon}>
+              <SymbolView
+                name={{
+                  ios: "clock.arrow.circlepath",
+                  android: "history",
+                  web: "history",
+                }}
+                tintColor="#7C3AED"
+                size={18}
+                weight="bold"
+              />
+            </View>
+
             <View style={styles.headerCopy}>
               <Text
-                style={[
-                  styles.title,
-                  { color: theme.colors.foreground },
-                ]}
+                maxFontSizeMultiplier={1.15}
+                style={styles.title}
               >
                 Historique
               </Text>
               <Text
-                style={[
-                  styles.subtitle,
-                  { color: theme.colors.foregroundMuted },
-                ]}
+                numberOfLines={2}
+                maxFontSizeMultiplier={1.15}
+                style={styles.subtitle}
               >
-                Retrouvez vos conversations sur tous vos appareils.
+                Retrouvez et reprenez vos conversations.
               </Text>
             </View>
 
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Fermer l’historique"
-              hitSlop={8}
-              onPress={onClose}
-              style={({ pressed }) => [
-                styles.closeButton,
-                pressed ? styles.pressed : null,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.closeLabel,
-                  { color: theme.colors.accent },
-                ]}
+            <View style={styles.closeVisual}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Fermer l’historique"
+                onPress={onClose}
+                android_ripple={{ color: "transparent" }}
+                style={styles.closePressable}
               >
-                Fermer
-              </Text>
-            </Pressable>
+                <SymbolView
+                  name={{
+                    ios: "xmark",
+                    android: "close",
+                    web: "close",
+                  }}
+                  tintColor="#667085"
+                  size={13}
+                  weight="bold"
+                />
+              </Pressable>
+            </View>
           </View>
 
           {loading ? (
-            <View style={styles.loadingBox}>
-              <ActivityIndicator
-                size="small"
-                color={theme.colors.accent}
-              />
+            <View style={styles.centerState}>
+              <ActivityIndicator size="small" color="#7C3AED" />
               <Text
-                style={[
-                  styles.loadingText,
-                  { color: theme.colors.foregroundMuted },
-                ]}
+                maxFontSizeMultiplier={1.15}
+                style={styles.stateText}
               >
                 Chargement des conversations…
               </Text>
             </View>
           ) : conversations.length === 0 ? (
-            <View
-              style={[
-                styles.emptyBox,
-                {
-                  backgroundColor: theme.colors.surfaceSoft,
-                  borderColor: theme.colors.border,
-                  borderWidth: theme.shape.borderWidth,
-                },
-              ]}
-            >
+            <View style={styles.emptyCard}>
+              <View style={styles.emptyIcon}>
+                <SymbolView
+                  name={{
+                    ios: "bubble.left.and.bubble.right",
+                    android: "forum",
+                    web: "forum",
+                  }}
+                  tintColor="#7C3AED"
+                  size={18}
+                  weight="bold"
+                />
+              </View>
+
               <Text
-                style={[
-                  styles.emptyTitle,
-                  { color: theme.colors.foreground },
-                ]}
+                maxFontSizeMultiplier={1.15}
+                style={styles.emptyTitle}
               >
                 Aucun historique
               </Text>
               <Text
-                style={[
-                  styles.emptyText,
-                  { color: theme.colors.foregroundMuted },
-                ]}
+                maxFontSizeMultiplier={1.15}
+                style={styles.emptyText}
               >
                 Votre première conversation apparaîtra ici.
               </Text>
@@ -179,139 +192,173 @@ export default function AssistantHistoryModal({
                     key={conversation.id}
                     style={[
                       styles.item,
-                      {
-                        backgroundColor: theme.colors.surfaceSoft,
-                        borderColor: theme.colors.border,
-                        borderWidth: theme.shape.borderWidth,
-                      },
+                      confirming ? styles.itemConfirming : null,
                     ]}
                   >
-                    <View style={styles.itemRow}>
+                    <View style={styles.itemMainRow}>
+                      <View style={styles.conversationIcon}>
+                        <SymbolView
+                          name={{
+                            ios: "bubble.left.fill",
+                            android: "chat_bubble",
+                            web: "chat_bubble",
+                          }}
+                          tintColor="#7C3AED"
+                          size={14}
+                          weight="bold"
+                        />
+                      </View>
+
                       <Pressable
                         accessibilityRole="button"
                         accessibilityLabel={`Ouvrir la conversation ${conversation.title}`}
                         disabled={opening || deleting}
                         onPress={() => onSelect(conversation.id)}
-                        style={({ pressed }) => [
-                          styles.openArea,
-                          pressed ? styles.pressed : null,
-                        ]}
+                        android_ripple={{ color: "transparent" }}
+                        style={styles.openArea}
                       >
                         <Text
                           numberOfLines={2}
-                          style={[
-                            styles.itemTitle,
-                            { color: theme.colors.foreground },
-                          ]}
+                          maxFontSizeMultiplier={1.15}
+                          style={styles.itemTitle}
                         >
                           {conversation.title}
                         </Text>
-                        <Text
-                          style={[
-                            styles.itemDate,
-                            { color: theme.colors.foregroundMuted },
-                          ]}
-                        >
-                          {formatDate(conversation.updatedAt)}
-                        </Text>
+
+                        <View style={styles.itemMeta}>
+                          <SymbolView
+                            name={{
+                              ios: "clock",
+                              android: "schedule",
+                              web: "schedule",
+                            }}
+                            tintColor="#98A2B3"
+                            size={10}
+                            weight="regular"
+                          />
+                          <Text
+                            numberOfLines={1}
+                            maxFontSizeMultiplier={1.15}
+                            style={styles.itemDate}
+                          >
+                            {formatDate(conversation.updatedAt)}
+                          </Text>
+                        </View>
                       </Pressable>
 
-                      <View style={styles.itemAction}>
+                      <View style={styles.itemActions}>
                         {opening ? (
-                          <ActivityIndicator
-                            size="small"
-                            color={theme.colors.accent}
-                          />
+                          <ActivityIndicator size="small" color="#7C3AED" />
                         ) : (
-                          <Pressable
-                            accessibilityRole="button"
-                            accessibilityLabel={`Supprimer la conversation ${conversation.title}`}
-                            disabled={deleting}
-                            onPress={() => onAskDelete(conversation.id)}
-                            style={({ pressed }) => [
-                              styles.deleteButton,
-                              pressed ? styles.pressed : null,
-                            ]}
-                          >
-                            {deleting ? (
-                              <ActivityIndicator
-                                size="small"
-                                color={theme.colors.accent}
-                              />
-                            ) : (
-                              <Text
-                                style={[
-                                  styles.deleteLabel,
-                                  { color: theme.colors.accent },
-                                ]}
+                          <>
+                            <View style={styles.openVisual}>
+                              <Pressable
+                                accessibilityRole="button"
+                                accessibilityLabel={`Ouvrir la conversation ${conversation.title}`}
+                                disabled={deleting}
+                                onPress={() => onSelect(conversation.id)}
+                                android_ripple={{ color: "transparent" }}
+                                style={styles.iconPressable}
                               >
-                                Supprimer
-                              </Text>
-                            )}
-                          </Pressable>
+                                <SymbolView
+                                  name={{
+                                    ios: "chevron.right",
+                                    android: "chevron_right",
+                                    web: "chevron_right",
+                                  }}
+                                  tintColor="#7C3AED"
+                                  size={11}
+                                  weight="bold"
+                                />
+                              </Pressable>
+                            </View>
+
+                            <View style={styles.deleteVisual}>
+                              <Pressable
+                                accessibilityRole="button"
+                                accessibilityLabel={`Supprimer la conversation ${conversation.title}`}
+                                disabled={deleting}
+                                onPress={() => onAskDelete(conversation.id)}
+                                android_ripple={{ color: "transparent" }}
+                                style={styles.iconPressable}
+                              >
+                                {deleting ? (
+                                  <ActivityIndicator
+                                    size="small"
+                                    color="#DC2626"
+                                  />
+                                ) : (
+                                  <SymbolView
+                                    name={{
+                                      ios: "trash",
+                                      android: "delete",
+                                      web: "delete",
+                                    }}
+                                    tintColor="#DC2626"
+                                    size={12}
+                                    weight="bold"
+                                  />
+                                )}
+                              </Pressable>
+                            </View>
+                          </>
                         )}
                       </View>
                     </View>
 
                     {confirming ? (
-                      <View
-                        style={[
-                          styles.confirmBox,
-                          { borderTopColor: theme.colors.border },
-                        ]}
-                      >
+                      <View style={styles.confirmBox}>
                         <Text
-                          style={[
-                            styles.confirmText,
-                            { color: theme.colors.foreground },
-                          ]}
+                          maxFontSizeMultiplier={1.15}
+                          style={styles.confirmText}
                         >
                           Supprimer définitivement cette conversation ?
                         </Text>
 
                         <View style={styles.confirmActions}>
-                          <Pressable
-                            accessibilityRole="button"
-                            accessibilityLabel="Annuler la suppression"
-                            onPress={onCancelDelete}
-                            style={({ pressed }) => [
-                              styles.confirmButton,
-                              {
-                                borderColor: theme.colors.border,
-                                borderWidth: theme.shape.borderWidth,
-                              },
-                              pressed ? styles.pressed : null,
-                            ]}
-                          >
-                            <Text
-                              style={[
-                                styles.confirmLabel,
-                                { color: theme.colors.foreground },
-                              ]}
+                          <View style={styles.cancelVisual}>
+                            <Pressable
+                              accessibilityRole="button"
+                              accessibilityLabel="Annuler la suppression"
+                              onPress={onCancelDelete}
+                              android_ripple={{ color: "transparent" }}
+                              style={styles.confirmPressable}
                             >
-                              Annuler
-                            </Text>
-                          </Pressable>
+                              <Text
+                                maxFontSizeMultiplier={1.15}
+                                style={styles.cancelLabel}
+                              >
+                                Annuler
+                              </Text>
+                            </Pressable>
+                          </View>
 
-                          <Pressable
-                            accessibilityRole="button"
-                            accessibilityLabel="Confirmer la suppression"
-                            onPress={onConfirmDelete}
-                            style={({ pressed }) => [
-                              styles.confirmButton,
-                              { backgroundColor: theme.colors.accent },
-                              pressed ? styles.pressed : null,
-                            ]}
-                          >
-                            <Text
-                              style={[
-                                styles.confirmLabel,
-                                { color: theme.colors.accentForeground },
-                              ]}
+                          <View style={styles.confirmDeleteVisual}>
+                            <Pressable
+                              accessibilityRole="button"
+                              accessibilityLabel="Confirmer la suppression"
+                              onPress={onConfirmDelete}
+                              android_ripple={{ color: "transparent" }}
+                              style={styles.confirmPressable}
                             >
-                              Supprimer
-                            </Text>
-                          </Pressable>
+                              <SymbolView
+                                name={{
+                                  ios: "trash.fill",
+                                  android: "delete",
+                                  web: "delete",
+                                }}
+                                tintColor="#FFFFFF"
+                                size={11}
+                                weight="bold"
+                              />
+                              <Text
+                                maxFontSizeMultiplier={1.15}
+                                style={styles.confirmDeleteLabel}
+                              >
+                                Supprimer
+                              </Text>
+                            </Pressable>
+                          </View>
                         </View>
                       </View>
                     ) : null}
@@ -322,14 +369,24 @@ export default function AssistantHistoryModal({
           )}
 
           {error ? (
-            <Text
-              style={[
-                styles.errorText,
-                { color: theme.colors.foreground },
-              ]}
-            >
-              {error}
-            </Text>
+            <View style={styles.errorCard}>
+              <SymbolView
+                name={{
+                  ios: "exclamationmark.triangle.fill",
+                  android: "warning",
+                  web: "warning",
+                }}
+                tintColor="#DC2626"
+                size={13}
+                weight="bold"
+              />
+              <Text
+                maxFontSizeMultiplier={1.15}
+                style={styles.errorText}
+              >
+                {error}
+              </Text>
+            </View>
           ) : null}
         </View>
       </View>
@@ -340,148 +397,272 @@ export default function AssistantHistoryModal({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.42)",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: uxSpacing.lg,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(15, 23, 42, 0.52)",
   },
-  card: {
+  sheet: {
     width: "100%",
-    maxWidth: 560,
-    maxHeight: "82%",
-    borderRadius: 18,
-    padding: uxSpacing.lg,
-    gap: uxSpacing.md,
+    maxHeight: "72%",
+    paddingHorizontal: 14,
+    paddingTop: 8,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    backgroundColor: "#F8F6F3",
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 18,
+    elevation: 14,
+  },
+  handle: {
+    width: 42,
+    height: 4,
+    borderRadius: 2,
+    alignSelf: "center",
+    marginBottom: 10,
+    backgroundColor: "#D0CBD5",
   },
   header: {
     flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: uxSpacing.md,
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  headerIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 13,
+    marginRight: 10,
+    backgroundColor: "#F1E9FF",
+    alignItems: "center",
+    justifyContent: "center",
   },
   headerCopy: {
     flex: 1,
     minWidth: 0,
-    gap: 3,
   },
   title: {
-    fontSize: 20,
+    color: "#111827",
+    fontSize: 18,
+    lineHeight: 22,
     fontWeight: "900",
   },
   subtitle: {
-    fontSize: uxTypography.caption,
-    lineHeight: 18,
+    marginTop: 1,
+    color: "#667085",
+    fontSize: 10,
+    lineHeight: 14,
+    fontWeight: "600",
   },
-  closeButton: {
-    minHeight: 36,
-    paddingHorizontal: uxSpacing.sm,
+  closeVisual: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    overflow: "hidden",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E4DFE8",
+  },
+  closePressable: {
+    flex: 1,
     alignItems: "center",
     justifyContent: "center",
   },
-  closeLabel: {
-    fontSize: uxTypography.caption,
-    fontWeight: "900",
-  },
-  loadingBox: {
-    minHeight: 120,
+
+  centerState: {
+    minHeight: 150,
     alignItems: "center",
     justifyContent: "center",
-    gap: uxSpacing.sm,
+    gap: 8,
   },
-  loadingText: {
-    fontSize: uxTypography.caption,
+  stateText: {
+    color: "#667085",
+    fontSize: 11,
+    fontWeight: "700",
   },
-  emptyBox: {
-    padding: uxSpacing.lg,
-    borderRadius: 14,
-    gap: uxSpacing.xs,
+
+  emptyCard: {
+    padding: 20,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "#E4DFE8",
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+  },
+  emptyIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 15,
+    marginBottom: 9,
+    backgroundColor: "#F1E9FF",
+    alignItems: "center",
+    justifyContent: "center",
   },
   emptyTitle: {
-    fontSize: uxTypography.body,
+    color: "#111827",
+    fontSize: 14,
     fontWeight: "900",
   },
   emptyText: {
-    fontSize: uxTypography.caption,
-    lineHeight: 18,
+    marginTop: 3,
+    color: "#667085",
+    fontSize: 10,
+    lineHeight: 14,
+    textAlign: "center",
   },
+
   list: {
     minHeight: 0,
   },
   listContent: {
-    gap: uxSpacing.sm,
-    paddingBottom: uxSpacing.xs,
+    gap: 8,
+    paddingBottom: 12,
   },
   item: {
-    borderRadius: 14,
     overflow: "hidden",
+    borderRadius: 17,
+    borderWidth: 1,
+    borderColor: "#E4DFE8",
+    backgroundColor: "#FFFFFF",
   },
-  itemRow: {
-    minHeight: 74,
+  itemConfirming: {
+    borderColor: "#F2C8C8",
+  },
+  itemMainRow: {
+    minHeight: 72,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
     flexDirection: "row",
     alignItems: "center",
+  },
+  conversationIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    marginRight: 9,
+    backgroundColor: "#F1E9FF",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
   },
   openArea: {
     flex: 1,
     minWidth: 0,
-    paddingHorizontal: uxSpacing.md,
-    paddingVertical: uxSpacing.sm,
-    gap: 4,
+    paddingVertical: 2,
   },
   itemTitle: {
-    fontSize: uxTypography.body,
-    lineHeight: 20,
-    fontWeight: "800",
+    color: "#111827",
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: "900",
+  },
+  itemMeta: {
+    marginTop: 4,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
   },
   itemDate: {
-    fontSize: uxTypography.caption,
+    color: "#98A2B3",
+    fontSize: 9,
+    fontWeight: "600",
   },
-  itemAction: {
-    minWidth: 92,
+  itemActions: {
+    marginLeft: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  openVisual: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    overflow: "hidden",
+    backgroundColor: "#F3EEFF",
+  },
+  deleteVisual: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    overflow: "hidden",
+    backgroundColor: "#FFF0F0",
+  },
+  iconPressable: {
+    flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingRight: uxSpacing.sm,
   },
-  deleteButton: {
-    minHeight: 38,
-    paddingHorizontal: uxSpacing.sm,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  deleteLabel: {
-    fontSize: uxTypography.caption,
-    fontWeight: "900",
-  },
+
   confirmBox: {
+    padding: 10,
     borderTopWidth: StyleSheet.hairlineWidth,
-    padding: uxSpacing.md,
-    gap: uxSpacing.sm,
+    borderTopColor: "#F0D8D8",
+    backgroundColor: "#FFF9F9",
   },
   confirmText: {
-    fontSize: uxTypography.caption,
-    lineHeight: 18,
-    fontWeight: "700",
+    color: "#7A2929",
+    fontSize: 10,
+    lineHeight: 14,
+    fontWeight: "800",
   },
   confirmActions: {
+    marginTop: 8,
     flexDirection: "row",
     justifyContent: "flex-end",
-    gap: uxSpacing.sm,
+    gap: 7,
   },
-  confirmButton: {
-    minHeight: 38,
-    paddingHorizontal: uxSpacing.md,
+  cancelVisual: {
+    minWidth: 82,
+    minHeight: 36,
+    borderRadius: 11,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#E4DFE8",
+    backgroundColor: "#FFFFFF",
+  },
+  confirmDeleteVisual: {
+    minWidth: 100,
+    minHeight: 36,
+    borderRadius: 11,
+    overflow: "hidden",
+    backgroundColor: "#DC2626",
+  },
+  confirmPressable: {
+    minHeight: 36,
+    paddingHorizontal: 10,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 10,
+    gap: 5,
   },
-  confirmLabel: {
-    fontSize: uxTypography.caption,
+  cancelLabel: {
+    color: "#475467",
+    fontSize: 10,
     fontWeight: "900",
   },
-  errorText: {
-    fontSize: uxTypography.caption,
-    lineHeight: 18,
+  confirmDeleteLabel: {
+    color: "#FFFFFF",
+    fontSize: 10,
+    fontWeight: "900",
   },
-  pressed: {
-    opacity: 0.7,
+
+  errorCard: {
+    marginTop: 8,
+    minHeight: 42,
+    paddingHorizontal: 10,
+    borderRadius: 13,
+    borderWidth: 1,
+    borderColor: "#F0CCCC",
+    backgroundColor: "#FFF5F5",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+  },
+  errorText: {
+    flex: 1,
+    minWidth: 0,
+    color: "#8E2525",
+    fontSize: 10,
+    lineHeight: 14,
+    fontWeight: "700",
   },
 });

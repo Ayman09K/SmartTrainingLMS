@@ -2,8 +2,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Platform,
-  StyleSheet,
-  Text,
   useWindowDimensions,
   View,
 } from "react-native";
@@ -21,6 +19,7 @@ import type {
 import {
   normalizeLearnerResourceType,
 } from "../../features/trainings/learnerTrainingService";
+import { Text } from "../nativewindui/Text";
 
 type MediaKind = "IMAGE" | "VIDEO" | "PDF";
 
@@ -29,7 +28,9 @@ type Props = {
   onVideoEnded?: () => void;
 };
 
-function protectedMediaPath(value?: string | null): string | null {
+function protectedMediaPath(
+  value?: string | null,
+): string | null {
   const raw = value?.trim();
 
   if (!raw) {
@@ -41,15 +42,21 @@ function protectedMediaPath(value?: string | null): string | null {
   if (/^https?:\/\//i.test(raw)) {
     try {
       const parsedUrl = new URL(raw);
-      if (parsedUrl.origin !== new URL(API_BASE_URL).origin) {
+
+      if (
+        parsedUrl.origin !==
+        new URL(API_BASE_URL).origin
+      ) {
         return null;
       }
+
       pathname = parsedUrl.pathname;
     } catch {
       return null;
     }
   } else {
-    pathname = raw.split(/[?#]/, 1)[0] || raw;
+    pathname =
+      raw.split(/[?#]/, 1)[0] || raw;
   }
 
   const markerIndex = pathname.indexOf("/media/");
@@ -61,7 +68,9 @@ function protectedMediaPath(value?: string | null): string | null {
   return pathname.slice(markerIndex);
 }
 
-function gatewayMediaUrl(value?: string | null): {
+function gatewayMediaUrl(
+  value?: string | null,
+): {
   url: string;
   protectedMedia: boolean;
 } | null {
@@ -89,7 +98,9 @@ function gatewayMediaUrl(value?: string | null): {
 export default function LearnerInlineMedia({
   resource,
   onVideoEnded,
-}: Props) {  const { theme } = useSmartTrainingTheme();
+}: Props) {
+  const { theme } = useSmartTrainingTheme();
+
   const {
     width: viewportWidth,
     height: viewportHeight,
@@ -98,11 +109,13 @@ export default function LearnerInlineMedia({
   const nativePdfHeight = useMemo(() => {
     const estimatedContentWidth = Math.max(
       280,
-      viewportWidth - 64,
+      viewportWidth - 48,
     );
+
     const widthDrivenHeight = Math.round(
       estimatedContentWidth * 1.35,
     );
+
     const viewportDrivenHeight = Math.round(
       viewportHeight * 0.62,
     );
@@ -116,17 +129,48 @@ export default function LearnerInlineMedia({
       ),
     );
   }, [viewportHeight, viewportWidth]);
-const type = normalizeLearnerResourceType(resource.type) as MediaKind;
-  const originalUrl = resource.publicUrl || resource.url || "";
+
+  const nativeMediaHeight = useMemo(() => {
+    const contentWidth = Math.max(
+      280,
+      viewportWidth - 68,
+    );
+
+    return Math.max(
+      220,
+      Math.min(
+        330,
+        Math.round(contentWidth * 0.62),
+      ),
+    );
+  }, [viewportWidth]);
+
+  const type =
+    normalizeLearnerResourceType(
+      resource.type,
+    ) as MediaKind;
+
+  const originalUrl =
+    resource.publicUrl ||
+    resource.url ||
+    "";
+
   const resolved = useMemo(
     () => gatewayMediaUrl(originalUrl),
     [originalUrl],
   );
 
-  const [token, setToken] = useState<string | null>(null);
-  const [webObjectUrl, setWebObjectUrl] = useState("");
-  const [loading, setLoading] = useState(Boolean(resolved));
-  const [error, setError] = useState("");
+  const [token, setToken] =
+    useState<string | null>(null);
+
+  const [webObjectUrl, setWebObjectUrl] =
+    useState("");
+
+  const [loading, setLoading] =
+    useState(Boolean(resolved));
+
+  const [error, setError] =
+    useState("");
 
   useEffect(() => {
     let active = true;
@@ -141,6 +185,7 @@ const type = normalizeLearnerResourceType(resource.type) as MediaKind;
         setLoading(Boolean(resolved));
 
         const value = await getToken();
+
         if (!active) return;
 
         setToken(value);
@@ -150,48 +195,70 @@ const type = normalizeLearnerResourceType(resource.type) as MediaKind;
           return;
         }
 
-        if (Platform.OS !== "web" || !resolved.protectedMedia) {
+        if (
+          Platform.OS !== "web" ||
+          !resolved.protectedMedia
+        ) {
           setLoading(false);
           return;
         }
 
-        const response = await fetch(resolved.url, {
-          headers: value
-            ? {
-                Authorization: `Bearer ${value}`,
-                Accept: "*/*",
-              }
-            : {
-                Accept: "*/*",
-              },
-        });
+        const response = await fetch(
+          resolved.url,
+          {
+            headers: value
+              ? {
+                  Authorization:
+                    `Bearer ${value}`,
+                  Accept: "*/*",
+                }
+              : {
+                  Accept: "*/*",
+                },
+          },
+        );
 
         if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
+          throw new Error(
+            `HTTP ${response.status}`,
+          );
         }
 
-        const blob = await response.blob();
-        createdObjectUrl = URL.createObjectURL(blob);
+        const blob =
+          await response.blob();
+
+        createdObjectUrl =
+          URL.createObjectURL(blob);
 
         if (!active) {
-          URL.revokeObjectURL(createdObjectUrl);
+          URL.revokeObjectURL(
+            createdObjectUrl,
+          );
           return;
         }
 
-        setWebObjectUrl(createdObjectUrl);
+        setWebObjectUrl(
+          createdObjectUrl,
+        );
+
         setLoading(false);
       })
       .catch(() => {
         if (active) {
-          setError("Le média protégé n’a pas pu être chargé dans le lecteur.");
+          setError(
+            "Le média protégé n’a pas pu être chargé dans le lecteur.",
+          );
           setLoading(false);
         }
       });
 
     return () => {
       active = false;
+
       if (createdObjectUrl) {
-        URL.revokeObjectURL(createdObjectUrl);
+        URL.revokeObjectURL(
+          createdObjectUrl,
+        );
       }
     };
   }, [resolved]);
@@ -202,13 +269,17 @@ const type = normalizeLearnerResourceType(resource.type) as MediaKind;
 
   if (loading) {
     return (
-      <View style={styles.state}>
-        <ActivityIndicator />
+      <View className="mt-[11px] min-h-[110px] items-center justify-center rounded-[15px] bg-[#F8F6F3] px-[12px]">
+        <ActivityIndicator
+          color={theme.colors.accent}
+        />
+
         <Text
-          style={[
-            styles.stateText,
-            { color: theme.colors.foregroundMuted },
-          ]}
+          className="mt-[8px] text-[11px] font-bold"
+          style={{
+            color:
+              theme.colors.foregroundMuted,
+          }}
         >
           Chargement du média sécurisé...
         </Text>
@@ -219,19 +290,20 @@ const type = normalizeLearnerResourceType(resource.type) as MediaKind;
   if (error) {
     return (
       <View
-        style={[
-          styles.errorBox,
-          {
-            backgroundColor: theme.colors.surfaceSoft,
-            borderColor: theme.colors.border,
-          },
-        ]}
+        className="mt-[11px] rounded-[14px] border px-[11px] py-[10px]"
+        style={{
+          backgroundColor:
+            theme.colors.surfaceSoft,
+          borderColor:
+            theme.colors.border,
+        }}
       >
         <Text
-          style={[
-            styles.errorText,
-            { color: theme.colors.foreground },
-          ]}
+          className="text-[11px] font-bold leading-[16px]"
+          style={{
+            color:
+              theme.colors.foreground,
+          }}
         >
           {error}
         </Text>
@@ -239,134 +311,132 @@ const type = normalizeLearnerResourceType(resource.type) as MediaKind;
     );
   }
 
-  const headers = resolved.protectedMedia && token
-    ? {
-        Authorization: `Bearer ${token}`,
-      }
-    : undefined;
+  const headers =
+    resolved.protectedMedia && token
+      ? {
+          Authorization:
+            `Bearer ${token}`,
+        }
+      : undefined;
 
   if (Platform.OS === "web") {
-    const url = webObjectUrl || resolved.url;
+    const url =
+      webObjectUrl || resolved.url;
 
     if (type === "IMAGE") {
-      return React.createElement("img", {
-        src: url,
-        alt: resource.title,
-        style: {
-          display: "block",
-          width: "100%",
-          maxHeight: 520,
-          objectFit: "contain",
-          borderRadius: 12,
-          marginTop: 12,
-        },
-      } as never);
+      return React.createElement(
+        "img",
+        {
+          src: url,
+          alt: resource.title,
+          style: {
+            display: "block",
+            width: "100%",
+            maxHeight: 520,
+            objectFit: "contain",
+            borderRadius: 14,
+            marginTop: 12,
+          },
+        } as never,
+      );
     }
 
     if (type === "VIDEO") {
-      return React.createElement("video", {
+      return React.createElement(
+        "video",
+        {
+          src: url,
+          controls: true,
+          preload: "metadata",
+          onEnded: onVideoEnded,
+          style: {
+            display: "block",
+            width: "100%",
+            maxHeight: 520,
+            borderRadius: 14,
+            marginTop: 12,
+            backgroundColor: "#000000",
+          },
+        } as never,
+      );
+    }
+
+    return React.createElement(
+      "iframe",
+      {
         src: url,
-        controls: true,
-        preload: "metadata",
-        onEnded: onVideoEnded,
+        title: resource.title,
         style: {
           display: "block",
           width: "100%",
-          maxHeight: 520,
-          borderRadius: 12,
+          height: "82vh",
+          minHeight: 640,
+          maxHeight: 1000,
+          border: 0,
+          borderRadius: 14,
           marginTop: 12,
-          backgroundColor: "#000000",
         },
-      } as never);
-    }
-
-    return React.createElement("iframe", {
-      src: url,
-      title: resource.title,
-      style: {
-        display: "block",
-        width: "100%",
-        height: "82vh",
-        minHeight: 640,
-        maxHeight: 1000,
-        border: 0,
-        borderRadius: 12,
-        marginTop: 12,
-      },
-    } as never);
+      } as never,
+    );
   }
 
   if (type === "IMAGE") {
     return (
-      <Image
-        source={{
-          uri: resolved.url,
-          headers,
+      <View
+        className="mt-[11px] overflow-hidden rounded-[15px] bg-[#F8F6F3]"
+        style={{
+          height: nativeMediaHeight,
         }}
-        contentFit="contain"
-        style={styles.image}
-        accessibilityLabel={resource.title}
-      />
+      >
+        <Image
+          source={{
+            uri: resolved.url,
+            headers,
+          }}
+          contentFit="contain"
+          style={{
+            width: "100%",
+            height: "100%",
+          }}
+          accessibilityLabel={
+            resource.title
+          }
+        />
+      </View>
     );
   }
 
   return (
-    <WebView
-      source={{
-        uri: resolved.url,
-        headers,
+    <View
+      className="mt-[11px] overflow-hidden rounded-[15px] bg-black"
+      style={{
+        height:
+          type === "PDF"
+            ? nativePdfHeight
+            : nativeMediaHeight,
       }}
-      originWhitelist={["*"]}
-      allowsInlineMediaPlayback
-      mediaPlaybackRequiresUserAction={type === "VIDEO"}
-      javaScriptEnabled
-      domStorageEnabled
-      style={
-        type === "PDF"
-          ? [styles.pdf, { height: nativePdfHeight }]
-          : styles.video
-      }
-    />
+    >
+      <WebView
+        source={{
+          uri: resolved.url,
+          headers,
+        }}
+        originWhitelist={["*"]}
+        allowsInlineMediaPlayback
+        mediaPlaybackRequiresUserAction={
+          type === "VIDEO"
+        }
+        javaScriptEnabled
+        domStorageEnabled
+        style={{
+          width: "100%",
+          height: "100%",
+          backgroundColor:
+            type === "VIDEO"
+              ? "#000000"
+              : "#FFFFFF",
+        }}
+      />
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  state: {
-    minHeight: 96,
-    marginTop: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-  },
-  stateText: {
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  errorBox: {
-    marginTop: 12,
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 14,
-  },
-  errorText: {
-    fontSize: 13,
-    lineHeight: 19,
-    fontWeight: "700",
-  },
-  image: {
-    width: "100%",
-    height: 360,
-    marginTop: 12,
-    borderRadius: 12,
-  },
-  video: {
-    width: "100%",
-    height: 360,
-    marginTop: 12,
-    backgroundColor: "#000000",
-  },
-  pdf: {
-    width: "100%",
-    marginTop: 12,
-  },
-});

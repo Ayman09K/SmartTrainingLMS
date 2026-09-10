@@ -27,6 +27,7 @@ function RootNavigator() {
       }}
     >
       <Stack.Screen name="index" options={{ headerShown: false }} />
+      <Stack.Screen name="onboarding" options={{ headerShown: false }} />
       <Stack.Screen name="register" options={{ headerShown: false }} />
             <Stack.Screen
         name="privacy"

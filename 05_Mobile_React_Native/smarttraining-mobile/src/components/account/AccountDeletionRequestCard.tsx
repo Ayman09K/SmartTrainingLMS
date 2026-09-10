@@ -1,13 +1,13 @@
 import { isAxiosError } from "axios";
+import { SymbolView } from "expo-symbols";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  StyleSheet,
+  Pressable,
   Text,
   View,
 } from "react-native";
 
-import AppButton from "../AppButton";
 import {
   cancelMyAccountDeletionRequest,
   getMyAccountDeletionRequest,
@@ -31,7 +31,9 @@ function statusLabel(status: AccountDeletionRequestStatus): string {
 
 function formatDate(value?: string | null): string {
   if (!value) return "";
+
   const date = new Date(value);
+
   return Number.isNaN(date.getTime())
     ? value
     : date.toLocaleString("fr-FR");
@@ -53,7 +55,9 @@ function errorMessage(error: unknown): string {
 
 export default function AccountDeletionRequestCard() {
   const { theme } = useSmartTrainingTheme();
-  const [request, setRequest] = useState<AccountDeletionRequest | null>(null);
+
+  const [request, setRequest] =
+    useState<AccountDeletionRequest | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -72,10 +76,14 @@ export default function AccountDeletionRequestCard() {
         }
       })
       .catch((loadError: unknown) => {
-        if (active) setError(errorMessage(loadError));
+        if (active) {
+          setError(errorMessage(loadError));
+        }
       })
       .finally(() => {
-        if (active) setLoading(false);
+        if (active) {
+          setLoading(false);
+        }
       });
 
     return () => {
@@ -90,6 +98,7 @@ export default function AccountDeletionRequestCard() {
 
     try {
       const created = await requestMyAccountDeletion();
+
       setRequest(created);
       setConfirming(false);
       setSuccess(
@@ -108,10 +117,14 @@ export default function AccountDeletionRequestCard() {
     setSuccess("");
 
     try {
-      const cancelled = await cancelMyAccountDeletionRequest();
+      const cancelled =
+        await cancelMyAccountDeletionRequest();
+
       setRequest(cancelled);
       setCancelling(false);
-      setSuccess("Ta demande de suppression a été annulée.");
+      setSuccess(
+        "Ta demande de suppression a été annulée.",
+      );
     } catch (cancelError: unknown) {
       setError(errorMessage(cancelError));
     } finally {
@@ -124,32 +137,57 @@ export default function AccountDeletionRequestCard() {
 
   return (
     <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: theme.colors.surface,
-          borderColor: theme.colors.border,
-          borderRadius: theme.shape.cardRadius,
-          borderWidth: theme.shape.borderWidth,
-          padding: theme.shape.cardPadding,
-        },
-      ]}
+      className="overflow-hidden rounded-[18px] border bg-white"
+      style={{ borderColor: theme.colors.border }}
     >
-      <Text style={[styles.eyebrow, { color: theme.colors.danger }]}>
-        SUPPRESSION DU COMPTE
-      </Text>
-      <Text style={[styles.title, { color: theme.colors.foreground }]}>
-        Gérer ma demande de suppression
-      </Text>
-      <Text style={[styles.help, { color: theme.colors.foregroundMuted }]}>
-        La demande est suivie par l’administration. Elle ne désactive pas et
-        n’efface pas automatiquement ton compte.
-      </Text>
+      <View className="flex-row items-start px-3.5 py-3">
+        <View className="h-9 w-9 shrink-0 items-center justify-center rounded-[11px] bg-[#FFF0F0]">
+          <SymbolView
+            name={{
+              ios: "trash.fill",
+              android: "delete",
+              web: "delete",
+            }}
+            tintColor={theme.colors.danger}
+            size={14}
+            weight="bold"
+          />
+        </View>
+
+        <View className="ml-3 min-w-0 flex-1">
+          <Text
+            className="text-[10px] font-black uppercase tracking-[0.6px]"
+            style={{ color: theme.colors.danger }}
+          >
+            Suppression du compte
+          </Text>
+
+          <Text
+            className="mt-1 text-[14px] font-black"
+            style={{ color: theme.colors.foreground }}
+          >
+            Gérer ma demande de suppression
+          </Text>
+
+          <Text
+            className="mt-1 text-[11px] leading-[16px]"
+            style={{ color: theme.colors.foregroundMuted }}
+          >
+            La demande est suivie par l’administration. Elle ne désactive pas et n’efface pas automatiquement ton compte.
+          </Text>
+        </View>
+      </View>
 
       {loading ? (
-        <View style={styles.loadingRow}>
-          <ActivityIndicator color={theme.colors.accent} />
-          <Text style={[styles.smallText, { color: theme.colors.foregroundMuted }]}>
+        <View className="flex-row items-center border-t border-[#EEE9F0] px-3.5 py-2.5">
+          <ActivityIndicator
+            size="small"
+            color={theme.colors.accent}
+          />
+          <Text
+            className="ml-2 text-[11px]"
+            style={{ color: theme.colors.foregroundMuted }}
+          >
             Vérification d’une demande existante...
           </Text>
         </View>
@@ -157,38 +195,46 @@ export default function AccountDeletionRequestCard() {
 
       {request ? (
         <View
-          style={[
-            styles.statusBox,
-            {
-              backgroundColor: theme.colors.surfaceSoft,
-              borderColor: active ? theme.colors.warning : theme.colors.border,
-              borderRadius: theme.shape.controlRadius,
-              borderWidth: Math.max(1, theme.shape.borderWidth),
-            },
-          ]}
+          className="mx-3.5 mb-3 rounded-[13px] border px-3 py-2.5"
+          style={{
+            backgroundColor: theme.colors.surfaceSoft,
+            borderColor: active
+              ? theme.colors.warning
+              : theme.colors.border,
+          }}
         >
           <Text
-            style={[
-              styles.statusTitle,
-              {
-                color: active
-                  ? theme.colors.warning
-                  : theme.colors.foreground,
-              },
-            ]}
+            className="text-[12px] font-black"
+            style={{
+              color: active
+                ? theme.colors.warning
+                : theme.colors.foreground,
+            }}
           >
             {statusLabel(request.status)}
           </Text>
-          <Text style={[styles.smallText, { color: theme.colors.foregroundMuted }]}>
+
+          <Text
+            className="mt-1 text-[10px]"
+            style={{ color: theme.colors.foregroundMuted }}
+          >
             Demande #{request.id} · {formatDate(request.requestedAt)}
           </Text>
+
           {request.processingStartedAt ? (
-            <Text style={[styles.smallText, { color: theme.colors.foregroundMuted }]}>
+            <Text
+              className="mt-0.5 text-[10px]"
+              style={{ color: theme.colors.foregroundMuted }}
+            >
               Prise en charge : {formatDate(request.processingStartedAt)}
             </Text>
           ) : null}
+
           {request.adminComment ? (
-            <Text style={[styles.comment, { color: theme.colors.foreground }]}>
+            <Text
+              className="mt-1 text-[11px] font-bold leading-[16px]"
+              style={{ color: theme.colors.foreground }}
+            >
               Commentaire : {request.adminComment}
             </Text>
           ) : null}
@@ -196,191 +242,161 @@ export default function AccountDeletionRequestCard() {
       ) : null}
 
       {error ? (
-        <Text style={[styles.message, { color: theme.colors.danger }]}>
+        <Text
+          className="mx-3.5 mb-2 text-[11px] font-bold leading-[16px]"
+          style={{ color: theme.colors.danger }}
+        >
           {error}
         </Text>
       ) : null}
 
       {success ? (
-        <Text style={[styles.message, { color: theme.colors.success }]}>
+        <Text
+          className="mx-3.5 mb-2 text-[11px] font-bold leading-[16px]"
+          style={{ color: theme.colors.success }}
+        >
           {success}
         </Text>
       ) : null}
 
       {confirming ? (
         <View
-          style={[
-            styles.confirmBox,
-            {
-              backgroundColor: theme.colors.surfaceSoft,
-              borderColor: theme.colors.warning,
-              borderRadius: theme.shape.controlRadius,
-              borderWidth: Math.max(1, theme.shape.borderWidth),
-            },
-          ]}
+          className="mx-3.5 mb-3 rounded-[13px] border px-3 py-3"
+          style={{
+            backgroundColor: theme.colors.surfaceSoft,
+            borderColor: theme.colors.warning,
+          }}
         >
-          <Text style={[styles.confirmTitle, { color: theme.colors.warning }]}>
+          <Text
+            className="text-[12px] font-black"
+            style={{ color: theme.colors.warning }}
+          >
             Confirmer la demande
           </Text>
-          <Text style={[styles.smallText, { color: theme.colors.foregroundMuted }]}>
-            Un administrateur devra prendre en charge la demande et documenter
-            le traitement réel des données et des historiques pédagogiques.
+
+          <Text
+            className="mt-1 text-[10px] leading-[15px]"
+            style={{ color: theme.colors.foregroundMuted }}
+          >
+            Un administrateur devra prendre en charge la demande et documenter le traitement réel des données.
           </Text>
-          <View style={styles.buttonRow}>
-            <AppButton
-              title="Annuler"
+
+          <View className="mt-3 flex-row gap-2">
+            <CompactButton
+              label="Annuler"
               onPress={() => setConfirming(false)}
               disabled={busy}
-              variant="secondary"
-              style={styles.flexButton}
             />
-            <AppButton
-              title={busy ? "Envoi..." : "Confirmer la demande"}
+            <CompactButton
+              label={busy ? "Envoi..." : "Confirmer"}
               onPress={() => void submitRequest()}
-              loading={busy}
-              style={styles.flexButton}
+              disabled={busy}
+              danger
             />
           </View>
         </View>
       ) : cancelling ? (
         <View
-          style={[
-            styles.confirmBox,
-            {
-              backgroundColor: theme.colors.surfaceSoft,
-              borderColor: theme.colors.warning,
-              borderRadius: theme.shape.controlRadius,
-              borderWidth: Math.max(1, theme.shape.borderWidth),
-            },
-          ]}
+          className="mx-3.5 mb-3 rounded-[13px] border px-3 py-3"
+          style={{
+            backgroundColor: theme.colors.surfaceSoft,
+            borderColor: theme.colors.warning,
+          }}
         >
-          <Text style={[styles.confirmTitle, { color: theme.colors.warning }]}>
+          <Text
+            className="text-[12px] font-black"
+            style={{ color: theme.colors.warning }}
+          >
             Annuler la demande en attente ?
           </Text>
-          <Text style={[styles.smallText, { color: theme.colors.foregroundMuted }]}>
-            Une demande déjà prise en charge par un administrateur ne peut plus
-            être annulée depuis ton compte.
+
+          <Text
+            className="mt-1 text-[10px] leading-[15px]"
+            style={{ color: theme.colors.foregroundMuted }}
+          >
+            Une demande déjà prise en charge par un administrateur ne peut plus être annulée depuis ton compte.
           </Text>
-          <View style={styles.buttonRow}>
-            <AppButton
-              title="Conserver la demande"
+
+          <View className="mt-3 flex-row gap-2">
+            <CompactButton
+              label="Conserver"
               onPress={() => setCancelling(false)}
               disabled={busy}
-              variant="secondary"
-              style={styles.flexButton}
             />
-            <AppButton
-              title={busy ? "Annulation..." : "Confirmer l’annulation"}
+            <CompactButton
+              label={busy ? "Annulation..." : "Confirmer"}
               onPress={() => void cancelRequest()}
-              loading={busy}
-              style={styles.flexButton}
+              disabled={busy}
+              danger
             />
           </View>
         </View>
       ) : (
-        <>
-          <AppButton
-            title={
+        <View className="border-t border-[#EEE9F0] px-3.5 py-3">
+          <CompactButton
+            label={
               active
                 ? "Demande déjà enregistrée"
-                : "Demander la suppression de mon compte"
+                : "Demander la suppression"
             }
             onPress={() => setConfirming(true)}
             disabled={loading || busy || active}
-            variant="secondary"
-            style={styles.actionButton}
+            danger={!active}
           />
+
           {canCancel ? (
-            <AppButton
-              title="Annuler ma demande"
-              onPress={() => setCancelling(true)}
-              disabled={busy}
-              variant="secondary"
-              style={styles.cancelButton}
-            />
+            <View className="mt-2">
+              <CompactButton
+                label="Annuler ma demande"
+                onPress={() => setCancelling(true)}
+                disabled={busy}
+              />
+            </View>
           ) : null}
-        </>
+        </View>
       )}
     </View>
   );
-}
 
-const styles = StyleSheet.create({
-  card: { marginBottom: 18 },
-  eyebrow: {
-    fontSize: 10,
-    fontWeight: "900",
-    letterSpacing: 0.9,
-    marginBottom: 6,
-  },
-  title: {
-    fontSize: 19,
-    lineHeight: 25,
-    fontWeight: "900",
-  },
-  help: {
-    fontSize: 14,
-    lineHeight: 20,
-    marginTop: 8,
-  },
-  loadingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginTop: 14,
-  },
-  smallText: {
-    fontSize: 12,
-    lineHeight: 18,
-  },
-  comment: {
-    fontSize: 13,
-    lineHeight: 19,
-    fontWeight: "700",
-    marginTop: 4,
-  },
-  statusBox: {
-    padding: 14,
-    marginTop: 14,
-    gap: 5,
-  },
-  statusTitle: {
-    fontSize: 14,
-    fontWeight: "900",
-  },
-  message: {
-    fontSize: 13,
-    lineHeight: 19,
-    fontWeight: "800",
-    marginTop: 12,
-  },
-  confirmBox: {
-    padding: 14,
-    marginTop: 16,
-  },
-  confirmTitle: {
-    fontSize: 14,
-    fontWeight: "900",
-    marginBottom: 6,
-  },
-  buttonRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-    marginTop: 14,
-  },
-  flexButton: {
-    flexGrow: 1,
-    minWidth: 160,
-  },
-  actionButton: {
-    alignSelf: "flex-start",
-    minWidth: 240,
-    marginTop: 16,
-  },
-  cancelButton: {
-    alignSelf: "flex-start",
-    minWidth: 180,
-    marginTop: 10,
-  },
-});
+  function CompactButton({
+    label,
+    onPress,
+    disabled,
+    danger = false,
+  }: {
+    label: string;
+    onPress: () => void;
+    disabled: boolean;
+    danger?: boolean;
+  }) {
+    return (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ disabled }}
+        disabled={disabled}
+        onPress={onPress}
+        android_ripple={{ color: "transparent" }}
+        className="h-10 min-w-0 flex-1 items-center justify-center rounded-[11px] border px-3"
+        style={{
+          backgroundColor: danger ? "#FFF2F2" : "#FBF9FC",
+          borderColor: danger
+            ? "#F2C8C8"
+            : theme.colors.border,
+          opacity: disabled ? 0.5 : 1,
+        }}
+      >
+        <Text
+          numberOfLines={1}
+          className="text-[11px] font-black"
+          style={{
+            color: danger
+              ? theme.colors.danger
+              : theme.colors.foreground,
+          }}
+        >
+          {label}
+        </Text>
+      </Pressable>
+    );
+  }
+}

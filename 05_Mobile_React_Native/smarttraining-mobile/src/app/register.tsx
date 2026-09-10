@@ -1,19 +1,41 @@
 import ScreenContainer from "../components/ScreenContainer";
-import { Href, router } from "expo-router";
+import {
+  Href,
+  router,
+} from "expo-router";
+
 import RegisterScreen from "../screens/auth/RegisterScreen";
-import { removeToken } from "../storage/tokenStorage";
+import {
+  removeToken,
+} from "../storage/tokenStorage";
 
 export default function RegisterRoute() {
   async function handleBackToLogin() {
     await removeToken();
-    router.replace("/" as Href);
+
+    router.replace(
+      "/?skipOnboarding=1" as Href,
+    );
   }
 
   return (
-    <ScreenContainer edges={["top", "right", "bottom", "left"]}>
+    <ScreenContainer
+      edges={[
+        "top",
+        "right",
+        "bottom",
+        "left",
+      ]}
+    >
       <RegisterScreen
-        onBackToLogin={() => void handleBackToLogin()}
-        onOpenPrivacy={() => router.push("/privacy" as Href)}
+        onBackToLogin={() => {
+          void handleBackToLogin();
+        }}
+        onOpenPrivacy={() => {
+          router.push(
+            "/privacy" as Href,
+          );
+        }}
       />
     </ScreenContainer>
   );

@@ -1,23 +1,25 @@
+import * as FileSystem from "expo-file-system/legacy";
 import { Href, router } from "expo-router";
+import * as Sharing from "expo-sharing";
+import { SymbolView } from "expo-symbols";
+import type { ComponentProps } from "react";
 import { useEffect, useMemo, useState } from "react";
 import {
   Image,
   Linking,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
-import * as FileSystem from "expo-file-system/legacy";
-import * as Sharing from "expo-sharing";
 
-import AppButton from "../../components/AppButton";
-import LearnerInlineMedia from "../../components/learner/LearnerInlineMedia";
+import { API_BASE_URL } from "../../api/apiConfig";
 import ErrorMessage from "../../components/ErrorMessage";
+import LearnerInlineMedia from "../../components/learner/LearnerInlineMedia";
 import LoadingState from "../../components/LoadingState";
 import ScreenContainer from "../../components/ScreenContainer";
-import { API_BASE_URL } from "../../api/apiConfig";
 import {
   getTrainerFullTraining,
 } from "../../features/trainer/trainerAuthoringService";
@@ -39,6 +41,14 @@ type Props = {
   trainingId: number;
   trainerId: number;
   onBack: () => void;
+};
+
+type SymbolName = ComponentProps<typeof SymbolView>["name"];
+
+type ResourceVisual = {
+  icon: SymbolName;
+  soft: string;
+  color: string;
 };
 
 function isAbsoluteHttpUrl(
@@ -65,6 +75,21 @@ function resourceUrl(
   );
 }
 
+function rawResourceUrl(
+  resource: TrainerResourceResponse,
+): string | null {
+  const candidates = [
+    resource.publicUrl,
+    resource.url,
+  ];
+
+  return (
+    candidates
+      .find((value) => Boolean(value?.trim()))
+      ?.trim() ?? null
+  );
+}
+
 function typeLabel(type?: string): string {
   if (type === "TEXT") return "Texte";
   if (type === "EXTERNAL_LINK") return "Lien";
@@ -77,7 +102,93 @@ function typeLabel(type?: string): string {
   return type || "Ressource";
 }
 
-function protectedMediaPath(value?: string | null): string | null {
+function resourceVisual(type?: string): ResourceVisual {
+  if (type === "TEXT") {
+    return {
+      icon: {
+        ios: "text.alignleft",
+        android: "notes",
+        web: "notes",
+      },
+      soft: "#F3EDFF",
+      color: "#7C3AED",
+    };
+  }
+
+  if (type === "EXTERNAL_LINK") {
+    return {
+      icon: {
+        ios: "link",
+        android: "link",
+        web: "link",
+      },
+      soft: "#EAF3FF",
+      color: "#2563EB",
+    };
+  }
+
+  if (type === "IMAGE") {
+    return {
+      icon: {
+        ios: "photo.fill",
+        android: "image",
+        web: "image",
+      },
+      soft: "#EAFBF3",
+      color: "#059669",
+    };
+  }
+
+  if (type === "PDF" || type === "PDF_URL") {
+    return {
+      icon: {
+        ios: "doc.fill",
+        android: "picture_as_pdf",
+        web: "picture_as_pdf",
+      },
+      soft: "#FFF0F2",
+      color: "#DC2626",
+    };
+  }
+
+  if (type === "DOCUMENT") {
+    return {
+      icon: {
+        ios: "doc.text.fill",
+        android: "description",
+        web: "description",
+      },
+      soft: "#EEF2FF",
+      color: "#4F46E5",
+    };
+  }
+
+  if (type === "VIDEO" || type === "VIDEO_URL") {
+    return {
+      icon: {
+        ios: "play.rectangle.fill",
+        android: "smart_display",
+        web: "smart_display",
+      },
+      soft: "#FFF4E5",
+      color: "#D97706",
+    };
+  }
+
+  return {
+    icon: {
+      ios: "shippingbox.fill",
+      android: "inventory_2",
+      web: "inventory_2",
+    },
+    soft: "#E9FAFC",
+    color: "#0EA5A8",
+  };
+}
+
+function protectedMediaPath(
+  value?: string | null,
+): string | null {
   const raw = value?.trim();
 
   if (!raw) {
@@ -89,9 +200,14 @@ function protectedMediaPath(value?: string | null): string | null {
   if (/^https?:\/\//i.test(raw)) {
     try {
       const parsedUrl = new URL(raw);
-      if (parsedUrl.origin !== new URL(API_BASE_URL).origin) {
+
+      if (
+        parsedUrl.origin !==
+        new URL(API_BASE_URL).origin
+      ) {
         return null;
       }
+
       pathname = parsedUrl.pathname;
     } catch {
       return null;
@@ -107,20 +223,6 @@ function protectedMediaPath(value?: string | null): string | null {
   }
 
   return pathname.slice(markerIndex);
-}
-
-function rawResourceUrl(
-  resource: TrainerResourceResponse,
-): string | null {
-  const candidates = [
-    resource.publicUrl,
-    resource.url,
-  ];
-
-  return (
-    candidates.find((value) => Boolean(value?.trim()))?.trim() ??
-    null
-  );
 }
 
 function safeDocumentName(
@@ -146,7 +248,21 @@ function levelLabel(level?: string): string {
   if (level === "INTERMEDIAIRE") return "Intermédiaire";
   if (level === "AVANCE") return "Avancé";
 
-  return level || "Niveau non renseigné";
+  return level || "";
+}
+
+function languageLabel(language?: string | null): string {
+  const value = language?.trim().toLowerCase();
+
+  if (!value) return "";
+  if (value === "fr" || value === "fr-fr") return "Français";
+  if (value === "en" || value === "en-us" || value === "en-gb") return "Anglais";
+  if (value === "es" || value === "es-es") return "Espagnol";
+  if (value === "de" || value === "de-de") return "Allemand";
+  if (value === "it" || value === "it-it") return "Italien";
+  if (value === "ar") return "Arabe";
+
+  return language?.trim() || "";
 }
 
 function formatSize(size?: number): string {
@@ -181,11 +297,22 @@ export default function TrainerTrainingPreviewScreen({
   const { theme } = useSmartTrainingTheme();
 
   const [training, setTraining] =
-    useState<TrainerFullTrainingResponse | null>(null);
+    useState<TrainerFullTrainingResponse | null>(
+      null,
+    );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const modules = useMemo<TrainerFullModuleResponse[]>(
+  const [expandedModules, setExpandedModules] =
+    useState<Set<number>>(new Set());
+  const [expandedLessons, setExpandedLessons] =
+    useState<Set<number>>(new Set());
+  const [expandedMedia, setExpandedMedia] =
+    useState<Set<number>>(new Set());
+
+  const modules = useMemo<
+    TrainerFullModuleResponse[]
+  >(
     () =>
       [...(training?.modules ?? [])].sort(
         (left, right) =>
@@ -193,6 +320,56 @@ export default function TrainerTrainingPreviewScreen({
           (right.orderIndex ?? 0),
       ),
     [training],
+  );
+
+  function sortedLessons(
+    module: TrainerFullModuleResponse,
+  ): TrainerFullLessonResponse[] {
+    return [...(module.lessons ?? [])].sort(
+      (left, right) =>
+        (left.orderIndex ?? 0) -
+        (right.orderIndex ?? 0),
+    );
+  }
+
+  function sortedResources(
+    lesson: TrainerFullLessonResponse,
+  ): TrainerResourceResponse[] {
+    return [...(lesson.resources ?? [])]
+      .filter(
+        (resource) => resource.active !== false,
+      )
+      .sort(
+        (left, right) =>
+          (left.orderIndex ?? 0) -
+          (right.orderIndex ?? 0),
+      );
+  }
+
+  const totalLessons = useMemo(
+    () =>
+      modules.reduce(
+        (total, module) =>
+          total + sortedLessons(module).length,
+        0,
+      ),
+    [modules],
+  );
+
+  const totalResources = useMemo(
+    () =>
+      modules.reduce(
+        (moduleTotal, module) =>
+          moduleTotal +
+          sortedLessons(module).reduce(
+            (lessonTotal, lesson) =>
+              lessonTotal +
+              sortedResources(lesson).length,
+            0,
+          ),
+        0,
+      ),
+    [modules],
   );
 
   useEffect(() => {
@@ -212,6 +389,32 @@ export default function TrainerTrainingPreviewScreen({
         }
 
         setTraining(loaded);
+
+        const firstModule = [...(loaded.modules ?? [])].sort(
+          (left, right) =>
+            (left.orderIndex ?? 0) -
+            (right.orderIndex ?? 0),
+        )[0];
+
+        if (firstModule) {
+          setExpandedModules(
+            new Set([firstModule.id]),
+          );
+
+          const firstLesson = [
+            ...(firstModule.lessons ?? []),
+          ].sort(
+            (left, right) =>
+              (left.orderIndex ?? 0) -
+              (right.orderIndex ?? 0),
+          )[0];
+
+          if (firstLesson) {
+            setExpandedLessons(
+              new Set([firstLesson.id]),
+            );
+          }
+        }
       })
       .catch((caught) => {
         if (active) {
@@ -229,12 +432,30 @@ export default function TrainerTrainingPreviewScreen({
     };
   }, [trainerId, trainingId]);
 
+  function toggleSet(
+    current: Set<number>,
+    id: number,
+  ): Set<number> {
+    const next = new Set(current);
+
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
+
+    return next;
+  }
+
   async function openUrl(url: string) {
     try {
-      const supported = await Linking.canOpenURL(url);
+      const supported =
+        await Linking.canOpenURL(url);
 
       if (!supported) {
-        setError("Cette ressource ne peut pas être ouverte.");
+        setError(
+          "Cette ressource ne peut pas être ouverte.",
+        );
         return;
       }
 
@@ -250,11 +471,14 @@ export default function TrainerTrainingPreviewScreen({
     const rawUrl = rawResourceUrl(resource);
 
     if (!rawUrl) {
-      setError("Ce document ne possède pas de lien ouvrable.");
+      setError(
+        "Ce document ne possède pas de lien ouvrable.",
+      );
       return;
     }
 
-    const protectedPath = protectedMediaPath(rawUrl);
+    const protectedPath =
+      protectedMediaPath(rawUrl);
 
     if (!protectedPath) {
       await openUrl(rawUrl);
@@ -268,7 +492,8 @@ export default function TrainerTrainingPreviewScreen({
         throw new Error("Session expirée.");
       }
 
-      const remoteUrl = `${API_BASE_URL}${protectedPath}`;
+      const remoteUrl =
+        `${API_BASE_URL}${protectedPath}`;
 
       if (Platform.OS === "web") {
         const response = await fetch(remoteUrl, {
@@ -279,50 +504,73 @@ export default function TrainerTrainingPreviewScreen({
         });
 
         if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
+          throw new Error(
+            `HTTP ${response.status}`,
+          );
         }
 
         const blob = await response.blob();
-        const objectUrl = URL.createObjectURL(blob);
-        const browserGlobal = globalThis as typeof globalThis & {
-          open?: (url?: string, target?: string) => unknown;
-        };
+        const objectUrl =
+          URL.createObjectURL(blob);
 
-        browserGlobal.open?.(objectUrl, "_blank");
+        const browserGlobal =
+          globalThis as typeof globalThis & {
+            open?: (
+              url?: string,
+              target?: string,
+            ) => unknown;
+          };
+
+        browserGlobal.open?.(
+          objectUrl,
+          "_blank",
+        );
+
         setTimeout(
           () => URL.revokeObjectURL(objectUrl),
           60_000,
         );
+
         return;
       }
 
       if (!FileSystem.cacheDirectory) {
-        throw new Error("Stockage temporaire indisponible.");
+        throw new Error(
+          "Stockage temporaire indisponible.",
+        );
       }
 
       const localUri =
-        `${FileSystem.cacheDirectory}${safeDocumentName(resource)}`;
+        `${FileSystem.cacheDirectory}${safeDocumentName(
+          resource,
+        )}`;
 
-      const result = await FileSystem.downloadAsync(
-        remoteUrl,
-        localUri,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: "*/*",
+      const result =
+        await FileSystem.downloadAsync(
+          remoteUrl,
+          localUri,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: "*/*",
+            },
           },
-        },
-      );
+        );
 
-      if (result.status < 200 || result.status >= 300) {
+      if (
+        result.status < 200 ||
+        result.status >= 300
+      ) {
         throw new Error(`HTTP ${result.status}`);
       }
 
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(result.uri, {
-          mimeType: resource.mimeType || undefined,
+          mimeType:
+            resource.mimeType || undefined,
           dialogTitle: resource.title,
         });
+
         return;
       }
 
@@ -332,28 +580,6 @@ export default function TrainerTrainingPreviewScreen({
         "Le document protégé n’a pas pu être ouvert. Réessayez dans quelques instants.",
       );
     }
-  }
-
-  function sortedLessons(
-    module: TrainerFullModuleResponse,
-  ): TrainerFullLessonResponse[] {
-    return [...(module.lessons ?? [])].sort(
-      (left, right) =>
-        (left.orderIndex ?? 0) -
-        (right.orderIndex ?? 0),
-    );
-  }
-
-  function sortedResources(
-    lesson: TrainerFullLessonResponse,
-  ): TrainerResourceResponse[] {
-    return [...(lesson.resources ?? [])]
-      .filter((resource) => resource.active !== false)
-      .sort(
-        (left, right) =>
-          (left.orderIndex ?? 0) -
-          (right.orderIndex ?? 0),
-      );
   }
 
   if (loading) {
@@ -366,395 +592,958 @@ export default function TrainerTrainingPreviewScreen({
     return (
       <ScreenContainer>
         <ErrorMessage
-          message={error || "Formation indisponible."}
+          message={
+            error || "Formation indisponible."
+          }
           onRetry={onBack}
         />
       </ScreenContainer>
     );
   }
 
+  const coverVisible = isAbsoluteHttpUrl(
+    training.coverImageUrl,
+  );
+
+  const summary =
+    training.shortDescription ||
+    training.description ||
+    "";
+
+  const level = levelLabel(training.level);
+  const language = languageLabel(training.language);
+
   return (
-    <ScreenContainer>
+    <ScreenContainer
+      edges={["left", "right", "bottom"]}
+      style={{
+        padding: 0,
+        backgroundColor: "#F8F6F3",
+      }}
+    >
       <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.content}
+        className="flex-1"
+        contentContainerStyle={{
+          paddingBottom: 36,
+        }}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.page}>
-          <AppButton
-            title="Retour à la formation"
-            variant="secondary"
-            onPress={onBack}
-            style={styles.backButton}
-          />
-
+        <View className="mx-auto w-full max-w-[820px] px-4">
+          {/* PREVIEW CONTROL BAR */}
           <View
-            style={[
-              styles.previewBanner,
-              {
-                backgroundColor: theme.colors.surfaceSoft,
-                borderColor: theme.colors.border,
-              },
-            ]}
+            className="mt-3 flex-row items-center rounded-[14px] border bg-white px-3 py-2"
+            style={{
+              borderColor: "#E8E2EB",
+            }}
           >
-            <Text
-              style={[
-                styles.previewEyebrow,
-                { color: theme.colors.accent },
-              ]}
+            <View
+              className="h-7 w-7 items-center justify-center rounded-[9px]"
+              style={{
+                backgroundColor: "#F1EBFF",
+              }}
             >
-              PRÉVISUALISATION FORMATEUR
-            </Text>
-
-            <Text
-              style={[
-                styles.previewText,
-                { color: theme.colors.foregroundMuted },
-              ]}
-            >
-              Lecture seule · aperçu de la structure pédagogique
-              présentée à l’apprenant.
-            </Text>
-          </View>
-
-          {isAbsoluteHttpUrl(training.coverImageUrl) ? (
-            <Image
-              source={{ uri: training.coverImageUrl }}
-              resizeMode="cover"
-              style={[
-                styles.cover,
-                {
-                  borderRadius: theme.shape.cardRadius,
-                },
-              ]}
-            />
-          ) : null}
-
-          <View style={styles.trainingHeader}>
-            <Text
-              style={[
-                styles.title,
-                { color: theme.colors.foreground },
-              ]}
-            >
-              {training.title}
-            </Text>
-
-            <Text
-              style={[
-                styles.shortDescription,
-                { color: theme.colors.foregroundMuted },
-              ]}
-            >
-              {training.shortDescription ||
-                training.description ||
-                "Aucune description."}
-            </Text>
-
-            <View style={styles.metaRow}>
-              <Meta text={statusLabel(training.status)} />
-              <Meta
-                text={training.category || "Sans catégorie"}
+              <SymbolView
+                name={{
+                  ios: "eye.fill",
+                  android: "visibility",
+                  web: "visibility",
+                }}
+                tintColor="#7C3AED"
+                size={13}
+                weight="bold"
               />
-              <Meta text={levelLabel(training.level)} />
-              <Meta
-                text={training.language || "Langue non renseignée"}
-              />
-              {training.estimatedDurationHours ? (
-                <Meta
-                  text={`${training.estimatedDurationHours} h`}
-                />
-              ) : null}
+            </View>
+
+            <View className="ml-2.5 min-w-0 flex-1">
+              <Text
+                className="text-[12px] font-black"
+                style={{
+                  color: theme.colors.foreground,
+                }}
+              >
+                Aperçu côté apprenant
+              </Text>
+
+              <Text
+                className="mt-0.5 text-[10px]"
+                style={{
+                  color: theme.colors.foregroundMuted,
+                }}
+              >
+                Lecture seule
+              </Text>
+            </View>
+
+            <View
+              className="rounded-full px-2.5 py-1"
+              style={{
+                backgroundColor:
+                  training.status === "PUBLISHED"
+                    ? "#EAFBF3"
+                    : training.status === "ARCHIVED"
+                      ? "#F2F4F7"
+                      : "#FFF4E5",
+              }}
+            >
+              <Text
+                className="text-[10px] font-black"
+                style={{
+                  color:
+                    training.status === "PUBLISHED"
+                      ? "#16845A"
+                      : training.status === "ARCHIVED"
+                        ? "#667085"
+                        : "#D97706",
+                }}
+              >
+                {statusLabel(training.status)}
+              </Text>
             </View>
           </View>
 
-          {error ? (
-            <ErrorMessage
-              message={error}
-              onRetry={() => setError("")}
-            />
-          ) : null}
+          {/* COVER OR FALLBACK SUMMARY */}
+          {coverVisible ? (
+            <>
+              <View
+                className="mt-3 overflow-hidden rounded-[22px] border bg-white"
+                style={{
+                  borderColor: "#E2DCE6",
+                  shadowColor: "#0F172A",
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.04,
+                  shadowRadius: 8,
+                  elevation: 1,
+                }}
+              >
+                <View
+                  style={{
+                    width: "100%",
+                    aspectRatio: 16 / 9,
+                    backgroundColor: "#0F172A",
+                  }}
+                >
+                  <Image
+                    source={{
+                      uri: training.coverImageUrl,
+                    }}
+                    resizeMode="contain"
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                    }}
+                  />
+                </View>
+              </View>
 
-          {training.objectives ? (
-            <InfoCard
-              title="Objectifs pédagogiques"
-              text={training.objectives}
-            />
-          ) : null}
+              {(training.category ||
+                level ||
+                language ||
+                training.estimatedDurationHours) ? (
+                <View
+                  className="mt-2.5 rounded-[16px] border bg-white p-2"
+                  style={{
+                    borderColor: "#E8E2EB",
+                  }}
+                >
+                  <View className="flex-row gap-2">
+                    {training.category ? (
+                      <InfoTile
+                        icon={{
+                          ios: "tag.fill",
+                          android: "category",
+                          web: "category",
+                        }}
+                        text={training.category}
+                      />
+                    ) : (
+                      <View className="flex-1" />
+                    )}
 
-          {training.prerequisites ? (
-            <InfoCard
-              title="Prérequis"
-              text={training.prerequisites}
-            />
-          ) : null}
+                    {level ? (
+                      <InfoTile
+                        icon={{
+                          ios: "chart.bar.fill",
+                          android: "bar_chart",
+                          web: "bar_chart",
+                        }}
+                        text={level}
+                      />
+                    ) : (
+                      <View className="flex-1" />
+                    )}
+                  </View>
 
-          {training.targetAudience ? (
-            <InfoCard
-              title="Public cible"
-              text={training.targetAudience}
-            />
-          ) : null}
+                  {(language || training.estimatedDurationHours) ? (
+                    <View className="mt-2 flex-row gap-2">
+                      {language ? (
+                        <InfoTile
+                          icon={{
+                            ios: "globe",
+                            android: "language",
+                            web: "language",
+                          }}
+                          text={language}
+                        />
+                      ) : (
+                        <View className="flex-1" />
+                      )}
 
-          <View style={styles.structureHeader}>
-            <Text
-              style={[
-                styles.structureTitle,
-                { color: theme.colors.foreground },
-              ]}
+                      {training.estimatedDurationHours ? (
+                        <InfoTile
+                          icon={{
+                            ios: "clock.fill",
+                            android: "schedule",
+                            web: "schedule",
+                          }}
+                          text={`${training.estimatedDurationHours} h`}
+                        />
+                      ) : (
+                        <View className="flex-1" />
+                      )}
+                    </View>
+                  ) : null}
+                </View>
+              ) : null}
+            </>
+          ) : (
+            <View
+              className="mt-3 rounded-[20px] border bg-white p-4"
+              style={cardStyle}
             >
-              Parcours
-            </Text>
+              <View className="flex-row items-start">
+                <View
+                  className="h-10 w-10 items-center justify-center rounded-[12px]"
+                  style={{ backgroundColor: "#F1EBFF" }}
+                >
+                  <SymbolView
+                    name={{
+                      ios: "graduationcap.fill",
+                      android: "school",
+                      web: "school",
+                    }}
+                    tintColor="#7C3AED"
+                    size={17}
+                    weight="bold"
+                  />
+                </View>
 
-            <Text
-              style={[
-                styles.structureCount,
-                { color: theme.colors.foregroundMuted },
-              ]}
-            >
-              {modules.length} module
-              {modules.length > 1 ? "s" : ""}
-            </Text>
+                <View className="ml-3 min-w-0 flex-1">
+                  <Text
+                    className="text-[11px] font-black uppercase tracking-[0.7px]"
+                    style={{ color: "#7C3AED" }}
+                  >
+                    Formation
+                  </Text>
+
+                  <Text
+                    className="mt-1 text-[20px] font-black leading-[24px]"
+                    style={{ color: theme.colors.foreground }}
+                  >
+                    {training.title}
+                  </Text>
+
+                  {summary ? (
+                    <Text
+                      className="mt-1.5 text-[12px] leading-[15px]"
+                      style={{
+                        color: theme.colors.foregroundMuted,
+                      }}
+                    >
+                      {summary}
+                    </Text>
+                  ) : null}
+                </View>
+              </View>
+
+              <View className="mt-3 flex-row flex-wrap gap-2">
+                {training.category ? (
+                  <InfoTile
+                    icon={{
+                      ios: "tag.fill",
+                      android: "category",
+                      web: "category",
+                    }}
+                    text={training.category}
+                  />
+                ) : null}
+
+                {level ? (
+                  <InfoTile
+                    icon={{
+                      ios: "chart.bar.fill",
+                      android: "bar_chart",
+                      web: "bar_chart",
+                    }}
+                    text={level}
+                  />
+                ) : null}
+
+                {language ? (
+                  <InfoTile
+                    icon={{
+                      ios: "globe",
+                      android: "language",
+                      web: "language",
+                    }}
+                    text={language}
+                  />
+                ) : null}
+
+                {training.estimatedDurationHours ? (
+                  <InfoTile
+                    icon={{
+                      ios: "clock.fill",
+                      android: "schedule",
+                      web: "schedule",
+                    }}
+                    text={`${training.estimatedDurationHours} h`}
+                  />
+                ) : null}
+              </View>
+            </View>
+          )}
+
+          {/* REAL STATS */}
+          <View
+            className="mt-3 flex-row rounded-[18px] border bg-white px-2 py-3"
+            style={cardStyle}
+          >
+            <SummaryMetric
+              icon={{
+                ios: "rectangle.stack.fill",
+                android: "view_module",
+                web: "view_module",
+              }}
+              value={modules.length}
+              label="Modules"
+              soft="#F1EBFF"
+              color="#7C3AED"
+            />
+
+            <MetricDivider />
+
+            <SummaryMetric
+              icon={{
+                ios: "doc.text.fill",
+                android: "description",
+                web: "description",
+              }}
+              value={totalLessons}
+              label="Leçons"
+              soft="#EAF3FF"
+              color="#2563EB"
+            />
+
+            <MetricDivider />
+
+            <SummaryMetric
+              icon={{
+                ios: "paperclip",
+                android: "attach_file",
+                web: "attach_file",
+              }}
+              value={totalResources}
+              label="Ressources"
+              soft="#EAFBF3"
+              color="#059669"
+            />
           </View>
+
+          {error ? (
+            <View className="mt-4">
+              <ErrorMessage
+                message={error}
+                onRetry={() => setError("")}
+              />
+            </View>
+          ) : null}
+
+          {/* PEDAGOGICAL INFO */}
+          {training.objectives ||
+          training.prerequisites ||
+          training.targetAudience ? (
+            <>
+              <SectionHeading
+                icon={{
+                  ios: "scope",
+                  android: "track_changes",
+                  web: "track_changes",
+                }}
+                title="À propos de la formation"
+                subtitle="Informations visibles avant le parcours"
+              />
+
+              <View
+                className="overflow-hidden rounded-[20px] border bg-white"
+                style={cardStyle}
+              >
+                {training.objectives ? (
+                  <InfoRow
+                    icon={{
+                      ios: "target",
+                      android: "track_changes",
+                      web: "track_changes",
+                    }}
+                    title="Objectifs"
+                    text={training.objectives}
+                    soft="#F1EBFF"
+                    color="#7C3AED"
+                  />
+                ) : null}
+
+                {training.prerequisites ? (
+                  <InfoRow
+                    icon={{
+                      ios: "checklist",
+                      android: "checklist",
+                      web: "checklist",
+                    }}
+                    title="Prérequis"
+                    text={training.prerequisites}
+                    soft="#EAF3FF"
+                    color="#2563EB"
+                  />
+                ) : null}
+
+                {training.targetAudience ? (
+                  <InfoRow
+                    icon={{
+                      ios: "person.2.fill",
+                      android: "groups",
+                      web: "groups",
+                    }}
+                    title="Public cible"
+                    text={training.targetAudience}
+                    soft="#EAFBF3"
+                    color="#059669"
+                    last
+                  />
+                ) : null}
+              </View>
+            </>
+          ) : null}
+
+          {/* COURSE */}
+          <SectionHeading
+            icon={{
+              ios: "books.vertical.fill",
+              android: "menu_book",
+              web: "menu_book",
+            }}
+            title="Programme"
+            subtitle={`${modules.length} module${
+              modules.length > 1 ? "s" : ""
+            } · ${totalLessons} leçon${
+              totalLessons > 1 ? "s" : ""
+            }`}
+          />
 
           {modules.length === 0 ? (
             <View
-              style={[
-                styles.emptyCard,
-                {
-                  backgroundColor: theme.colors.surface,
-                  borderColor: theme.colors.border,
-                  borderRadius: theme.shape.cardRadius,
-                  borderWidth: theme.shape.borderWidth,
-                },
-              ]}
+              className="items-center rounded-[22px] border bg-white px-5 py-8"
+              style={cardStyle}
             >
+              <View
+                className="h-[60px] w-[60px] items-center justify-center rounded-full"
+                style={{
+                  backgroundColor: "#F1EBFF",
+                }}
+              >
+                <SymbolView
+                  name={{
+                    ios: "rectangle.stack.badge.minus",
+                    android: "view_module",
+                    web: "view_module",
+                  }}
+                  tintColor="#7C3AED"
+                  size={23}
+                  weight="bold"
+                />
+              </View>
+
               <Text
-                style={[
-                  styles.emptyTitle,
-                  { color: theme.colors.foreground },
-                ]}
+                className="mt-4 text-[18px] font-black"
+                style={{
+                  color: theme.colors.foreground,
+                }}
               >
                 Aucun contenu
               </Text>
+
               <Text
-                style={[
-                  styles.emptyText,
-                  { color: theme.colors.foregroundMuted },
-                ]}
+                className="mt-1.5 text-center text-[12px] leading-[15px]"
+                style={{
+                  color:
+                    theme.colors.foregroundMuted,
+                }}
               >
                 Cette formation ne contient encore aucun module.
               </Text>
             </View>
           ) : (
             modules.map((module, moduleIndex) => {
-              const lessons = sortedLessons(module);
+              const lessons =
+                sortedLessons(module);
+              const isModuleExpanded =
+                expandedModules.has(module.id);
+
+              const moduleResources =
+                lessons.reduce(
+                  (total, lesson) =>
+                    total +
+                    sortedResources(lesson).length,
+                  0,
+                );
 
               return (
                 <View
                   key={module.id}
-                  style={[
-                    styles.moduleCard,
-                    {
-                      backgroundColor: theme.colors.surface,
-                      borderColor: theme.colors.border,
-                      borderRadius: theme.shape.cardRadius,
-                      borderWidth: theme.shape.borderWidth,
-                    },
-                  ]}
+                  className="mb-3 overflow-hidden rounded-[20px] border bg-white"
+                  style={cardStyle}
                 >
-                  <Text
-                    style={[
-                      styles.moduleEyebrow,
-                      { color: theme.colors.accent },
-                    ]}
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`${
+                      isModuleExpanded
+                        ? "Réduire"
+                        : "Développer"
+                    } le module ${module.title}`}
+                    onPress={() =>
+                      setExpandedModules(
+                        (current) =>
+                          toggleSet(
+                            current,
+                            module.id,
+                          ),
+                      )
+                    }
+                    android_ripple={{
+                      color: "transparent",
+                    }}
+                    className="flex-row items-center px-3.5 py-3.5"
                   >
-                    MODULE {moduleIndex + 1}
-                  </Text>
-
-                  <Text
-                    style={[
-                      styles.moduleTitle,
-                      { color: theme.colors.foreground },
-                    ]}
-                  >
-                    {module.title}
-                  </Text>
-
-                  {module.description ? (
-                    <Text
-                      style={[
-                        styles.moduleDescription,
-                        { color: theme.colors.foregroundMuted },
-                      ]}
+                    <View
+                      className="h-11 w-11 items-center justify-center rounded-[13px]"
+                      style={{
+                        backgroundColor: "#F1EBFF",
+                      }}
                     >
-                      {module.description}
-                    </Text>
-                  ) : null}
-
-                  <View
-                    style={[
-                      styles.lessonList,
-                      {
-                        borderTopColor: theme.colors.border,
-                      },
-                    ]}
-                  >
-                    {lessons.length === 0 ? (
                       <Text
-                        style={[
-                          styles.noLesson,
-                          {
-                            color:
-                              theme.colors.foregroundSubtle,
-                          },
-                        ]}
+                        className="text-[16px] font-black"
+                        style={{
+                          color: "#7C3AED",
+                        }}
                       >
-                        Aucune leçon.
+                        {String(moduleIndex + 1).padStart(
+                          2,
+                          "0",
+                        )}
                       </Text>
-                    ) : (
-                      lessons.map((lesson, lessonIndex) => {
-                        const resources =
-                          sortedResources(lesson);
+                    </View>
 
-                        return (
-                          <View
-                            key={lesson.id}
-                            style={[
-                              styles.lessonCard,
-                              {
-                                backgroundColor:
-                                  theme.colors.surfaceSoft,
-                                borderColor:
-                                  theme.colors.border,
-                              },
-                            ]}
+                    <View className="ml-3 min-w-0 flex-1">
+                      <Text
+                        className="text-[11px] font-black uppercase tracking-[0.6px]"
+                        style={{
+                          color: "#7C3AED",
+                        }}
+                      >
+                        Module {moduleIndex + 1}
+                      </Text>
+
+                      <Text
+                        className="mt-0.5 text-[17px] font-black leading-[20px]"
+                        style={{
+                          color:
+                            theme.colors.foreground,
+                        }}
+                      >
+                        {module.title}
+                      </Text>
+
+                      <View className="mt-2 flex-row flex-wrap gap-3">
+                        <MiniMeta
+                          icon={{
+                            ios: "doc.text.fill",
+                            android: "description",
+                            web: "description",
+                          }}
+                          text={`${lessons.length} leçon${
+                            lessons.length > 1
+                              ? "s"
+                              : ""
+                          }`}
+                        />
+
+                        <MiniMeta
+                          icon={{
+                            ios: "paperclip",
+                            android: "attach_file",
+                            web: "attach_file",
+                          }}
+                          text={`${moduleResources} ressource${
+                            moduleResources > 1
+                              ? "s"
+                              : ""
+                          }`}
+                        />
+                      </View>
+                    </View>
+
+                    <View
+                      className="ml-2 h-8 w-8 items-center justify-center rounded-full"
+                      style={{
+                        backgroundColor: "#F8F6FA",
+                      }}
+                    >
+                      <SymbolView
+                        name={{
+                          ios: isModuleExpanded
+                            ? "chevron.up"
+                            : "chevron.down",
+                          android: isModuleExpanded
+                            ? "expand_less"
+                            : "expand_more",
+                          web: isModuleExpanded
+                            ? "expand_less"
+                            : "expand_more",
+                        }}
+                        tintColor={
+                          theme.colors
+                            .foregroundMuted
+                        }
+                        size={15}
+                        weight="bold"
+                      />
+                    </View>
+                  </Pressable>
+
+                  {isModuleExpanded ? (
+                    <View
+                      className="border-t px-3 pb-3 pt-2.5"
+                      style={{
+                        borderTopColor: "#EEE9F0",
+                        backgroundColor: "#FBFAFC",
+                      }}
+                    >
+                      {module.description ? (
+                        <Text
+                          className="mb-2.5 px-1 text-[12px] leading-[15px]"
+                          style={{
+                            color:
+                              theme.colors
+                                .foregroundMuted,
+                          }}
+                        >
+                          {module.description}
+                        </Text>
+                      ) : null}
+
+                      {lessons.length === 0 ? (
+                        <View className="rounded-[14px] bg-white px-3 py-4">
+                          <Text
+                            className="text-center text-[12px]"
+                            style={{
+                              color:
+                                theme.colors
+                                  .foregroundSubtle,
+                            }}
                           >
-                            <Text
-                              style={[
-                                styles.lessonEyebrow,
-                                {
-                                  color:
-                                    theme.colors
-                                      .foregroundSubtle,
-                                },
-                              ]}
-                            >
-                              LEÇON {lessonIndex + 1}
-                            </Text>
+                            Aucune leçon dans ce module.
+                          </Text>
+                        </View>
+                      ) : (
+                        lessons.map(
+                          (
+                            lesson,
+                            lessonIndex,
+                          ) => {
+                            const resources =
+                              sortedResources(
+                                lesson,
+                              );
+                            const isLessonExpanded =
+                              expandedLessons.has(
+                                lesson.id,
+                              );
 
-                            <Text
-                              style={[
-                                styles.lessonTitle,
-                                {
-                                  color:
-                                    theme.colors.foreground,
-                                },
-                              ]}
-                            >
-                              {lesson.title}
-                            </Text>
-
-                            <View style={styles.lessonMetaRow}>
-                              <Text
-                                style={[
-                                  styles.lessonMeta,
-                                  {
-                                    color:
-                                      theme.colors
-                                        .foregroundMuted,
-                                  },
-                                ]}
+                            return (
+                              <View
+                                key={lesson.id}
+                                className="mb-2.5 overflow-hidden rounded-[16px] border bg-white"
+                                style={{
+                                  borderColor:
+                                    "#E6E1E8",
+                                }}
                               >
-                                {lesson.estimatedDurationMinutes ??
-                                  0}{" "}
-                                min
-                              </Text>
-                              <Text
-                                style={[
-                                  styles.lessonMeta,
-                                  {
+                                <Pressable
+                                  accessibilityRole="button"
+                                  accessibilityLabel={`${
+                                    isLessonExpanded
+                                      ? "Réduire"
+                                      : "Développer"
+                                  } la leçon ${lesson.title}`}
+                                  onPress={() =>
+                                    setExpandedLessons(
+                                      (current) =>
+                                        toggleSet(
+                                          current,
+                                          lesson.id,
+                                        ),
+                                    )
+                                  }
+                                  android_ripple={{
                                     color:
-                                      theme.colors
-                                        .foregroundMuted,
-                                  },
-                                ]}
-                              >
-                                {lesson.required === false
-                                  ? "Optionnelle"
-                                  : "Obligatoire"}
-                              </Text>
-                            </View>
-
-                            {lesson.objective ? (
-                              <Text
-                                style={[
-                                  styles.lessonObjective,
-                                  {
-                                    color:
-                                      theme.colors
-                                        .foregroundMuted,
-                                  },
-                                ]}
-                              >
-                                Objectif : {lesson.objective}
-                              </Text>
-                            ) : null}
-
-                            {lesson.content ? (
-                              <Text
-                                style={[
-                                  styles.lessonContent,
-                                  {
-                                    color:
-                                      theme.colors.foreground,
-                                  },
-                                ]}
-                              >
-                                {lesson.content}
-                              </Text>
-                            ) : null}
-
-                            <View style={styles.resourcesBlock}>
-                              <Text
-                                style={[
-                                  styles.resourcesTitle,
-                                  {
-                                    color:
-                                      theme.colors.foreground,
-                                  },
-                                ]}
-                              >
-                                Ressources
-                              </Text>
-
-                              {resources.length === 0 ? (
-                                <Text
-                                  style={[
-                                    styles.noResource,
-                                    {
-                                      color:
-                                        theme.colors
-                                          .foregroundSubtle,
-                                    },
-                                  ]}
+                                      "transparent",
+                                  }}
+                                  className="flex-row items-center px-3 py-3"
                                 >
-                                  Aucune ressource.
-                                </Text>
-                              ) : (
-                                resources.map((resource) => (
-                                  <ResourcePreview
-                                    key={resource.id}
-                                    resource={resource}
+                                  <View
+                                    className="h-9 w-9 items-center justify-center rounded-[11px]"
+                                    style={{
+                                      backgroundColor:
+                                        "#EEF2FF",
+                                    }}
+                                  >
+                                    <Text
+                                      className="text-[13px] font-black"
+                                      style={{
+                                        color:
+                                          "#4F46E5",
+                                      }}
+                                    >
+                                      {lessonIndex + 1}
+                                    </Text>
+                                  </View>
+
+                                  <View className="ml-2.5 min-w-0 flex-1">
+                                    <Text
+                                      className="text-[15px] font-black leading-[18px]"
+                                      style={{
+                                        color:
+                                          theme.colors
+                                            .foreground,
+                                      }}
+                                    >
+                                      {lesson.title}
+                                    </Text>
+
+                                    <View className="mt-1.5 flex-row flex-wrap gap-3">
+                                      {lesson.estimatedDurationMinutes &&
+                                      lesson.estimatedDurationMinutes >
+                                        0 ? (
+                                        <MiniMeta
+                                          icon={{
+                                            ios: "clock.fill",
+                                            android:
+                                              "schedule",
+                                            web: "schedule",
+                                          }}
+                                          text={`${lesson.estimatedDurationMinutes} min`}
+                                        />
+                                      ) : null}
+
+                                      <MiniMeta
+                                        icon={{
+                                          ios:
+                                            lesson.required ===
+                                            false
+                                              ? "circle"
+                                              : "checkmark.circle.fill",
+                                          android:
+                                            lesson.required ===
+                                            false
+                                              ? "radio_button_unchecked"
+                                              : "check_circle",
+                                          web:
+                                            lesson.required ===
+                                            false
+                                              ? "radio_button_unchecked"
+                                              : "check_circle",
+                                        }}
+                                        text={
+                                          lesson.required ===
+                                          false
+                                            ? "Optionnelle"
+                                            : "Obligatoire"
+                                        }
+                                      />
+
+                                      <MiniMeta
+                                        icon={{
+                                          ios: "paperclip",
+                                          android:
+                                            "attach_file",
+                                          web: "attach_file",
+                                        }}
+                                        text={`${resources.length} ressource${
+                                          resources.length >
+                                          1
+                                            ? "s"
+                                            : ""
+                                        }`}
+                                      />
+                                    </View>
+                                  </View>
+
+                                  <SymbolView
+                                    name={{
+                                      ios:
+                                        isLessonExpanded
+                                          ? "chevron.up"
+                                          : "chevron.down",
+                                      android:
+                                        isLessonExpanded
+                                          ? "expand_less"
+                                          : "expand_more",
+                                      web:
+                                        isLessonExpanded
+                                          ? "expand_less"
+                                          : "expand_more",
+                                    }}
+                                    tintColor={
+                                      theme.colors
+                                        .foregroundSubtle
+                                    }
+                                    size={14}
+                                    weight="bold"
                                   />
-                                ))
-                              )}
-                            </View>
-                          </View>
-                        );
-                      })
-                    )}
-                  </View>
+                                </Pressable>
+
+                                {isLessonExpanded ? (
+                                  <View
+                                    className="border-t px-3 pb-3 pt-3"
+                                    style={{
+                                      borderTopColor:
+                                        "#F0EBF2",
+                                    }}
+                                  >
+                                    {lesson.objective ? (
+                                      <View
+                                        className="rounded-[13px] px-3 py-2.5"
+                                        style={{
+                                          backgroundColor:
+                                            "#F7F3FF",
+                                        }}
+                                      >
+                                        <Text
+                                          className="text-[11px] font-black uppercase tracking-[0.5px]"
+                                          style={{
+                                            color:
+                                              "#7C3AED",
+                                          }}
+                                        >
+                                          Objectif
+                                        </Text>
+
+                                        <Text
+                                          className="mt-1 text-[12px] leading-[15px]"
+                                          style={{
+                                            color:
+                                              theme.colors
+                                                .foregroundMuted,
+                                          }}
+                                        >
+                                          {
+                                            lesson.objective
+                                          }
+                                        </Text>
+                                      </View>
+                                    ) : null}
+
+                                    {lesson.content ? (
+                                      <Text
+                                        className="mt-3 text-[13px] leading-[18px]"
+                                        style={{
+                                          color:
+                                            theme.colors
+                                              .foreground,
+                                        }}
+                                      >
+                                        {lesson.content}
+                                      </Text>
+                                    ) : null}
+
+                                    <View className="mt-4">
+                                      <View className="mb-2.5 flex-row items-center">
+                                        <Text
+                                          className="flex-1 text-[13px] font-black"
+                                          style={{
+                                            color:
+                                              theme.colors
+                                                .foreground,
+                                          }}
+                                        >
+                                          Ressources
+                                        </Text>
+
+                                        <View
+                                          className="rounded-full px-2 py-1"
+                                          style={{
+                                            backgroundColor:
+                                              "#F1EBFF",
+                                          }}
+                                        >
+                                          <Text
+                                            className="text-[10px] font-black"
+                                            style={{
+                                              color:
+                                                "#7C3AED",
+                                            }}
+                                          >
+                                            {
+                                              resources.length
+                                            }
+                                          </Text>
+                                        </View>
+                                      </View>
+
+                                      {resources.length ===
+                                      0 ? (
+                                        <View
+                                          className="rounded-[13px] px-3 py-3"
+                                          style={{
+                                            backgroundColor:
+                                              "#F8F6F3",
+                                          }}
+                                        >
+                                          <Text
+                                            className="text-center text-[11px]"
+                                            style={{
+                                              color:
+                                                theme.colors
+                                                  .foregroundSubtle,
+                                            }}
+                                          >
+                                            Aucune ressource.
+                                          </Text>
+                                        </View>
+                                      ) : (
+                                        resources.map(
+                                          (
+                                            resource,
+                                          ) => (
+                                            <ResourcePreview
+                                              key={
+                                                resource.id
+                                              }
+                                              resource={
+                                                resource
+                                              }
+                                            />
+                                          ),
+                                        )
+                                      )}
+                                    </View>
+                                  </View>
+                                ) : null}
+                              </View>
+                            );
+                          },
+                        )
+                      )}
+                    </View>
+                  ) : null}
                 </View>
               );
             })
@@ -764,21 +1553,40 @@ export default function TrainerTrainingPreviewScreen({
     </ScreenContainer>
   );
 
-  function Meta({ text }: { text: string }) {
+  function InfoTile({
+    icon,
+    text,
+  }: {
+    icon: SymbolName;
+    text: string;
+  }) {
     return (
       <View
-        style={[
-          styles.metaPill,
-          {
-            backgroundColor: theme.colors.surfaceSoft,
-          },
-        ]}
+        className="min-h-[42px] min-w-0 flex-1 flex-row items-center rounded-[12px] px-2.5 py-2"
+        style={{
+          backgroundColor: "#F8F5FB",
+        }}
       >
+        <View
+          className="h-7 w-7 items-center justify-center rounded-[9px]"
+          style={{
+            backgroundColor: "#EFE7FF",
+          }}
+        >
+          <SymbolView
+            name={icon}
+            tintColor="#7C3AED"
+            size={12}
+            weight="bold"
+          />
+        </View>
+
         <Text
-          style={[
-            styles.metaText,
-            { color: theme.colors.foreground },
-          ]}
+          numberOfLines={2}
+          className="ml-2 min-w-0 flex-1 text-[11px] font-black leading-[12px]"
+          style={{
+            color: theme.colors.foregroundMuted,
+          }}
         >
           {text}
         </Text>
@@ -786,38 +1594,205 @@ export default function TrainerTrainingPreviewScreen({
     );
   }
 
-  function InfoCard({
+  function SummaryMetric({
+    icon,
+    value,
+    label,
+    soft,
+    color,
+  }: {
+    icon: SymbolName;
+    value: number;
+    label: string;
+    soft: string;
+    color: string;
+  }) {
+    return (
+      <View className="flex-1 items-center">
+        <View
+          className="h-8 w-8 items-center justify-center rounded-[10px]"
+          style={{
+            backgroundColor: soft,
+          }}
+        >
+          <SymbolView
+            name={icon}
+            tintColor={color}
+            size={14}
+            weight="bold"
+          />
+        </View>
+
+        <Text
+          className="mt-1.5 text-[16px] font-black"
+          style={{
+            color: theme.colors.foreground,
+          }}
+        >
+          {value}
+        </Text>
+
+        <Text
+          className="mt-0.5 text-[11px]"
+          style={{
+            color:
+              theme.colors.foregroundMuted,
+          }}
+        >
+          {label}
+        </Text>
+      </View>
+    );
+  }
+
+  function MetricDivider() {
+    return (
+      <View
+        className="my-1 w-px"
+        style={{
+          backgroundColor: "#E8ECF1",
+        }}
+      />
+    );
+  }
+
+  function SectionHeading({
+    icon,
+    title,
+    subtitle,
+  }: {
+    icon: SymbolName;
+    title: string;
+    subtitle: string;
+  }) {
+    return (
+      <View className="mb-3 mt-6 flex-row items-center">
+        <View
+          className="h-10 w-10 items-center justify-center rounded-[12px]"
+          style={{
+            backgroundColor: "#F1EBFF",
+          }}
+        >
+          <SymbolView
+            name={icon}
+            tintColor="#7C3AED"
+            size={17}
+            weight="bold"
+          />
+        </View>
+
+        <View className="ml-2.5 min-w-0 flex-1">
+          <Text
+            className="text-[19px] font-black"
+            style={{
+              color: theme.colors.foreground,
+            }}
+          >
+            {title}
+          </Text>
+
+          <Text
+            className="mt-0.5 text-[11px] leading-[13px]"
+            style={{
+              color:
+                theme.colors.foregroundMuted,
+            }}
+          >
+            {subtitle}
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  function InfoRow({
+    icon,
     title,
     text,
+    soft,
+    color,
+    last = false,
   }: {
+    icon: SymbolName;
     title: string;
     text: string;
+    soft: string;
+    color: string;
+    last?: boolean;
   }) {
     return (
       <View
-        style={[
-          styles.infoCard,
-          {
-            backgroundColor: theme.colors.surface,
-            borderColor: theme.colors.border,
-            borderRadius: theme.shape.cardRadius,
-            borderWidth: theme.shape.borderWidth,
-          },
-        ]}
+        className={[
+          "flex-row items-start p-3.5",
+          last ? "" : "border-b",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+        style={{
+          borderBottomColor: "#EEE9F0",
+        }}
       >
-        <Text
-          style={[
-            styles.infoTitle,
-            { color: theme.colors.foreground },
-          ]}
+        <View
+          className="h-10 w-10 items-center justify-center rounded-[12px]"
+          style={{
+            backgroundColor: soft,
+          }}
         >
-          {title}
-        </Text>
+          <SymbolView
+            name={icon}
+            tintColor={color}
+            size={16}
+            weight="bold"
+          />
+        </View>
+
+        <View className="ml-3 min-w-0 flex-1">
+          <Text
+            className="text-[14px] font-black"
+            style={{
+              color: theme.colors.foreground,
+            }}
+          >
+            {title}
+          </Text>
+
+          <Text
+            className="mt-1 text-[12px] leading-[16px]"
+            style={{
+              color:
+                theme.colors.foregroundMuted,
+            }}
+          >
+            {text}
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  function MiniMeta({
+    icon,
+    text,
+  }: {
+    icon: SymbolName;
+    text: string;
+  }) {
+    return (
+      <View className="flex-row items-center">
+        <SymbolView
+          name={icon}
+          tintColor={
+            theme.colors.foregroundSubtle
+          }
+          size={11}
+        />
+
         <Text
-          style={[
-            styles.infoText,
-            { color: theme.colors.foregroundMuted },
-          ]}
+          className="ml-1 text-[11px] font-bold"
+          style={{
+            color:
+              theme.colors.foregroundMuted,
+          }}
         >
           {text}
         </Text>
@@ -832,381 +1807,329 @@ export default function TrainerTrainingPreviewScreen({
   }) {
     const url = resourceUrl(resource);
     const rawUrl = rawResourceUrl(resource);
-    const inlineMedia =
-      resource.type === "IMAGE" ||
+    const visual =
+      resourceVisual(resource.type);
+
+    const isImage =
+      resource.type === "IMAGE";
+    const isVideo =
       resource.type === "VIDEO" ||
-      resource.type === "VIDEO_URL" ||
+      resource.type === "VIDEO_URL";
+    const isPdf =
       resource.type === "PDF" ||
       resource.type === "PDF_URL";
+
+    const canInlinePreview =
+      (isImage || isVideo) && Boolean(rawUrl);
+
+    const isMediaExpanded =
+      expandedMedia.has(resource.id);
 
     const inlineMediaResource =
       resource as unknown as LearnerTrainingResource;
 
+    const canOpenFile =
+      isPdf ||
+      resource.type === "DOCUMENT";
+
+    const canOpenLink =
+      resource.type === "EXTERNAL_LINK" &&
+      Boolean(url);
+
+    const canOpenScorm =
+      resource.type === "SCORM";
+
     return (
       <View
-        style={[
-          styles.resourceCard,
-          {
-            backgroundColor: theme.colors.background,
-            borderColor: theme.colors.border,
-          },
-        ]}
+        className="mb-2.5 overflow-hidden rounded-[14px] border bg-white"
+        style={{
+          borderColor: "#E7E2EA",
+        }}
       >
-        <View style={styles.resourceHeader}>
-          <Text
-            style={[
-              styles.resourceTitle,
-              { color: theme.colors.foreground },
-            ]}
-          >
-            {resource.title}
-          </Text>
-
+        <View className="flex-row items-start p-3">
           <View
-            style={[
-              styles.resourceType,
-              {
-                backgroundColor: theme.colors.surfaceSoft,
-              },
-            ]}
+            className="h-9 w-9 items-center justify-center rounded-[11px]"
+            style={{
+              backgroundColor: visual.soft,
+            }}
           >
-            <Text
-              style={[
-                styles.resourceTypeText,
-                { color: theme.colors.accent },
-              ]}
-            >
-              {typeLabel(resource.type)}
-            </Text>
+            <SymbolView
+              name={visual.icon}
+              tintColor={visual.color}
+              size={15}
+              weight="bold"
+            />
+          </View>
+
+          <View className="ml-2.5 min-w-0 flex-1">
+            <View className="flex-row items-start">
+              <Text
+                className="flex-1 text-[13px] font-black leading-[15px]"
+                style={{
+                  color: theme.colors.foreground,
+                }}
+              >
+                {resource.title}
+              </Text>
+
+              <View
+                className="ml-2 rounded-full px-2 py-1"
+                style={{
+                  backgroundColor: visual.soft,
+                }}
+              >
+                <Text
+                  className="text-[10px] font-black"
+                  style={{
+                    color: visual.color,
+                  }}
+                >
+                  {typeLabel(resource.type)}
+                </Text>
+              </View>
+            </View>
+
+            {resource.description ? (
+              <Text
+                className="mt-1.5 text-[11px] leading-[14px]"
+                style={{
+                  color:
+                    theme.colors
+                      .foregroundMuted,
+                }}
+              >
+                {resource.description}
+              </Text>
+            ) : null}
+
+            {resource.originalFileName ? (
+              <Text
+                numberOfLines={1}
+                className="mt-1.5 text-[10px]"
+                style={{
+                  color:
+                    theme.colors
+                      .foregroundSubtle,
+                }}
+              >
+                {resource.originalFileName}
+                {resource.fileSize
+                  ? ` · ${formatSize(
+                      resource.fileSize,
+                    )}`
+                  : ""}
+              </Text>
+            ) : null}
+
+            {resource.type === "SCORM" ? (
+              <Text
+                className="mt-1.5 text-[10px]"
+                style={{
+                  color:
+                    theme.colors
+                      .foregroundSubtle,
+                }}
+              >
+                Package SCORM
+                {resource.scormPackageId
+                  ? ` #${resource.scormPackageId}`
+                  : ""}
+              </Text>
+            ) : null}
           </View>
         </View>
 
-        {resource.description ? (
-          <Text
-            style={[
-              styles.resourceDescription,
-              { color: theme.colors.foregroundMuted },
-            ]}
-          >
-            {resource.description}
-          </Text>
-        ) : null}
-
         {resource.type === "TEXT" &&
         resource.textContent ? (
-          <Text
-            style={[
-              styles.textResource,
-              { color: theme.colors.foreground },
-            ]}
-          >
-            {resource.textContent}
-          </Text>
-        ) : null}
-
-        {inlineMedia && rawUrl ? (
-          <LearnerInlineMedia
-            resource={inlineMediaResource}
-          />
-        ) : null}
-
-        {resource.originalFileName ? (
-          <Text
-            style={[
-              styles.fileMeta,
-              { color: theme.colors.foregroundSubtle },
-            ]}
-          >
-            {resource.originalFileName}
-            {resource.fileSize
-              ? ` · ${formatSize(resource.fileSize)}`
-              : ""}
-          </Text>
-        ) : null}
-
-        {resource.type === "SCORM" ? (
-          <Text
-            style={[
-              styles.fileMeta,
-              { color: theme.colors.foregroundSubtle },
-            ]}
-          >
-            Package SCORM
-            {resource.scormPackageId
-              ? ` #${resource.scormPackageId}`
-              : ""}
-          </Text>
-        ) : null}
-
-        {resource.type === "SCORM" ||
-        (resource.type === "DOCUMENT" && rawUrl) ||
-        (resource.type === "EXTERNAL_LINK" && url) ? (
-          <AppButton
-            title={
-              resource.type === "SCORM"
-                ? "Ouvrir le SCORM"
-                : resource.type === "EXTERNAL_LINK"
-                  ? "Ouvrir le lien"
-                  : "Ouvrir le document"
-            }
-            variant="secondary"
-            onPress={() => {
-              if (resource.type === "SCORM") {
-                router.push(
-                  `/scorm/${resource.id}?mode=author` as Href,
-                );
-                return;
-              }
-
-              if (resource.type === "DOCUMENT") {
-                void openDocument(resource);
-                return;
-              }
-
-              if (url) {
-                void openUrl(url);
-              }
+          <View
+            className="mx-3 mb-3 rounded-[12px] px-3 py-2.5"
+            style={{
+              backgroundColor: "#F8F6F3",
             }}
-            style={styles.openButton}
-          />
+          >
+            <Text
+              className="text-[12px] leading-[16px]"
+              style={{
+                color: theme.colors.foreground,
+              }}
+            >
+              {resource.textContent}
+            </Text>
+          </View>
+        ) : null}
+
+        {canInlinePreview ? (
+          <>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={
+                isMediaExpanded
+                  ? "Masquer l’aperçu"
+                  : "Afficher l’aperçu"
+              }
+              onPress={() =>
+                setExpandedMedia((current) =>
+                  toggleSet(
+                    current,
+                    resource.id,
+                  ),
+                )
+              }
+              android_ripple={{
+                color: "transparent",
+              }}
+              className="mx-3 mb-3 flex-row items-center justify-center rounded-[12px] px-3 py-2.5"
+              style={{
+                backgroundColor: visual.soft,
+              }}
+            >
+              <SymbolView
+                name={{
+                  ios: isMediaExpanded
+                    ? "chevron.up"
+                    : "play.fill",
+                  android: isMediaExpanded
+                    ? "expand_less"
+                    : "play_arrow",
+                  web: isMediaExpanded
+                    ? "expand_less"
+                    : "play_arrow",
+                }}
+                tintColor={visual.color}
+                size={12}
+                weight="bold"
+              />
+
+              <Text
+                className="ml-2 text-[11px] font-black"
+                style={{
+                  color: visual.color,
+                }}
+              >
+                {isMediaExpanded
+                  ? "Masquer l’aperçu"
+                  : isVideo
+                    ? "Lire la vidéo"
+                    : "Afficher l’image"}
+              </Text>
+            </Pressable>
+
+            {isMediaExpanded ? (
+              <View
+                className="mx-3 mb-3 overflow-hidden rounded-[12px]"
+                style={{
+                  maxHeight: 390,
+                }}
+              >
+                <LearnerInlineMedia
+                  resource={inlineMediaResource}
+                />
+              </View>
+            ) : null}
+          </>
+        ) : null}
+
+        {canOpenFile ||
+        canOpenLink ||
+        canOpenScorm ? (
+          <View
+            className="border-t px-3 py-2.5"
+            style={{
+              borderTopColor: "#F0EBF2",
+              backgroundColor: "#FCFBFD",
+            }}
+          >
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={
+                canOpenScorm
+                  ? "Ouvrir le SCORM"
+                  : canOpenLink
+                    ? "Ouvrir le lien"
+                    : isPdf
+                      ? "Ouvrir le PDF"
+                      : "Ouvrir le document"
+              }
+              onPress={() => {
+                if (canOpenScorm) {
+                  router.push(
+                    `/scorm/${resource.id}?mode=author` as Href,
+                  );
+                  return;
+                }
+
+                if (canOpenLink && url) {
+                  void openUrl(url);
+                  return;
+                }
+
+                if (canOpenFile) {
+                  void openDocument(resource);
+                }
+              }}
+              android_ripple={{
+                color: "transparent",
+              }}
+              className="flex-row items-center justify-between rounded-[11px] px-2 py-2"
+            >
+              <View className="flex-row items-center">
+                <SymbolView
+                  name={{
+                    ios: canOpenLink
+                      ? "arrow.up.right"
+                      : "arrow.up.doc.fill",
+                    android: "open_in_new",
+                    web: "open_in_new",
+                  }}
+                  tintColor="#7C3AED"
+                  size={12}
+                  weight="bold"
+                />
+
+                <Text
+                  className="ml-2 text-[11px] font-black"
+                  style={{
+                    color: "#7C3AED",
+                  }}
+                >
+                  {canOpenScorm
+                    ? "Ouvrir le SCORM"
+                    : canOpenLink
+                      ? "Ouvrir le lien"
+                      : isPdf
+                        ? "Ouvrir le PDF"
+                        : "Ouvrir le document"}
+                </Text>
+              </View>
+
+              <SymbolView
+                name={{
+                  ios: "chevron.right",
+                  android: "chevron_right",
+                  web: "chevron_right",
+                }}
+                tintColor="#A78BFA"
+                size={13}
+                weight="bold"
+              />
+            </Pressable>
+          </View>
         ) : null}
       </View>
     );
   }
 }
 
-const styles = StyleSheet.create({
-  scroll: {
-    flex: 1,
-    minHeight: 0,
+const cardStyle = {
+  borderColor: "#E2DCE6",
+  shadowColor: "#0F172A",
+  shadowOffset: {
+    width: 0,
+    height: 2,
   },
-  content: {
-    flexGrow: 1,
-    paddingBottom: 44,
-  },
-  page: {
-    width: "100%",
-    maxWidth: 900,
-    alignSelf: "center",
-  },
-  backButton: {
-    alignSelf: "flex-start",
-    marginBottom: 16,
-  },
-  previewBanner: {
-    borderWidth: 1,
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 16,
-  },
-  previewEyebrow: {
-    fontSize: 10,
-    fontWeight: "900",
-    letterSpacing: 1,
-  },
-  previewText: {
-    fontSize: 12,
-    lineHeight: 18,
-    marginTop: 4,
-  },
-  cover: {
-    width: "100%",
-    height: 210,
-    marginBottom: 18,
-  },
-  trainingHeader: {
-    marginBottom: 18,
-  },
-  title: {
-    fontSize: 29,
-    lineHeight: 35,
-    fontWeight: "900",
-  },
-  shortDescription: {
-    fontSize: 14,
-    lineHeight: 21,
-    marginTop: 7,
-  },
-  metaRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 7,
-    marginTop: 12,
-  },
-  metaPill: {
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  metaText: {
-    fontSize: 10,
-    fontWeight: "800",
-  },
-  infoCard: {
-    padding: 15,
-    marginBottom: 11,
-  },
-  infoTitle: {
-    fontSize: 15,
-    fontWeight: "900",
-  },
-  infoText: {
-    fontSize: 13,
-    lineHeight: 20,
-    marginTop: 6,
-  },
-  structureHeader: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    gap: 8,
-    marginTop: 10,
-    marginBottom: 12,
-  },
-  structureTitle: {
-    fontSize: 20,
-    fontWeight: "900",
-  },
-  structureCount: {
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  emptyCard: {
-    padding: 20,
-  },
-  emptyTitle: {
-    fontSize: 16,
-    fontWeight: "900",
-  },
-  emptyText: {
-    fontSize: 12,
-    lineHeight: 18,
-    marginTop: 5,
-  },
-  moduleCard: {
-    padding: 16,
-    marginBottom: 14,
-  },
-  moduleEyebrow: {
-    fontSize: 10,
-    fontWeight: "900",
-    letterSpacing: 0.9,
-  },
-  moduleTitle: {
-    fontSize: 19,
-    fontWeight: "900",
-    marginTop: 4,
-  },
-  moduleDescription: {
-    fontSize: 12,
-    lineHeight: 18,
-    marginTop: 6,
-  },
-  lessonList: {
-    borderTopWidth: 1,
-    paddingTop: 14,
-    marginTop: 14,
-  },
-  noLesson: {
-    fontSize: 12,
-    fontStyle: "italic",
-  },
-  lessonCard: {
-    borderWidth: 1,
-    borderRadius: 13,
-    padding: 14,
-    marginBottom: 11,
-  },
-  lessonEyebrow: {
-    fontSize: 9,
-    fontWeight: "900",
-    letterSpacing: 0.8,
-  },
-  lessonTitle: {
-    fontSize: 16,
-    fontWeight: "900",
-    marginTop: 4,
-  },
-  lessonMetaRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 9,
-    marginTop: 5,
-  },
-  lessonMeta: {
-    fontSize: 10,
-    fontWeight: "700",
-  },
-  lessonObjective: {
-    fontSize: 11,
-    lineHeight: 17,
-    marginTop: 9,
-  },
-  lessonContent: {
-    fontSize: 13,
-    lineHeight: 20,
-    marginTop: 10,
-  },
-  resourcesBlock: {
-    marginTop: 14,
-  },
-  resourcesTitle: {
-    fontSize: 13,
-    fontWeight: "900",
-    marginBottom: 8,
-  },
-  noResource: {
-    fontSize: 11,
-    fontStyle: "italic",
-  },
-  resourceCard: {
-    borderWidth: 1,
-    borderRadius: 11,
-    padding: 12,
-    marginBottom: 8,
-  },
-  resourceHeader: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "center",
-    gap: 8,
-  },
-  resourceTitle: {
-    flexShrink: 1,
-    fontSize: 13,
-    fontWeight: "900",
-  },
-  resourceType: {
-    borderRadius: 999,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  resourceTypeText: {
-    fontSize: 9,
-    fontWeight: "900",
-  },
-  resourceDescription: {
-    fontSize: 11,
-    lineHeight: 17,
-    marginTop: 6,
-  },
-  textResource: {
-    fontSize: 13,
-    lineHeight: 20,
-    marginTop: 10,
-  },
-  resourceImage: {
-    width: "100%",
-    height: 190,
-    borderRadius: 10,
-    marginTop: 10,
-  },
-  fileMeta: {
-    fontSize: 10,
-    lineHeight: 15,
-    marginTop: 8,
-  },
-  openButton: {
-    alignSelf: "flex-start",
-    marginTop: 10,
-  },
-});
+  shadowOpacity: 0.04,
+  shadowRadius: 8,
+  elevation: 1,
+} as const;
+
+const styles = StyleSheet.create({});

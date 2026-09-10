@@ -28,6 +28,7 @@ export default function AppButton({
   style,
 }: AppButtonProps) {
   const { theme } = useSmartTrainingTheme();
+
   const isDisabled = disabled || loading;
 
   const backgroundColor =
@@ -44,6 +45,16 @@ export default function AppButton({
         ? theme.colors.statusForeground
         : theme.colors.accentForeground;
 
+  const borderColor =
+    variant === "secondary"
+      ? theme.colors.border
+      : backgroundColor;
+
+  const borderWidth =
+    variant === "secondary"
+      ? theme.shape.borderWidth
+      : 0;
+
   const spinnerColor =
     variant === "secondary"
       ? theme.colors.accent
@@ -57,26 +68,29 @@ export default function AppButton({
         disabled: isDisabled,
         busy: loading,
       }}
+      onPress={onPress}
+      disabled={isDisabled}
+
+      // Supprime le fond gris au clic sur Android
+      android_ripple={{
+        color: "transparent",
+      }}
+
+      android_disableSound
+
       style={[
         styles.button,
         {
           backgroundColor,
-          borderColor:
-            variant === "secondary"
-              ? theme.colors.border
-              : backgroundColor,
+          borderColor,
+          borderWidth,
           borderRadius: theme.shape.controlRadius,
-          borderWidth:
-            variant === "secondary"
-              ? theme.shape.borderWidth
-              : 0,
           minHeight: theme.shape.minTouchTarget,
         },
+        variant === "primary" && styles.primaryButton,
         isDisabled && styles.disabledButton,
         style,
       ]}
-      onPress={onPress}
-      disabled={isDisabled}
     >
       {loading ? (
         <ActivityIndicator color={spinnerColor} />
@@ -100,14 +114,23 @@ const styles = StyleSheet.create({
   button: {
     alignItems: "center",
     justifyContent: "center",
+
     paddingHorizontal: 18,
-    paddingVertical: 12,
+    paddingVertical: 11,
+
+    minWidth: 0,
   },
+
+  primaryButton: {
+    elevation: 0,
+  },
+
   disabledButton: {
-    opacity: 0.55,
+    opacity: 0.5,
   },
+
   buttonText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "800",
     textAlign: "center",
   },

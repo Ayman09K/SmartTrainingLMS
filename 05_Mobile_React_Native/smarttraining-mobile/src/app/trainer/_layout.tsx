@@ -1,4 +1,5 @@
 import { Href, Stack, router } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
 
 import LoadingState from "../../components/LoadingState";
@@ -58,24 +59,30 @@ export default function TrainerLayout() {
   }
 
   return (
-    <Stack
-      screenOptions={{
-        headerStyle: {
-          backgroundColor: theme.colors.headerBackground,
-        },
-        headerTintColor: theme.colors.headerForeground,
-        headerTitleStyle: {
-          fontWeight: "700",
-        },
-        headerTitleAlign: "center",
-        headerLeft: () => (
-          <SafeHeaderBackButton fallback={"/trainer" as Href} />
-        ),
-        contentStyle: {
-          backgroundColor: theme.colors.background,
-        },
-      }}
-    >
+    <>
+      <StatusBar
+        style="light"
+        animated
+      />
+
+      <Stack
+        screenOptions={{
+          headerStyle: {
+            backgroundColor: theme.colors.headerBackground,
+          },
+          headerTintColor: theme.colors.headerForeground,
+          headerTitleStyle: {
+            fontWeight: "700",
+          },
+          headerTitleAlign: "center",
+          headerLeft: () => (
+            <SafeHeaderBackButton fallback={"/trainer" as Href} />
+          ),
+          contentStyle: {
+            backgroundColor: theme.colors.background,
+          },
+        }}
+      >
       <Stack.Screen
         name="(tabs)"
         options={{
@@ -236,6 +243,7 @@ export default function TrainerLayout() {
           title: "Notifications",
         }}
       />
-    </Stack>
+      </Stack>
+    </>
   );
 }

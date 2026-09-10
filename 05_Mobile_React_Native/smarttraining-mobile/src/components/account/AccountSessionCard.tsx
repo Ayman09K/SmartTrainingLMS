@@ -1,12 +1,12 @@
 import { Href, router } from "expo-router";
+import { SymbolView } from "expo-symbols";
 import { useState } from "react";
 import {
-  StyleSheet,
+  Pressable,
   Text,
   View,
 } from "react-native";
 
-import AppButton from "../AppButton";
 import { removeToken } from "../../storage/tokenStorage";
 import {
   useSmartTrainingTheme,
@@ -32,81 +32,80 @@ export default function AccountSessionCard() {
 
   return (
     <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: theme.colors.surface,
-          borderColor: theme.colors.border,
-          borderRadius: theme.shape.cardRadius,
-          borderWidth: theme.shape.borderWidth,
-          padding: theme.shape.cardPadding,
-        },
-      ]}
+      className="overflow-hidden rounded-[18px] border bg-white"
+      style={{ borderColor: theme.colors.border }}
     >
-      <Text
-        style={[
-          styles.eyebrow,
-          { color: theme.colors.accent },
-        ]}
-      >
-        SESSION
-      </Text>
+      <View className="flex-row items-center px-3.5 py-3">
+        <View className="h-9 w-9 shrink-0 items-center justify-center rounded-[11px] bg-[#F1E9FF]">
+          <SymbolView
+            name={{
+              ios: "rectangle.portrait.and.arrow.right",
+              android: "logout",
+              web: "logout",
+            }}
+            tintColor={theme.colors.accent}
+            size={14}
+            weight="bold"
+          />
+        </View>
 
-      <Text
-        style={[
-          styles.title,
-          { color: theme.colors.foreground },
-        ]}
-      >
-        Se déconnecter
-      </Text>
+        <View className="ml-3 min-w-0 flex-1">
+          <Text
+            className="text-[10px] font-black uppercase tracking-[0.6px]"
+            style={{ color: theme.colors.accent }}
+          >
+            Session
+          </Text>
 
-      <Text
-        style={[
-          styles.help,
-          { color: theme.colors.foregroundMuted },
-        ]}
-      >
-        Fermez votre session SmartTraining sur cet appareil.
-        Une reconnexion sera nécessaire.
-      </Text>
+          <Text
+            className="mt-0.5 text-[14px] font-black"
+            style={{ color: theme.colors.foreground }}
+          >
+            Se déconnecter
+          </Text>
 
-      <AppButton
-        title={
-          loggingOut
-            ? "Déconnexion..."
-            : "Se déconnecter"
-        }
-        onPress={() => void handleLogout()}
-        disabled={loggingOut}
-        variant="secondary"
-        style={styles.button}
-      />
+          <Text
+            className="mt-0.5 text-[11px] leading-[16px]"
+            style={{ color: theme.colors.foregroundMuted }}
+          >
+            Fermez votre session SmartTraining sur cet appareil.
+          </Text>
+        </View>
+      </View>
+
+      <View className="border-t border-[#EEE9F0] px-3.5 py-3">
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ disabled: loggingOut }}
+          disabled={loggingOut}
+          onPress={() => void handleLogout()}
+          android_ripple={{ color: "transparent" }}
+          className="h-10 flex-row items-center justify-center rounded-[11px] border"
+          style={{
+            backgroundColor: "#FBF9FC",
+            borderColor: theme.colors.border,
+            opacity: loggingOut ? 0.5 : 1,
+          }}
+        >
+          <SymbolView
+            name={{
+              ios: "rectangle.portrait.and.arrow.right",
+              android: "logout",
+              web: "logout",
+            }}
+            tintColor={theme.colors.accent}
+            size={13}
+            weight="bold"
+          />
+
+          <Text
+            className="ml-2 text-[11px] font-black"
+            style={{ color: theme.colors.foreground }}
+          >
+            {loggingOut ? "Déconnexion..." : "Se déconnecter"}
+          </Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    width: "100%",
-  },
-  eyebrow: {
-    fontSize: 11,
-    fontWeight: "900",
-    letterSpacing: 0.8,
-    marginBottom: 6,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: "900",
-    lineHeight: 24,
-  },
-  help: {
-    fontSize: 13,
-    lineHeight: 20,
-    marginTop: 8,
-  },
-  button: {
-    marginTop: 14,
-  },
-});

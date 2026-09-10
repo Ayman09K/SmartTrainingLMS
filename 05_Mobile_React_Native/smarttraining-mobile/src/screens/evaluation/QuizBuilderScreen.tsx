@@ -1,4 +1,5 @@
 import { isAxiosError } from "axios";
+import { SymbolView } from "expo-symbols";
 import {
   useCallback,
   useEffect,
@@ -6,7 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import {
   KeyboardAvoidingView,
   Modal,
@@ -591,14 +592,14 @@ function Chip({
       accessibilityRole="button"
       accessibilityState={{ selected: Boolean(selected) }}
       onPress={onPress}
-      style={({ pressed }) => [
+      android_ripple={{ color: "transparent" }}
+      style={[
         styles.chip,
         {
           backgroundColor: selected
             ? theme.colors.accent
             : theme.colors.surfaceSoft,
           borderColor: selected ? theme.colors.accent : theme.colors.border,
-          opacity: pressed ? 0.78 : 1,
         },
       ]}
     >
@@ -613,6 +614,184 @@ function Chip({
       >
         {label}
       </Text>
+    </Pressable>
+  );
+}
+
+
+function ModuleChoice({
+  label,
+  selected,
+  wholeTraining = false,
+  onPress,
+}: {
+  label: string;
+  selected: boolean;
+  wholeTraining?: boolean;
+  onPress: () => void;
+}) {
+  const { theme } = useSmartTrainingTheme();
+
+  return (
+    <Pressable
+      accessibilityRole="radio"
+      accessibilityLabel={label}
+      accessibilityState={{ selected }}
+      onPress={onPress}
+      android_ripple={{ color: "transparent" }}
+      className="mb-2.5 flex-row items-center rounded-[16px] border px-3.5 py-3"
+      style={{
+        borderColor: selected ? "#8B5CF6" : "#E5DFE8",
+        backgroundColor: selected ? "#F7F2FF" : "#FFFFFF",
+      }}
+    >
+      <View
+        className="h-10 w-10 items-center justify-center rounded-[12px]"
+        style={{
+          backgroundColor: selected ? "#EDE3FF" : "#F3F1F5",
+        }}
+      >
+        <SymbolView
+          name={
+            wholeTraining
+              ? {
+                  ios: "square.stack.3d.up.fill",
+                  android: "layers",
+                  web: "layers",
+                }
+              : {
+                  ios: "rectangle.stack.fill",
+                  android: "view_module",
+                  web: "view_module",
+                }
+          }
+          tintColor={selected ? "#7C3AED" : "#667085"}
+          size={16}
+          weight="bold"
+        />
+      </View>
+
+      <View className="ml-3 min-w-0 flex-1">
+        <Text
+          numberOfLines={2}
+          className="text-[11px] font-black leading-[15px]"
+          style={{ color: theme.colors.foreground }}
+        >
+          {label}
+        </Text>
+
+        <Text
+          className="mt-0.5 text-[8px] leading-[12px]"
+          style={{ color: theme.colors.foregroundMuted }}
+        >
+          {wholeTraining
+            ? "Le quiz concerne l’ensemble de la formation."
+            : "Le quiz est rattaché à ce module."}
+        </Text>
+      </View>
+
+      <View
+        className="ml-2 h-6 w-6 items-center justify-center rounded-full border"
+        style={{
+          borderColor: selected ? "#7C3AED" : "#CFC8D5",
+          backgroundColor: selected ? "#7C3AED" : "#FFFFFF",
+        }}
+      >
+        {selected ? (
+          <SymbolView
+            name={{
+              ios: "checkmark",
+              android: "check",
+              web: "check",
+            }}
+            tintColor="#FFFFFF"
+            size={11}
+            weight="bold"
+          />
+        ) : null}
+      </View>
+    </Pressable>
+  );
+}
+
+function PolicyChoice({
+  label,
+  description,
+  selected,
+  icon,
+  onPress,
+}: {
+  label: string;
+  description: string;
+  selected: boolean;
+  icon: ComponentProps<typeof SymbolView>["name"];
+  onPress: () => void;
+}) {
+  const { theme } = useSmartTrainingTheme();
+
+  return (
+    <Pressable
+      accessibilityRole="radio"
+      accessibilityLabel={label}
+      accessibilityState={{ selected }}
+      onPress={onPress}
+      android_ripple={{ color: "transparent" }}
+      className="mb-2.5 flex-row items-center rounded-[16px] border px-3.5 py-3"
+      style={{
+        borderColor: selected ? "#8B5CF6" : "#E5DFE8",
+        backgroundColor: selected ? "#F7F2FF" : "#FFFFFF",
+      }}
+    >
+      <View
+        className="h-10 w-10 items-center justify-center rounded-[12px]"
+        style={{
+          backgroundColor: selected ? "#EDE3FF" : "#F5F3F6",
+        }}
+      >
+        <SymbolView
+          name={icon}
+          tintColor={selected ? "#7C3AED" : "#667085"}
+          size={16}
+          weight="bold"
+        />
+      </View>
+
+      <View className="ml-3 min-w-0 flex-1">
+        <Text
+          className="text-[11px] font-black"
+          style={{ color: theme.colors.foreground }}
+        >
+          {label}
+        </Text>
+
+        <Text
+          className="mt-0.5 text-[8px] leading-[12px]"
+          style={{ color: theme.colors.foregroundMuted }}
+        >
+          {description}
+        </Text>
+      </View>
+
+      <View
+        className="ml-2 h-6 w-6 items-center justify-center rounded-full border"
+        style={{
+          borderColor: selected ? "#7C3AED" : "#CFC8D5",
+          backgroundColor: selected ? "#7C3AED" : "#FFFFFF",
+        }}
+      >
+        {selected ? (
+          <SymbolView
+            name={{
+              ios: "checkmark",
+              android: "check",
+              web: "check",
+            }}
+            tintColor="#FFFFFF"
+            size={11}
+            weight="bold"
+          />
+        ) : null}
+      </View>
     </Pressable>
   );
 }
@@ -635,12 +814,13 @@ function SmallAction({
       accessibilityLabel={label}
       disabled={disabled}
       onPress={onPress}
-      style={({ pressed }) => [
+      android_ripple={{ color: "transparent" }}
+      style={[
         styles.smallAction,
         {
-          borderColor: danger ? theme.colors.danger : theme.colors.border,
-          backgroundColor: theme.colors.surfaceSoft,
-          opacity: disabled ? 0.45 : pressed ? 0.72 : 1,
+          borderColor: danger ? "#F3C7CC" : theme.colors.border,
+          backgroundColor: danger ? "#FFF7F8" : theme.colors.surfaceSoft,
+          opacity: disabled ? 0.45 : 1,
         },
       ]}
     >
@@ -759,7 +939,7 @@ function DragAssignmentItem({
   );
 }
 
-export default function QuizBuilderScreen({ trainingId, onBack }: Props) {
+export default function QuizBuilderScreen({ trainingId }: Props) {
   const { theme } = useSmartTrainingTheme();
   const [trainingTitle, setTrainingTitle] = useState("");
   const [modules, setModules] = useState<QuizBuilderModuleOption[]>([]);
@@ -1668,7 +1848,10 @@ export default function QuizBuilderScreen({ trainingId, onBack }: Props) {
   }
 
   return (
-    <ScreenContainer>
+    <ScreenContainer
+      edges={["left", "right", "bottom"]}
+      style={{ padding: 0, backgroundColor: "#F8F6F3" }}
+    >
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -1676,460 +1859,668 @@ export default function QuizBuilderScreen({ trainingId, onBack }: Props) {
         <View style={styles.flex}>
           <ScrollView
             style={styles.flex}
-            contentContainerStyle={[
-              styles.content,
-              { paddingBottom: theme.shape.cardPadding * 2 },
-            ]}
+            contentContainerStyle={styles.content}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            <AppButton title="Retour" variant="secondary" onPress={onBack} />
-            <SectionHeader
-              title="Quiz Builder"
-              subtitle={
-                trainingTitle ||
-                "Créez et pilotez les évaluations de cette formation."
-              }
-            />
+            <View className="mx-auto w-full max-w-[820px]">
+              <View style={styles.heroCard}>
+                <View style={styles.heroGlow} />
 
-            {error ? (
-              <ErrorMessage message={error} onRetry={() => setError("")} />
-            ) : null}
-            {notice ? (
-              <View
-                style={[
-                  styles.notice,
-                  {
-                    borderColor: theme.colors.success,
-                    backgroundColor: theme.colors.surfaceSoft,
-                  },
-                ]}
-              >
-                <Text style={{ color: theme.colors.success, fontWeight: "800" }}>
-                  {notice}
-                </Text>
-              </View>
-            ) : null}
+                <View className="flex-row items-start">
+                  <View className="min-w-0 flex-1">
+                    <Text className="text-[9px] font-black uppercase tracking-[0.9px] text-[#D8CAFF]">
+                      Évaluations
+                    </Text>
 
-            <View style={styles.topActions}>
-              <AppButton
-                title="Nouveau quiz"
-                onPress={newQuiz}
-                style={styles.flexButton}
-              />
-              <AppButton
-                title={refreshing ? "Actualisation..." : "Actualiser"}
-                variant="secondary"
-                disabled={refreshing}
-                onPress={() => void refresh()}
-                style={styles.flexButton}
-              />
-            </View>
+                    <Text
+                      numberOfLines={2}
+                      className="mt-1 text-[20px] font-black leading-[25px] text-white"
+                    >
+                      {trainingTitle || "Évaluation de la formation"}
+                    </Text>
 
-            <View
-              style={[
-                styles.card,
-                {
-                  borderColor: theme.colors.border,
-                  backgroundColor: theme.colors.surface,
-                },
-              ]}
-            >
-              <Text style={[styles.cardTitle, { color: theme.colors.foreground }]}>Quiz de la formation</Text>
-              {quizzes.length === 0 ? (
-                <Text style={[styles.helpText, { color: theme.colors.foregroundMuted }]}>Aucun quiz. Créez le premier brouillon ci-dessous.</Text>
-              ) : (
-                quizzes.map((quiz) => (
-                  <Pressable
-                    key={quiz.id}
-                    accessibilityRole="button"
-                    onPress={() => void openQuiz(quiz.id)}
-                    style={({ pressed }) => [
-                      styles.quizRow,
-                      {
-                        borderColor:
-                          activeQuiz?.id === quiz.id
-                            ? theme.colors.accent
-                            : theme.colors.border,
-                        backgroundColor: theme.colors.surfaceSoft,
-                        opacity: pressed ? 0.76 : 1,
-                      },
-                    ]}
-                  >
-                    <View style={styles.quizRowText}>
-                      <Text style={[styles.quizTitle, { color: theme.colors.foreground }]}>{quiz.title}</Text>
-                      <Text style={[styles.helpText, { color: theme.colors.foregroundMuted }]}>
-                        {quiz.status === "DRAFT"
-                          ? "Brouillon"
-                          : quiz.status === "PUBLISHED"
-                            ? "Publié"
-                            : "Archivé"} · seuil {quiz.passingScore}% · {quiz.maxAttempts} tentative(s)
+                    <Text className="mt-1.5 text-[10px] leading-[15px] text-white/70">
+                      Créez et gérez les quiz associés à cette formation.
+                    </Text>
+                  </View>
+
+                  <View className="ml-3 h-11 w-11 items-center justify-center rounded-[15px] bg-white/10">
+                    <SymbolView
+                      name={{
+                        ios: "checkmark.circle.fill",
+                        android: "quiz",
+                        web: "quiz",
+                      }}
+                      tintColor="#D8CAFF"
+                      size={20}
+                      weight="bold"
+                    />
+                  </View>
+                </View>
+
+                <View className="mt-4 flex-row flex-wrap gap-2">
+                  <View className="flex-row items-center rounded-full bg-white/10 px-3 py-1.5">
+                    <SymbolView
+                      name={{
+                        ios: "square.stack.3d.up.fill",
+                        android: "layers",
+                        web: "layers",
+                      }}
+                      tintColor="#D8CAFF"
+                      size={12}
+                    />
+                    <Text className="ml-1.5 text-[9px] font-black text-white/85">
+                      {quizzes.length} quiz
+                    </Text>
+                  </View>
+
+                  <View className="flex-row items-center rounded-full bg-white/10 px-3 py-1.5">
+                    <SymbolView
+                      name={{
+                        ios: "rectangle.stack.fill",
+                        android: "view_module",
+                        web: "view_module",
+                      }}
+                      tintColor="#D8CAFF"
+                      size={12}
+                    />
+                    <Text className="ml-1.5 text-[9px] font-black text-white/85">
+                      {modules.length} module{modules.length > 1 ? "s" : ""}
+                    </Text>
+                  </View>
+
+                  {activeQuiz ? (
+                    <View className="flex-row items-center rounded-full bg-white/10 px-3 py-1.5">
+                      <SymbolView
+                        name={{
+                          ios: "list.bullet.clipboard.fill",
+                          android: "format_list_numbered",
+                          web: "format_list_numbered",
+                        }}
+                        tintColor="#D8CAFF"
+                        size={12}
+                      />
+                      <Text className="ml-1.5 text-[9px] font-black text-white/85">
+                        {questions.length} question{questions.length > 1 ? "s" : ""}
                       </Text>
                     </View>
-                    <Text style={{ color: theme.colors.accent, fontWeight: "900" }}>Ouvrir ›</Text>
-                  </Pressable>
-                ))
-              )}
-            </View>
-
-            <View
-              style={[
-                styles.card,
-                {
-                  borderColor: theme.colors.border,
-                  backgroundColor: theme.colors.surface,
-                },
-              ]}
-            >
-              <Text style={[styles.cardTitle, { color: theme.colors.foreground }]}>
-                {activeQuiz ? "Paramètres du quiz" : "Nouveau quiz"}
-              </Text>
-
-              <Field label="Titre">
-                <TextInput
-                  accessibilityLabel="Titre du quiz"
-                  value={form.title}
-                  onChangeText={(title) =>
-                    setForm((current) => ({ ...current, title }))
-                  }
-                  placeholder="Quiz final"
-                  placeholderTextColor={theme.colors.foregroundMuted}
-                  style={inputStyle}
-                />
-              </Field>
-
-              <Field label="Description">
-                <TextInput
-                  accessibilityLabel="Description du quiz"
-                  value={form.description}
-                  onChangeText={(description) =>
-                    setForm((current) => ({ ...current, description }))
-                  }
-                  multiline
-                  placeholder="Objectif de l'évaluation..."
-                  placeholderTextColor={theme.colors.foregroundMuted}
-                  style={[inputStyle, styles.multiline]}
-                />
-              </Field>
-
-              <Field label="Module associé">
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.chipWrap}
-                >
-                  <Chip
-                    label="Formation entière"
-                    selected={form.moduleId === null}
-                    onPress={() =>
-                      setForm((current) => ({ ...current, moduleId: null }))
-                    }
-                  />
-                  {modules.map((module) => (
-                    <Chip
-                      key={module.id}
-                      label={module.title}
-                      selected={form.moduleId === module.id}
-                      onPress={() =>
-                        setForm((current) => ({
-                          ...current,
-                          moduleId: module.id,
-                        }))
-                      }
-                    />
-                  ))}
-                </ScrollView>
-              </Field>
-
-              <View style={styles.twoColumns}>
-                <Field label="Seuil (%)">
-                  <TextInput
-                    accessibilityLabel="Score de réussite"
-                    value={form.passingScore}
-                    onChangeText={(passingScore) =>
-                      setForm((current) => ({ ...current, passingScore }))
-                    }
-                    keyboardType="number-pad"
-                    style={inputStyle}
-                  />
-                </Field>
-                <Field label="Tentatives max">
-                  <TextInput
-                    accessibilityLabel="Nombre maximal de tentatives"
-                    value={form.maxAttempts}
-                    onChangeText={(maxAttempts) =>
-                      setForm((current) => ({ ...current, maxAttempts }))
-                    }
-                    keyboardType="number-pad"
-                    style={inputStyle}
-                  />
-                </Field>
-              </View>
-
-              <Field label="Durée limite en minutes (0 = aucune)">
-                <TextInput
-                  accessibilityLabel="Durée limite en minutes"
-                  value={form.timeLimitMinutes}
-                  onChangeText={(timeLimitMinutes) =>
-                    setForm((current) => ({ ...current, timeLimitMinutes }))
-                  }
-                  keyboardType="number-pad"
-                  style={inputStyle}
-                />
-              </Field>
-
-              <View style={styles.switchRow}>
-                <Text style={{ color: theme.colors.foreground }}>Mélanger les questions</Text>
-                <Switch
-                  value={form.shuffleQuestions}
-                  onValueChange={(shuffleQuestions) =>
-                    setForm((current) => ({ ...current, shuffleQuestions }))
-                  }
-                />
-              </View>
-              <View style={styles.switchRow}>
-                <Text style={{ color: theme.colors.foreground }}>Mélanger les réponses</Text>
-                <Switch
-                  value={form.shuffleOptions}
-                  onValueChange={(shuffleOptions) =>
-                    setForm((current) => ({ ...current, shuffleOptions }))
-                  }
-                />
-              </View>
-
-              <Field label="Affichage du résultat">
-                <View style={styles.chipWrap}>
-                  <Chip
-                    label="Après soumission"
-                    selected={form.resultPolicy === "AFTER_SUBMIT"}
-                    onPress={() =>
-                      setForm((current) => ({
-                        ...current,
-                        resultPolicy: "AFTER_SUBMIT",
-                      }))
-                    }
-                  />
-                  <Chip
-                    label="Après chaque question"
-                    selected={form.resultPolicy === "AFTER_EACH_QUESTION"}
-                    onPress={() =>
-                      setForm((current) => ({
-                        ...current,
-                        resultPolicy: "AFTER_EACH_QUESTION",
-                      }))
-                    }
-                  />
-                </View>
-              </Field>
-
-              <Field label="Révélation des bonnes réponses">
-                <View style={styles.chipWrap}>
-                  <Chip
-                    label="Jamais"
-                    selected={form.correctAnswerPolicy === "NEVER"}
-                    onPress={() =>
-                      setForm((current) => ({
-                        ...current,
-                        correctAnswerPolicy: "NEVER",
-                      }))
-                    }
-                  />
-                  <Chip
-                    label="Après soumission"
-                    selected={form.correctAnswerPolicy === "AFTER_SUBMIT"}
-                    onPress={() =>
-                      setForm((current) => ({
-                        ...current,
-                        correctAnswerPolicy: "AFTER_SUBMIT",
-                      }))
-                    }
-                  />
-                  <Chip
-                    label="Dernière tentative"
-                    selected={form.correctAnswerPolicy === "AFTER_LAST_ATTEMPT"}
-                    onPress={() =>
-                      setForm((current) => ({
-                        ...current,
-                        correctAnswerPolicy: "AFTER_LAST_ATTEMPT",
-                      }))
-                    }
-                  />
-                </View>
-              </Field>
-
-              <Field label="Feedback réussite">
-                <TextInput
-                  accessibilityLabel="Feedback en cas de réussite"
-                  value={form.successFeedback}
-                  onChangeText={(successFeedback) =>
-                    setForm((current) => ({ ...current, successFeedback }))
-                  }
-                  multiline
-                  placeholder="Bravo..."
-                  placeholderTextColor={theme.colors.foregroundMuted}
-                  style={[inputStyle, styles.multiline]}
-                />
-              </Field>
-
-              <Field label="Feedback échec">
-                <TextInput
-                  accessibilityLabel="Feedback en cas d’échec"
-                  value={form.failureFeedback}
-                  onChangeText={(failureFeedback) =>
-                    setForm((current) => ({ ...current, failureFeedback }))
-                  }
-                  multiline
-                  placeholder="À retravailler..."
-                  placeholderTextColor={theme.colors.foregroundMuted}
-                  style={[inputStyle, styles.multiline]}
-                />
-              </Field>
-
-              {activeQuiz ? (
-                <View style={styles.statusActions}>
-                  {activeQuiz.status === "DRAFT" ? (
-                    <SmallAction
-                      label="Publier"
-                      disabled={!questions.length || saving}
-                      onPress={() =>
-                        setConfirmTarget({
-                          kind: "PUBLISH",
-                          id: activeQuiz.id,
-                          label: activeQuiz.title,
-                        })
-                      }
-                    />
-                  ) : (
-                    <SmallAction
-                      label="Repasser en brouillon"
-                      disabled={saving}
-                      onPress={() => void setQuizStatus("DRAFT")}
-                    />
-                  )}
-                  {activeQuiz.status !== "ARCHIVED" ? (
-                    <SmallAction
-                      label="Archiver"
-                      disabled={saving}
-                      onPress={() => void setQuizStatus("ARCHIVED")}
-                    />
                   ) : null}
-                  <SmallAction
-                    label="Supprimer le quiz"
-                    danger
-                    disabled={saving}
-                    onPress={() =>
-                      setConfirmTarget({
-                        kind: "QUIZ",
-                        id: activeQuiz.id,
-                        label: activeQuiz.title,
-                      })
-                    }
+                </View>
+
+                <View className="mt-4 flex-row gap-2.5">
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={newQuiz}
+                    android_ripple={{ color: "transparent" }}
+                    className="flex-1 flex-row items-center justify-center rounded-[14px] bg-white px-3 py-3"
+                  >
+                    <SymbolView
+                      name={{
+                        ios: "plus",
+                        android: "add",
+                        web: "add",
+                      }}
+                      tintColor="#7C3AED"
+                      size={14}
+                      weight="bold"
+                    />
+                    <Text className="ml-2 text-[10px] font-black text-[#7C3AED]">
+                      Nouveau quiz
+                    </Text>
+                  </Pressable>
+
+                  <Pressable
+                    accessibilityRole="button"
+                    disabled={refreshing}
+                    onPress={() => void refresh()}
+                    android_ripple={{ color: "transparent" }}
+                    className="flex-row items-center justify-center rounded-[14px] bg-white/10 px-4 py-3"
+                    style={{ opacity: refreshing ? 0.5 : 1 }}
+                  >
+                    <SymbolView
+                      name={{
+                        ios: "arrow.clockwise",
+                        android: "refresh",
+                        web: "refresh",
+                      }}
+                      tintColor="#FFFFFF"
+                      size={14}
+                      weight="bold"
+                    />
+                    <Text className="ml-2 text-[10px] font-black text-white">
+                      {refreshing ? "Actualisation..." : "Actualiser"}
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
+
+              {error ? (
+                <View className="mt-4">
+                  <ErrorMessage
+                    message={error}
+                    onRetry={() => setError("")}
                   />
                 </View>
               ) : null}
-            </View>
 
-            {activeQuiz ? (
-              <View
-                style={[
-                  styles.card,
-                  {
-                    borderColor: theme.colors.border,
-                    backgroundColor: theme.colors.surface,
-                  },
-                ]}
-              >
-                <View style={styles.sectionTop}>
-                  <View style={styles.quizRowText}>
-                    <Text style={[styles.cardTitle, { color: theme.colors.foreground }]}>Questions ({questions.length})</Text>
-                    <Text style={[styles.helpText, { color: theme.colors.foregroundMuted }]}>Édition disponible lorsque le quiz est en brouillon.</Text>
+              {notice ? (
+                <View style={styles.notice}>
+                  <View className="h-8 w-8 items-center justify-center rounded-full bg-[#EAFBF3]">
+                    <SymbolView
+                      name={{ ios: "checkmark", android: "check", web: "check" }}
+                      tintColor="#16A36A"
+                      size={14}
+                      weight="bold"
+                    />
                   </View>
-                  <SmallAction
-                    label="+ Question"
-                    disabled={activeQuiz.status !== "DRAFT"}
-                    onPress={() =>
-                      setQuestionDraft(emptyQuestion(questions.length + 1))
-                    }
+                  <Text className="ml-2.5 flex-1 text-[10px] font-extrabold text-[#166534]">
+                    {notice}
+                  </Text>
+                </View>
+              ) : null}
+
+              <View style={styles.sectionHeading}>
+                <View className="h-10 w-10 items-center justify-center rounded-[13px] bg-[#F1E9FF]">
+                  <SymbolView
+                    name={{
+                      ios: "square.stack.3d.up.fill",
+                      android: "layers",
+                      web: "layers",
+                    }}
+                    tintColor="#7C3AED"
+                    size={17}
+                    weight="bold"
                   />
                 </View>
+                <View className="ml-2.5 flex-1">
+                  <Text style={[styles.sectionTitle, { color: theme.colors.foreground }]}>Quiz de la formation</Text>
+                  <Text style={[styles.helpText, { color: theme.colors.foregroundMuted }]}>Sélectionnez une évaluation ou créez un nouveau brouillon.</Text>
+                </View>
+              </View>
 
-                {questions.length === 0 ? (
-                  <Text style={[styles.helpText, { color: theme.colors.foregroundMuted }]}>Aucune question. Ajoutez au moins une question avant publication.</Text>
-                ) : (
-                  questions.map((question, index) => (
-                    <View
-                      key={question.id}
-                      style={[
-                        styles.questionCard,
-                        {
-                          borderColor: theme.colors.border,
-                          backgroundColor: theme.colors.surfaceSoft,
-                        },
-                      ]}
-                    >
-                      <Text style={[styles.questionTitle, { color: theme.colors.foreground }]}>{index + 1}. {question.content}</Text>
-                      <Text style={[styles.helpText, { color: theme.colors.foregroundMuted }]}>{TYPE_LABEL[question.type]} · {question.points} pt</Text>
-                      <View style={styles.questionActions}>
-                        <SmallAction
-                          label="↑ Monter"
-                          disabled={activeQuiz.status !== "DRAFT" || index === 0}
-                          onPress={() => void moveQuestion(index, -1)}
-                        />
-                        <SmallAction
-                          label="↓ Descendre"
-                          disabled={
-                            activeQuiz.status !== "DRAFT" ||
-                            index === questions.length - 1
-                          }
-                          onPress={() => void moveQuestion(index, 1)}
-                        />
-                        <SmallAction
-                          label="Modifier"
-                          disabled={activeQuiz.status !== "DRAFT"}
-                          onPress={() =>
-                            setQuestionDraft(questionDraftFrom(question))
-                          }
-                        />
-                        <SmallAction
-                          label="Supprimer"
-                          danger
-                          disabled={activeQuiz.status !== "DRAFT"}
-                          onPress={() =>
-                            setConfirmTarget({
-                              kind: "QUESTION",
-                              id: question.id,
-                              label: question.content,
-                            })
-                          }
-                        />
-                      </View>
+              <View style={styles.quizListCard}>
+                {quizzes.length === 0 ? (
+                  <View className="items-center px-4 py-7">
+                    <View className="h-14 w-14 items-center justify-center rounded-full bg-[#F1E9FF]">
+                      <SymbolView
+                        name={{ ios: "doc.badge.plus", android: "post_add", web: "post_add" }}
+                        tintColor="#7C3AED"
+                        size={22}
+                        weight="bold"
+                      />
                     </View>
-                  ))
+                    <Text className="mt-3 text-[14px] font-black text-[#111827]">Aucun quiz</Text>
+                    <Text className="mt-1 text-center text-[10px] leading-[15px] text-[#667085]">Créez le premier brouillon pour commencer l’évaluation.</Text>
+                  </View>
+                ) : (
+                  quizzes.map((quiz) => {
+                    const selected = activeQuiz?.id === quiz.id;
+                    const statusText =
+                      quiz.status === "DRAFT"
+                        ? "Brouillon"
+                        : quiz.status === "PUBLISHED"
+                          ? "Publié"
+                          : "Archivé";
+                    const statusColor =
+                      quiz.status === "DRAFT"
+                        ? "#7C3AED"
+                        : quiz.status === "PUBLISHED"
+                          ? "#16A36A"
+                          : "#667085";
+                    const statusBg =
+                      quiz.status === "DRAFT"
+                        ? "#F1E9FF"
+                        : quiz.status === "PUBLISHED"
+                          ? "#EAFBF3"
+                          : "#F2F4F7";
+
+                    return (
+                      <Pressable
+                        key={quiz.id}
+                        accessibilityRole="button"
+                        onPress={() => void openQuiz(quiz.id)}
+                        android_ripple={{ color: "transparent" }}
+                        style={[
+                          styles.quizRow,
+                          {
+                            borderColor: selected ? "#7C3AED" : "#E6E0E9",
+                            backgroundColor: selected ? "#FBF9FF" : "#FFFFFF",
+                          },
+                        ]}
+                      >
+                        <View
+                          className="h-11 w-11 items-center justify-center rounded-[14px]"
+                          style={{ backgroundColor: statusBg }}
+                        >
+                          <SymbolView
+                            name={{ ios: "checklist", android: "quiz", web: "quiz" }}
+                            tintColor={statusColor}
+                            size={18}
+                            weight="bold"
+                          />
+                        </View>
+
+                        <View style={styles.quizRowText}>
+                          <View className="flex-row flex-wrap items-center">
+                            <Text style={[styles.quizTitle, { color: theme.colors.foreground }]}>{quiz.title}</Text>
+                            <View className="ml-2 rounded-full px-2 py-1" style={{ backgroundColor: statusBg }}>
+                              <Text className="text-[7px] font-black" style={{ color: statusColor }}>{statusText}</Text>
+                            </View>
+                          </View>
+                          <Text style={[styles.helpText, { color: theme.colors.foregroundMuted }]}>
+                            Seuil {quiz.passingScore}% · {quiz.maxAttempts} tentative{quiz.maxAttempts > 1 ? "s" : ""}
+                          </Text>
+                        </View>
+
+                        <SymbolView
+                          name={{ ios: "chevron.right", android: "chevron_right", web: "chevron_right" }}
+                          tintColor={selected ? "#7C3AED" : "#98A2B3"}
+                          size={16}
+                          weight="bold"
+                        />
+                      </Pressable>
+                    );
+                  })
                 )}
               </View>
-            ) : null}
+
+              <View style={styles.sectionHeading}>
+                <View className="h-10 w-10 items-center justify-center rounded-[13px] bg-[#EAF2FF]">
+                  <SymbolView
+                    name={{ ios: "slider.horizontal.3", android: "tune", web: "tune" }}
+                    tintColor="#397BE8"
+                    size={17}
+                    weight="bold"
+                  />
+                </View>
+                <View className="ml-2.5 flex-1">
+                  <Text style={[styles.sectionTitle, { color: theme.colors.foreground }]}>
+                    {activeQuiz ? "Paramètres du quiz" : "Nouveau quiz"}
+                  </Text>
+                  <Text style={[styles.helpText, { color: theme.colors.foregroundMuted }]}>
+                    Configurez les règles générales de l’évaluation.
+                  </Text>
+                </View>
+                {activeQuiz ? (
+                  <View className="rounded-full px-2.5 py-1.5" style={{ backgroundColor: activeQuiz.status === "DRAFT" ? "#F1E9FF" : activeQuiz.status === "PUBLISHED" ? "#EAFBF3" : "#F2F4F7" }}>
+                    <Text className="text-[8px] font-black" style={{ color: activeQuiz.status === "DRAFT" ? "#7C3AED" : activeQuiz.status === "PUBLISHED" ? "#16A36A" : "#667085" }}>
+                      {activeQuiz.status === "DRAFT" ? "Brouillon" : activeQuiz.status === "PUBLISHED" ? "Publié" : "Archivé"}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+
+              <View style={styles.card}>
+                <View style={styles.formGroupHeader}>
+                  <View className="h-9 w-9 items-center justify-center rounded-[12px] bg-[#F1E9FF]">
+                    <SymbolView name={{ ios: "doc.text.fill", android: "description", web: "description" }} tintColor="#7C3AED" size={15} weight="bold" />
+                  </View>
+                  <View className="ml-2.5 flex-1">
+                    <Text style={[styles.groupTitle, { color: theme.colors.foreground }]}>Informations générales</Text>
+                    <Text style={[styles.helpText, { color: theme.colors.foregroundMuted }]}>Titre, description et rattachement.</Text>
+                  </View>
+                </View>
+
+                <Field label="Titre">
+                  <TextInput
+                    accessibilityLabel="Titre du quiz"
+                    value={form.title}
+                    onChangeText={(title) => setForm((current) => ({ ...current, title }))}
+                    placeholder="Quiz final"
+                    placeholderTextColor={theme.colors.foregroundMuted}
+                    style={inputStyle}
+                  />
+                </Field>
+
+                <Field label="Description">
+                  <TextInput
+                    accessibilityLabel="Description du quiz"
+                    value={form.description}
+                    onChangeText={(description) => setForm((current) => ({ ...current, description }))}
+                    multiline
+                    placeholder="Objectif de l'évaluation..."
+                    placeholderTextColor={theme.colors.foregroundMuted}
+                    style={[inputStyle, styles.multiline]}
+                  />
+                </Field>
+
+                <Field label="Module associé">
+                  <View
+                    className="rounded-[18px] border p-2.5"
+                    style={{
+                      backgroundColor: "#FBFAFC",
+                      borderColor: "#ECE7EF",
+                    }}
+                  >
+                    <ModuleChoice
+                      label="Formation entière"
+                      wholeTraining
+                      selected={form.moduleId === null}
+                      onPress={() =>
+                        setForm((current) => ({
+                          ...current,
+                          moduleId: null,
+                        }))
+                      }
+                    />
+
+                    {modules.map((module) => (
+                      <ModuleChoice
+                        key={module.id}
+                        label={module.title}
+                        selected={form.moduleId === module.id}
+                        onPress={() =>
+                          setForm((current) => ({
+                            ...current,
+                            moduleId: module.id,
+                          }))
+                        }
+                      />
+                    ))}
+                  </View>
+                </Field>
+              </View>
+
+              <View style={styles.card}>
+                <View style={styles.formGroupHeader}>
+                  <View className="h-9 w-9 items-center justify-center rounded-[12px] bg-[#EAFBF3]">
+                    <SymbolView name={{ ios: "target", android: "track_changes", web: "track_changes" }} tintColor="#16A36A" size={15} weight="bold" />
+                  </View>
+                  <View className="ml-2.5 flex-1">
+                    <Text style={[styles.groupTitle, { color: theme.colors.foreground }]}>Règles de passage</Text>
+                    <Text style={[styles.helpText, { color: theme.colors.foregroundMuted }]}>Score, tentatives et ordre des questions.</Text>
+                  </View>
+                </View>
+
+                <View style={styles.twoColumns}>
+                  <Field label="Seuil (%)">
+                    <TextInput
+                      accessibilityLabel="Score de réussite"
+                      value={form.passingScore}
+                      onChangeText={(passingScore) => setForm((current) => ({ ...current, passingScore }))}
+                      keyboardType="number-pad"
+                      style={inputStyle}
+                    />
+                  </Field>
+                  <Field label="Tentatives max">
+                    <TextInput
+                      accessibilityLabel="Nombre maximal de tentatives"
+                      value={form.maxAttempts}
+                      onChangeText={(maxAttempts) => setForm((current) => ({ ...current, maxAttempts }))}
+                      keyboardType="number-pad"
+                      style={inputStyle}
+                    />
+                  </Field>
+                </View>
+
+                <Field label="Durée limite en minutes (0 = aucune)">
+                  <TextInput
+                    accessibilityLabel="Durée limite en minutes"
+                    value={form.timeLimitMinutes}
+                    onChangeText={(timeLimitMinutes) => setForm((current) => ({ ...current, timeLimitMinutes }))}
+                    keyboardType="number-pad"
+                    style={inputStyle}
+                  />
+                </Field>
+
+                <View style={styles.switchCard}>
+                  <View className="flex-1">
+                    <Text style={[styles.switchTitle, { color: theme.colors.foreground }]}>Mélanger les questions</Text>
+                    <Text style={[styles.helpText, { color: theme.colors.foregroundMuted }]}>L’ordre des questions varie entre les tentatives.</Text>
+                  </View>
+                  <Switch value={form.shuffleQuestions} onValueChange={(shuffleQuestions) => setForm((current) => ({ ...current, shuffleQuestions }))} />
+                </View>
+
+                <View style={styles.switchCard}>
+                  <View className="flex-1">
+                    <Text style={[styles.switchTitle, { color: theme.colors.foreground }]}>Mélanger les réponses</Text>
+                    <Text style={[styles.helpText, { color: theme.colors.foregroundMuted }]}>L’ordre des choix peut varier pour chaque apprenant.</Text>
+                  </View>
+                  <Switch value={form.shuffleOptions} onValueChange={(shuffleOptions) => setForm((current) => ({ ...current, shuffleOptions }))} />
+                </View>
+              </View>
+
+              <View style={styles.card}>
+                <View style={styles.formGroupHeader}>
+                  <View className="h-9 w-9 items-center justify-center rounded-[12px] bg-[#FFF4E5]">
+                    <SymbolView name={{ ios: "eye.fill", android: "visibility", web: "visibility" }} tintColor="#D97706" size={15} weight="bold" />
+                  </View>
+                  <View className="ml-2.5 flex-1">
+                    <Text style={[styles.groupTitle, { color: theme.colors.foreground }]}>Résultats & feedback</Text>
+                    <Text style={[styles.helpText, { color: theme.colors.foregroundMuted }]}>Définissez quand afficher les résultats et réponses.</Text>
+                  </View>
+                </View>
+
+                <Field label="Affichage du résultat">
+                  <View style={styles.chipWrap}>
+                    <Chip label="Après soumission" selected={form.resultPolicy === "AFTER_SUBMIT"} onPress={() => setForm((current) => ({ ...current, resultPolicy: "AFTER_SUBMIT" }))} />
+                    <Chip label="Après chaque question" selected={form.resultPolicy === "AFTER_EACH_QUESTION"} onPress={() => setForm((current) => ({ ...current, resultPolicy: "AFTER_EACH_QUESTION" }))} />
+                  </View>
+                </Field>
+
+                <Field label="Révélation des bonnes réponses">
+                  <View
+                    className="rounded-[18px] border p-2.5"
+                    style={{
+                      backgroundColor: "#FBFAFC",
+                      borderColor: "#ECE7EF",
+                    }}
+                  >
+                    <PolicyChoice
+                      label="Jamais"
+                      description="Les bonnes réponses ne sont pas révélées."
+                      selected={form.correctAnswerPolicy === "NEVER"}
+                      icon={{
+                        ios: "eye.slash.fill",
+                        android: "visibility_off",
+                        web: "visibility_off",
+                      }}
+                      onPress={() =>
+                        setForm((current) => ({
+                          ...current,
+                          correctAnswerPolicy: "NEVER",
+                        }))
+                      }
+                    />
+
+                    <PolicyChoice
+                      label="Après soumission"
+                      description="Les bonnes réponses sont révélées après la soumission."
+                      selected={form.correctAnswerPolicy === "AFTER_SUBMIT"}
+                      icon={{
+                        ios: "checkmark.circle.fill",
+                        android: "task_alt",
+                        web: "task_alt",
+                      }}
+                      onPress={() =>
+                        setForm((current) => ({
+                          ...current,
+                          correctAnswerPolicy: "AFTER_SUBMIT",
+                        }))
+                      }
+                    />
+
+                    <PolicyChoice
+                      label="Dernière tentative"
+                      description="Les bonnes réponses sont révélées après la dernière tentative disponible."
+                      selected={form.correctAnswerPolicy === "AFTER_LAST_ATTEMPT"}
+                      icon={{
+                        ios: "flag.checkered",
+                        android: "outlined_flag",
+                        web: "outlined_flag",
+                      }}
+                      onPress={() =>
+                        setForm((current) => ({
+                          ...current,
+                          correctAnswerPolicy: "AFTER_LAST_ATTEMPT",
+                        }))
+                      }
+                    />
+                  </View>
+                </Field>
+
+                <Field label="Feedback réussite">
+                  <TextInput
+                    accessibilityLabel="Feedback en cas de réussite"
+                    value={form.successFeedback}
+                    onChangeText={(successFeedback) => setForm((current) => ({ ...current, successFeedback }))}
+                    multiline
+                    placeholder="Bravo..."
+                    placeholderTextColor={theme.colors.foregroundMuted}
+                    style={[inputStyle, styles.multiline]}
+                  />
+                </Field>
+
+                <Field label="Feedback échec">
+                  <TextInput
+                    accessibilityLabel="Feedback en cas d’échec"
+                    value={form.failureFeedback}
+                    onChangeText={(failureFeedback) => setForm((current) => ({ ...current, failureFeedback }))}
+                    multiline
+                    placeholder="À retravailler..."
+                    placeholderTextColor={theme.colors.foregroundMuted}
+                    style={[inputStyle, styles.multiline]}
+                  />
+                </Field>
+
+                {activeQuiz ? (
+                  <View style={styles.lifecycleCard}>
+                    <Text style={[styles.lifecycleTitle, { color: theme.colors.foreground }]}>Cycle de vie du quiz</Text>
+                    <View style={styles.statusActions}>
+                      {activeQuiz.status === "DRAFT" ? (
+                        <SmallAction
+                          label="Publier"
+                          disabled={!questions.length || saving}
+                          onPress={() => setConfirmTarget({ kind: "PUBLISH", id: activeQuiz.id, label: activeQuiz.title })}
+                        />
+                      ) : (
+                        <SmallAction label="Repasser en brouillon" disabled={saving} onPress={() => void setQuizStatus("DRAFT")} />
+                      )}
+                      {activeQuiz.status !== "ARCHIVED" ? (
+                        <SmallAction label="Archiver" disabled={saving} onPress={() => void setQuizStatus("ARCHIVED")} />
+                      ) : null}
+                      <SmallAction
+                        label="Supprimer le quiz"
+                        danger
+                        disabled={saving}
+                        onPress={() => setConfirmTarget({ kind: "QUIZ", id: activeQuiz.id, label: activeQuiz.title })}
+                      />
+                    </View>
+                  </View>
+                ) : null}
+              </View>
+
+              {activeQuiz ? (
+                <>
+                  <View style={styles.sectionHeading}>
+                    <View className="h-10 w-10 items-center justify-center rounded-[13px] bg-[#F1E9FF]">
+                      <SymbolView name={{ ios: "list.number", android: "format_list_numbered", web: "format_list_numbered" }} tintColor="#7C3AED" size={17} weight="bold" />
+                    </View>
+
+                    <View className="ml-2.5 flex-1">
+                      <Text style={[styles.sectionTitle, { color: theme.colors.foreground }]}>
+                        Questions ({questions.length})
+                      </Text>
+                      <Text style={[styles.helpText, { color: theme.colors.foregroundMuted }]}>
+                        {activeQuiz.status === "DRAFT"
+                          ? "Ajoutez, modifiez et réorganisez les questions."
+                          : "Questions verrouillées. Repassez le quiz en brouillon pour les modifier."}
+                      </Text>
+                    </View>
+
+                    {activeQuiz.status === "DRAFT" ? (
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel="Ajouter une question"
+                        onPress={() => setQuestionDraft(emptyQuestion(questions.length + 1))}
+                        android_ripple={{ color: "transparent" }}
+                        className="flex-row items-center rounded-[13px] px-3 py-2.5"
+                        style={{ backgroundColor: "#7C3AED" }}
+                      >
+                        <SymbolView name={{ ios: "plus", android: "add", web: "add" }} tintColor="#FFFFFF" size={13} weight="bold" />
+                        <Text className="ml-1.5 text-[9px] font-black text-white">Question</Text>
+                      </Pressable>
+                    ) : null}
+                  </View>
+
+                  <View style={styles.questionsPanel}>
+                    {questions.length === 0 ? (
+                      <View className="items-center px-4 py-7">
+                        <View className="h-14 w-14 items-center justify-center rounded-full bg-[#F1E9FF]">
+                          <SymbolView name={{ ios: "questionmark.circle.fill", android: "help", web: "help" }} tintColor="#7C3AED" size={22} weight="bold" />
+                        </View>
+                        <Text className="mt-3 text-[13px] font-black text-[#111827]">Aucune question</Text>
+                        <Text className="mt-1 text-center text-[10px] leading-[15px] text-[#667085]">Ajoutez au moins une question avant publication.</Text>
+                      </View>
+                    ) : (
+                      questions.map((question, index) => (
+                        <View key={question.id} style={styles.questionCard}>
+                          <View className="flex-row items-start">
+                            <View className="h-10 w-10 items-center justify-center rounded-[13px] bg-[#F1E9FF]">
+                              <Text className="text-[12px] font-black text-[#7C3AED]">{index + 1}</Text>
+                            </View>
+                            <View className="ml-3 min-w-0 flex-1">
+                              <Text style={[styles.questionTitle, { color: theme.colors.foreground }]}>{question.content}</Text>
+                              <View className="mt-2 flex-row flex-wrap gap-2">
+                                <View className="rounded-full bg-[#EEF2FF] px-2 py-1">
+                                  <Text className="text-[8px] font-black text-[#4F46E5]">{TYPE_LABEL[question.type]}</Text>
+                                </View>
+                                <View className="rounded-full bg-[#EAFBF3] px-2 py-1">
+                                  <Text className="text-[8px] font-black text-[#16845A]">{question.points} pt</Text>
+                                </View>
+                              </View>
+                            </View>
+                          </View>
+
+                          {activeQuiz.status === "DRAFT" ? (
+                            <View style={styles.questionActions}>
+                              <SmallAction
+                                label="Monter"
+                                disabled={index === 0}
+                                onPress={() => void moveQuestion(index, -1)}
+                              />
+                              <SmallAction
+                                label="Descendre"
+                                disabled={index === questions.length - 1}
+                                onPress={() => void moveQuestion(index, 1)}
+                              />
+                              <SmallAction
+                                label="Modifier"
+                                onPress={() => setQuestionDraft(questionDraftFrom(question))}
+                              />
+                              <SmallAction
+                                label="Supprimer"
+                                danger
+                                onPress={() => setConfirmTarget({ kind: "QUESTION", id: question.id, label: question.content })}
+                              />
+                            </View>
+                          ) : null}
+                        </View>
+                      ))
+                    )}
+                  </View>
+                </>
+              ) : null}
+            </View>
           </ScrollView>
 
-          <View
-            style={[
-              styles.stickyFooter,
-              {
-                borderColor: theme.colors.border,
-                backgroundColor: theme.colors.surfaceElevated,
-              },
-            ]}
-          >
-            <AppButton
-              title={
-                saving
-                  ? "Enregistrement..."
-                  : activeQuiz
-                    ? "Enregistrer le quiz"
-                    : "Créer le brouillon"
-              }
-              disabled={saving}
-              onPress={() => void saveQuiz()}
-            />
+          <View style={styles.stickyFooter}>
+            <View className="mx-auto w-full max-w-[820px]">
+              <AppButton
+                title={
+                  saving
+                    ? "Enregistrement..."
+                    : !activeQuiz
+                      ? "Créer le brouillon"
+                      : activeQuiz.status === "DRAFT"
+                        ? "Enregistrer le quiz"
+                        : "Enregistrer les paramètres"
+                }
+                disabled={saving}
+                onPress={() => void saveQuiz()}
+              />
+            </View>
           </View>
         </View>
       </KeyboardAvoidingView>
@@ -2327,36 +2718,120 @@ export default function QuizBuilderScreen({ trainingId, onBack }: Props) {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  content: { padding: 14, gap: 14 },
-  modalContent: { padding: 14, paddingBottom: 28, gap: 14 },
-  topActions: { flexDirection: "row", gap: 10, flexWrap: "wrap" },
+  content: {
+    paddingHorizontal: 14,
+    paddingTop: 14,
+    paddingBottom: 28,
+  },
+  modalContent: {
+    padding: 16,
+    paddingBottom: 30,
+    gap: 16,
+  },
+  heroCard: {
+    position: "relative",
+    overflow: "hidden",
+    borderRadius: 24,
+    padding: 15,
+    backgroundColor: "#0F172A",
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.16,
+    shadowRadius: 14,
+    elevation: 4,
+  },
+  heroGlow: {
+    position: "absolute",
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    right: -80,
+    top: -90,
+    backgroundColor: "#7C3AED",
+    opacity: 0.38,
+  },
+  sectionHeading: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 22,
+    marginBottom: 10,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    lineHeight: 22,
+    fontWeight: "900",
+  },
+  quizListCard: {
+    borderWidth: 1,
+    borderColor: "#E6E0E9",
+    borderRadius: 20,
+    backgroundColor: "#FFFFFF",
+    padding: 10,
+    gap: 8,
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 1,
+  },
+  topActions: {
+    flexDirection: "row",
+    gap: 10,
+    flexWrap: "wrap",
+  },
   flexButton: { flex: 1, minWidth: 145 },
-  card: { borderWidth: 1, borderRadius: 18, padding: 16, gap: 14 },
+  card: {
+    borderWidth: 1,
+    borderColor: "#E6E0E9",
+    borderRadius: 20,
+    padding: 15,
+    gap: 14,
+    backgroundColor: "#FFFFFF",
+    marginBottom: 12,
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 1,
+  },
   cardTitle: { fontSize: 18, fontWeight: "900" },
-  helpText: { fontSize: 12, lineHeight: 18 },
-  notice: { borderWidth: 1, borderRadius: 14, padding: 12 },
+  helpText: { fontSize: 10, lineHeight: 15 },
+  notice: {
+    marginTop: 14,
+    borderWidth: 1,
+    borderColor: "#D9EDE4",
+    borderRadius: 15,
+    padding: 11,
+    backgroundColor: "#FFFFFF",
+    flexDirection: "row",
+    alignItems: "center",
+  },
   quizRow: {
     borderWidth: 1,
-    borderRadius: 14,
-    padding: 13,
+    borderRadius: 16,
+    padding: 11,
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    marginTop: 8,
   },
   quizRowText: { flex: 1, minWidth: 0, gap: 3 },
-  quizTitle: { fontSize: 15, fontWeight: "900" },
-  field: { gap: 7, flex: 1, minWidth: 130 },
-  fieldLabel: { fontSize: 13, fontWeight: "900" },
-  input: {
-    minHeight: 46,
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
+  quizTitle: { fontSize: 13, lineHeight: 18, fontWeight: "900", flexShrink: 1 },
+  formGroupHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingBottom: 2,
   },
-  multiline: { minHeight: 88, textAlignVertical: "top" },
+  field: { gap: 7, flex: 1, minWidth: 130 },
+  fieldLabel: { fontSize: 12, fontWeight: "900" },
+  input: {
+    minHeight: 48,
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingHorizontal: 13,
+    paddingVertical: 11,
+    fontSize: 13,
+  },
+  multiline: { minHeight: 92, textAlignVertical: "top" },
   twoColumns: { flexDirection: "row", gap: 10, flexWrap: "wrap" },
   switchRow: {
     flexDirection: "row",
@@ -2364,36 +2839,70 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
   },
+  switchCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    borderWidth: 1,
+    borderColor: "#ECE7EF",
+    borderRadius: 15,
+    padding: 12,
+    backgroundColor: "#FBFAFC",
+  },
+  switchTitle: { fontSize: 11, fontWeight: "900" },
   chipWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   chip: {
     borderWidth: 1,
     borderRadius: 999,
     paddingHorizontal: 12,
-    paddingVertical: 9,
+    paddingVertical: 8,
   },
   statusActions: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   smallAction: {
     minHeight: 36,
     borderWidth: 1,
-    borderRadius: 10,
+    borderRadius: 11,
     paddingHorizontal: 11,
     paddingVertical: 8,
     justifyContent: "center",
     alignItems: "center",
   },
+  lifecycleCard: {
+    borderTopWidth: 1,
+    borderTopColor: "#EEE9F0",
+    paddingTop: 13,
+    gap: 10,
+  },
+  lifecycleTitle: { fontSize: 12, fontWeight: "900" },
   sectionTop: { flexDirection: "row", alignItems: "center", gap: 10 },
+  questionsPanel: {
+    borderWidth: 1,
+    borderColor: "#E6E0E9",
+    borderRadius: 20,
+    backgroundColor: "#FFFFFF",
+    padding: 10,
+    gap: 9,
+    marginBottom: 8,
+  },
   questionCard: {
     borderWidth: 1,
-    borderRadius: 14,
-    padding: 13,
-    gap: 7,
-    marginTop: 8,
+    borderColor: "#E9E4EC",
+    borderRadius: 17,
+    padding: 12,
+    gap: 10,
+    backgroundColor: "#FCFBFD",
   },
-  questionTitle: { fontSize: 14, fontWeight: "900", lineHeight: 20 },
+  questionTitle: { fontSize: 13, fontWeight: "900", lineHeight: 18 },
   questionActions: { flexDirection: "row", flexWrap: "wrap", gap: 7 },
-  stickyFooter: { borderTopWidth: 1, padding: 12 },
+  stickyFooter: {
+    borderTopWidth: 1,
+    borderTopColor: "#E6E0E9",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: "#FFFFFF",
+  },
   editorGroup: { gap: 12 },
-  groupTitle: { fontSize: 15, fontWeight: "900" },
+  groupTitle: { fontSize: 14, fontWeight: "900" },
   optionRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   check: {
     width: 38,
@@ -2404,7 +2913,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   optionInput: { flex: 1 },
-  subCard: { borderWidth: 1, borderRadius: 14, padding: 12, gap: 10 },
+  subCard: {
+    borderWidth: 1,
+    borderRadius: 15,
+    padding: 12,
+    gap: 10,
+    backgroundColor: "#FBFAFC",
+  },
   orderRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   orderNumber: { width: 22, fontWeight: "900", textAlign: "center" },
   orderInput: { flex: 1 },
@@ -2412,29 +2927,39 @@ const styles = StyleSheet.create({
   dropZone: {
     borderWidth: 2,
     borderStyle: "dashed",
-    borderRadius: 14,
+    borderRadius: 15,
     padding: 12,
     gap: 8,
   },
   dragItemCard: { gap: 8 },
   dragHandle: {
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: 13,
     padding: 12,
     gap: 3,
     zIndex: 10,
   },
   readOnlyValue: {
-    minHeight: 46,
-    borderRadius: 12,
+    minHeight: 48,
+    borderRadius: 14,
     padding: 13,
     fontWeight: "800",
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.55)",
+    backgroundColor: "rgba(15,23,42,0.56)",
     justifyContent: "center",
-    padding: 20,
+    padding: 18,
   },
-  confirmCard: { borderWidth: 1, borderRadius: 18, padding: 18, gap: 14 },
+  confirmCard: {
+    borderWidth: 1,
+    borderRadius: 22,
+    padding: 18,
+    gap: 14,
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
+    elevation: 10,
+  },
 });

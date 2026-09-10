@@ -1,4 +1,5 @@
 import { Href, Stack, router } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
 
 import LoadingState from "../../components/LoadingState";
@@ -47,8 +48,11 @@ export default function AdminLayout() {
   }
 
   return (
-    <Stack
-      screenOptions={{
+    <>
+      <StatusBar style="light" animated />
+
+      <Stack
+        screenOptions={{
         headerStyle: {
           backgroundColor: theme.colors.headerBackground,
         },
@@ -165,6 +169,7 @@ export default function AdminLayout() {
           title: "Quiz de la formation",
         }}
       />
-    </Stack>
+      </Stack>
+    </>
   );
 }

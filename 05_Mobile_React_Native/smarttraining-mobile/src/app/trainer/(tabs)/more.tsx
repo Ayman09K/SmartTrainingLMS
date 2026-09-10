@@ -2,62 +2,76 @@ import {
   SymbolView,
   type SymbolViewProps,
 } from "expo-symbols";
-import {
-  Href,
-  router,
-} from "expo-router";
+import { Href, router } from "expo-router";
 import { useState } from "react";
 import {
   Pressable,
   ScrollView,
-  StyleSheet,
   Text,
   View,
   useWindowDimensions,
 } from "react-native";
 
+import { removeToken } from "../../../storage/tokenStorage";
 import {
   useSmartTrainingTheme,
 } from "../../../theme/provider/SmartTrainingThemeProvider";
-import { removeToken } from "../../../storage/tokenStorage";
 
 type TrainerTool = {
   label: string;
   description: string;
   href: string;
   icon: SymbolViewProps["name"];
+  tone: "violet" | "teal" | "coral" | "pink" | "blue" | "amber";
 };
 
 type TrainerToolSection = {
   title: string;
   description: string;
+  icon: SymbolViewProps["name"];
   tools: readonly TrainerTool[];
 };
+
+const TONES = {
+  violet: { soft: "#F1E9FF", color: "#7C3AED" },
+  teal: { soft: "#E4F8F3", color: "#109E85" },
+  coral: { soft: "#FFF0EA", color: "#E45B54" },
+  pink: { soft: "#FDEAF7", color: "#CE3C9C" },
+  blue: { soft: "#EAF2FF", color: "#3478D4" },
+  amber: { soft: "#FFF3DD", color: "#DD8A00" },
+} as const;
 
 const sections: readonly TrainerToolSection[] = [
   {
     title: "Organisation",
     description: "Parcours, groupes et accompagnement.",
+    icon: {
+      ios: "person.3.fill",
+      android: "groups",
+      web: "groups",
+    },
     tools: [
       {
         label: "Parcours de formation",
-        description: "Assembler et publier.",
+        description: "Assembler et publier vos parcours.",
         href: "/trainer/learning-paths",
         icon: {
           ios: "map.fill",
           android: "route",
           web: "route",
         },
+        tone: "violet",
       },
       {
         label: "Groupes / cohortes",
-        description: "Piloter les cohortes.",
+        description: "Piloter les cohortes et leur suivi.",
         href: "/trainer/groups",
         icon: {
           ios: "person.3.fill",
           android: "groups",
           web: "groups",
         },
+        tone: "teal",
       },
       {
         label: "Séances d’accompagnement",
@@ -68,12 +82,18 @@ const sections: readonly TrainerToolSection[] = [
           android: "event",
           web: "event",
         },
+        tone: "coral",
       },
     ],
   },
   {
     title: "Suivi pédagogique",
     description: "Interventions, feedbacks et avis.",
+    icon: {
+      ios: "graduationcap.fill",
+      android: "school",
+      web: "school",
+    },
     tools: [
       {
         label: "Interventions",
@@ -84,6 +104,7 @@ const sections: readonly TrainerToolSection[] = [
           android: "settings",
           web: "settings",
         },
+        tone: "violet",
       },
       {
         label: "Feedbacks apprenants",
@@ -94,62 +115,62 @@ const sections: readonly TrainerToolSection[] = [
           android: "forum",
           web: "forum",
         },
+        tone: "pink",
       },
       {
         label: "Avis sur mes formations",
-        description: "Consulter les avis.",
+        description: "Consulter les avis apprenants.",
         href: "/trainer/reviews",
         icon: {
           ios: "star.fill",
           android: "star",
           web: "star",
         },
+        tone: "amber",
       },
     ],
   },
   {
     title: "Compte et activité",
-    description: "Notifications, compte et préférences.",
+    description: "Notifications, profil et préférences.",
+    icon: {
+      ios: "person.crop.circle.fill",
+      android: "account_circle",
+      web: "account_circle",
+    },
     tools: [
       {
         label: "Notifications",
-        description: "Événements à consulter.",
+        description: "Restez informé de votre activité.",
         href: "/trainer/notifications",
         icon: {
           ios: "bell.fill",
           android: "notifications",
           web: "notifications",
         },
+        tone: "pink",
       },
       {
-        label: "Mon compte",
-        description: "Identité et préférences.",
+        label: "Mon profil",
+        description: "Gérer vos informations personnelles.",
         href: "/trainer/profile",
         icon: {
           ios: "person.crop.circle.fill",
           android: "account_circle",
           web: "account_circle",
         },
+        tone: "blue",
       },
       {
-        label: "Apparence",
-        description: "Thème et couleur.",
+        label: "Préférences",
+        description: "Personnaliser thème et couleur.",
         href: "/trainer/appearance",
         icon: {
-          ios: "paintpalette.fill",
-          android: "palette",
-          web: "palette",
+          ios: "slider.horizontal.3",
+          android: "tune",
+          web: "tune",
         },
-      },
-      {
-        label: "Mon apprentissage",
-        description: "Passer côté apprenant.",
-        href: "/learner",
-        icon: {
-          ios: "graduationcap.fill",
-          android: "school",
-          web: "school",
-        },
+        tone: "violet",
       },
     ],
   },
@@ -159,7 +180,9 @@ export default function TrainerMoreRoute() {
   const { theme } = useSmartTrainingTheme();
   const { width } = useWindowDimensions();
   const [loggingOut, setLoggingOut] = useState(false);
-  const twoColumns = width >= 360;
+
+  const threeColumns = width >= 390;
+  const toolWidth = threeColumns ? "31.6%" : "48.3%";
 
   async function handleLogout(): Promise<void> {
     if (loggingOut) {
@@ -177,381 +200,302 @@ export default function TrainerMoreRoute() {
 
   return (
     <ScrollView
-      style={[
-        styles.scroll,
-        { backgroundColor: theme.colors.background },
-      ]}
-      contentContainerStyle={styles.content}
+      className="flex-1"
+      style={{ backgroundColor: "#F8F6F3" }}
+      contentContainerStyle={{
+        paddingHorizontal: 14,
+        paddingTop: 12,
+
+        // Seule modification :
+        // anciennement 112.
+        paddingBottom: 8,
+      }}
       showsVerticalScrollIndicator={false}
     >
       <View
-        style={[
-          styles.hero,
-          {
-            backgroundColor: theme.colors.surface,
-            borderColor: theme.colors.border,
-            borderRadius: theme.shape.cardRadius,
-            borderWidth: theme.shape.borderWidth,
-          },
-        ]}
+        className="overflow-hidden rounded-[22px] border bg-white"
+        style={{
+          borderColor: "#E7E2EB",
+          shadowColor: "#0F172A",
+          shadowOffset: { width: 0, height: 3 },
+          shadowOpacity: 0.05,
+          shadowRadius: 10,
+          elevation: 2,
+        }}
       >
-        <View
-          style={[
-            styles.heroIcon,
-            { backgroundColor: theme.colors.surfaceSoft },
-          ]}
-        >
-          <SymbolView
-            name={{
-              ios: "square.grid.2x2.fill",
-              android: "apps",
-              web: "apps",
-            }}
-            tintColor={theme.colors.accent}
-            size={28}
-            weight="bold"
-          />
-        </View>
+        <View className="h-1 bg-[#7C3AED]" />
 
-        <View style={styles.heroCopy}>
-          <Text
-            style={[
-              styles.eyebrow,
-              { color: theme.colors.accent },
-            ]}
-          >
-            ESPACE FORMATEUR
-          </Text>
-          <Text
-            accessibilityRole="header"
-            style={[
-              styles.heroTitle,
-              { color: theme.colors.foreground },
-            ]}
-          >
-            Outils et pilotage
-          </Text>
-          <Text
-            style={[
-              styles.heroText,
-              { color: theme.colors.foregroundMuted },
-            ]}
-          >
-            Accès rapide aux fonctions complémentaires.
-          </Text>
+        <View className="relative overflow-hidden px-3.5 py-3">
+          <View
+            className="absolute -right-8 -top-10 h-[120px] w-[120px] rounded-full"
+            style={{ backgroundColor: "#F4ECFF" }}
+          />
+
+          <View
+            className="absolute right-3 top-5 h-[66px] w-[58px] rotate-6 rounded-[18px]"
+            style={{ backgroundColor: "#E4D2FF" }}
+          />
+
+          <View className="flex-row items-center">
+            <View className="h-12 w-12 items-center justify-center rounded-[15px] bg-[#F1E9FF]">
+              <SymbolView
+                name={{
+                  ios: "square.grid.3x3.fill",
+                  android: "apps",
+                  web: "apps",
+                }}
+                tintColor="#7C3AED"
+                size={21}
+                weight="bold"
+              />
+            </View>
+
+            <View className="ml-3 min-w-0 flex-1 pr-[68px]">
+              <Text className="text-[9px] font-black uppercase tracking-[0.6px] text-[#7C3AED]">
+                Espace formateur
+              </Text>
+
+              <Text
+                accessibilityRole="header"
+                className="mt-0.5 text-[18px] font-black leading-[22px]"
+                style={{ color: theme.colors.foreground }}
+              >
+                Outils et pilotage
+              </Text>
+
+              <Text
+                className="mt-0.5 text-[10px] leading-[14px]"
+                style={{ color: theme.colors.foregroundMuted }}
+              >
+                Accès rapide aux fonctions complémentaires.
+              </Text>
+            </View>
+
+            <View className="h-8 w-8 items-center justify-center rounded-full bg-[#F3EEFF]">
+              <SymbolView
+                name={{
+                  ios: "chevron.right",
+                  android: "chevron_right",
+                  web: "chevron_right",
+                }}
+                tintColor="#7C3AED"
+                size={11}
+                weight="bold"
+              />
+            </View>
+          </View>
         </View>
       </View>
 
       {sections.map((section) => (
-        <View key={section.title} style={styles.section}>
-          <View style={styles.sectionHead}>
-            <Text
-              accessibilityRole="header"
-              style={[
-                styles.sectionTitle,
-                { color: theme.colors.foreground },
-              ]}
-            >
-              {section.title}
-            </Text>
-            <Text
-              style={[
-                styles.sectionText,
-                { color: theme.colors.foregroundMuted },
-              ]}
-            >
-              {section.description}
-            </Text>
+        <View key={section.title} className="mt-5">
+          <View className="mb-2.5 flex-row items-center">
+            <View className="h-9 w-9 items-center justify-center rounded-[12px] bg-[#F1E9FF]">
+              <SymbolView
+                name={section.icon}
+                tintColor="#7C3AED"
+                size={15}
+                weight="bold"
+              />
+            </View>
+
+            <View className="ml-2.5 min-w-0 flex-1">
+              <Text
+                accessibilityRole="header"
+                className="text-[17px] font-black leading-[20px]"
+                style={{ color: theme.colors.foreground }}
+              >
+                {section.title}
+              </Text>
+
+              <Text
+                className="mt-0.5 text-[10px] leading-[14px]"
+                style={{ color: theme.colors.foregroundMuted }}
+              >
+                {section.description}
+              </Text>
+            </View>
           </View>
 
-          <View style={styles.grid}>
-            {section.tools.map((tool) => (
-              <Pressable
-                key={tool.href}
-                accessibilityRole="button"
-                accessibilityLabel={tool.label}
-                accessibilityHint={tool.description}
-                onPress={() =>
-                  router.push(tool.href as Href)
-                }
-                style={({ pressed }) => [
-                  styles.toolCard,
-                  twoColumns
-                    ? styles.toolCardTwoColumns
-                    : styles.toolCardOneColumn,
-                  {
-                    backgroundColor: pressed
-                      ? theme.colors.surfaceSoft
-                      : theme.colors.surface,
-                    borderColor: theme.colors.border,
-                    borderRadius: theme.shape.cardRadius,
-                    borderWidth: theme.shape.borderWidth,
-                  },
-                ]}
-              >
-                <View
-                  style={[
-                    styles.toolIcon,
-                    {
-                      backgroundColor:
-                        theme.colors.surfaceSoft,
-                    },
-                  ]}
-                >
-                  <SymbolView
-                    name={tool.icon}
-                    tintColor={theme.colors.accent}
-                    size={24}
-                    weight="bold"
-                  />
-                </View>
+          <View className="flex-row flex-wrap justify-between gap-y-2.5">
+            {section.tools.map((tool) => {
+              const visual = TONES[tool.tone];
 
-                <Text
-                  numberOfLines={2}
-                  style={[
-                    styles.toolTitle,
-                    { color: theme.colors.foreground },
-                  ]}
+              return (
+                <Pressable
+                  key={tool.href}
+                  accessibilityRole="button"
+                  accessibilityLabel={tool.label}
+                  accessibilityHint={tool.description}
+                  onPress={() => router.push(tool.href as Href)}
+                  android_ripple={{ color: "transparent" }}
+                  className="min-h-[132px] rounded-[18px] border bg-white p-2.5"
+                  style={{
+                    width: toolWidth,
+                    borderColor: "#E7E2EB",
+                    shadowColor: "#0F172A",
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.025,
+                    shadowRadius: 5,
+                    elevation: 1,
+                  }}
                 >
-                  {tool.label}
-                </Text>
+                  <View className="flex-row items-start justify-between">
+                    <View
+                      className="h-9 w-9 items-center justify-center rounded-[12px]"
+                      style={{
+                        backgroundColor: visual.soft,
+                      }}
+                    >
+                      <SymbolView
+                        name={tool.icon}
+                        tintColor={visual.color}
+                        size={16}
+                        weight="bold"
+                      />
+                    </View>
 
-                <Text
-                  numberOfLines={2}
-                  style={[
-                    styles.toolText,
-                    { color: theme.colors.foregroundMuted },
-                  ]}
-                >
-                  {tool.description}
-                </Text>
+                    <View className="h-7 w-7 items-center justify-center rounded-full bg-[#F3EEFF]">
+                      <SymbolView
+                        name={{
+                          ios: "chevron.right",
+                          android: "chevron_right",
+                          web: "chevron_right",
+                        }}
+                        tintColor="#7C3AED"
+                        size={10}
+                        weight="bold"
+                      />
+                    </View>
+                  </View>
 
-                <Text
-                  importantForAccessibility="no"
-                  style={[
-                    styles.chevron,
-                    { color: theme.colors.accent },
-                  ]}
-                >
-                  ›
-                </Text>
-              </Pressable>
-            ))}
+                  <Text
+                    numberOfLines={3}
+                    className="mt-2.5 text-[12px] font-black leading-[15px]"
+                    style={{ color: theme.colors.foreground }}
+                  >
+                    {tool.label}
+                  </Text>
+
+                  <Text
+                    numberOfLines={3}
+                    className="mt-1 text-[9px] leading-[13px]"
+                    style={{ color: theme.colors.foregroundMuted }}
+                  >
+                    {tool.description}
+                  </Text>
+                </Pressable>
+              );
+            })}
           </View>
         </View>
       ))}
 
-      <View style={styles.section}>
-        <View style={styles.sectionHead}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Mon apprentissage"
+        accessibilityHint="Passer côté apprenant"
+        onPress={() => router.push("/learner" as Href)}
+        android_ripple={{ color: "transparent" }}
+        className="mt-3 flex-row items-center rounded-[16px] border bg-white px-3 py-2.5"
+        style={{
+          borderColor: "#E7E2EB",
+        }}
+      >
+        <View className="h-9 w-9 items-center justify-center rounded-[12px] bg-[#EEF2F8]">
+          <SymbolView
+            name={{
+              ios: "book.fill",
+              android: "menu_book",
+              web: "menu_book",
+            }}
+            tintColor="#53657F"
+            size={15}
+            weight="bold"
+          />
+        </View>
+
+        <View className="ml-2.5 min-w-0 flex-1">
           <Text
-            accessibilityRole="header"
-            style={[
-              styles.sectionTitle,
-              { color: theme.colors.foreground },
-            ]}
+            className="text-[12px] font-black"
+            style={{ color: theme.colors.foreground }}
           >
-            Session
+            Mon apprentissage
           </Text>
+
           <Text
-            style={[
-              styles.sectionText,
-              { color: theme.colors.foregroundMuted },
-            ]}
+            className="mt-0.5 text-[9px]"
+            style={{ color: theme.colors.foregroundMuted }}
           >
-            Quittez ce compte sur cet appareil.
+            Accéder à mes formations côté apprenant.
           </Text>
         </View>
 
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Se déconnecter"
-          accessibilityHint="Ferme la session et revient à la connexion"
-          disabled={loggingOut}
-          onPress={() => void handleLogout()}
-          style={({ pressed }) => [
-            styles.logoutCard,
-            {
-              backgroundColor: pressed
-                ? theme.colors.surfaceSoft
-                : theme.colors.surface,
-              borderColor: theme.colors.border,
-              borderRadius: theme.shape.cardRadius,
-              borderWidth: theme.shape.borderWidth,
-              opacity: loggingOut ? 0.6 : 1,
-            },
-          ]}
-        >
-          <View
-            style={[
-              styles.toolIcon,
-              { backgroundColor: theme.colors.surfaceSoft },
-            ]}
-          >
-            <SymbolView
-              name={{
-                ios: "rectangle.portrait.and.arrow.right",
-                android: "logout",
-                web: "logout",
-              }}
-              tintColor={theme.colors.accent}
-              size={24}
-              weight="bold"
-            />
-          </View>
+        <SymbolView
+          name={{
+            ios: "chevron.right",
+            android: "chevron_right",
+            web: "chevron_right",
+          }}
+          tintColor="#7C3AED"
+          size={11}
+          weight="bold"
+        />
+      </Pressable>
 
-          <View style={styles.logoutCopy}>
-            <Text
-              style={[
-                styles.toolTitle,
-                { color: theme.colors.foreground },
-              ]}
-            >
-              {loggingOut
-                ? "Déconnexion…"
-                : "Se déconnecter"}
-            </Text>
-            <Text
-              style={[
-                styles.toolText,
-                { color: theme.colors.foregroundMuted },
-              ]}
-            >
-              Une reconnexion sera nécessaire.
-            </Text>
-          </View>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Se déconnecter"
+        accessibilityHint="Ferme la session et revient à la connexion"
+        disabled={loggingOut}
+        onPress={() => void handleLogout()}
+        android_ripple={{ color: "transparent" }}
+        className="mt-2.5 flex-row items-center rounded-[16px] border bg-white px-3 py-2.5"
+        style={{
+          borderColor: "#E7E2EB",
+          opacity: loggingOut ? 0.55 : 1,
+        }}
+      >
+        <View className="h-9 w-9 items-center justify-center rounded-[12px] bg-[#F3EEFF]">
+          <SymbolView
+            name={{
+              ios: "rectangle.portrait.and.arrow.right",
+              android: "logout",
+              web: "logout",
+            }}
+            tintColor="#7C3AED"
+            size={15}
+            weight="bold"
+          />
+        </View>
+
+        <View className="ml-2.5 min-w-0 flex-1">
+          <Text
+            className="text-[12px] font-black"
+            style={{ color: theme.colors.foreground }}
+          >
+            {loggingOut ? "Déconnexion…" : "Se déconnecter"}
+          </Text>
 
           <Text
-            importantForAccessibility="no"
-            style={[
-              styles.logoutArrow,
-              { color: theme.colors.accent },
-            ]}
+            className="mt-0.5 text-[9px]"
+            style={{ color: theme.colors.foregroundMuted }}
           >
-            →
+            Une reconnexion sera nécessaire.
           </Text>
-        </Pressable>
-      </View>
+        </View>
+
+        <SymbolView
+          name={{
+            ios: "chevron.right",
+            android: "chevron_right",
+            web: "chevron_right",
+          }}
+          tintColor="#7C3AED"
+          size={11}
+          weight="bold"
+        />
+      </Pressable>
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  scroll: {
-    flex: 1,
-  },
-  content: {
-    paddingHorizontal: 14,
-    paddingTop: 14,
-    paddingBottom: 96,
-    gap: 20,
-  },
-  hero: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    padding: 14,
-  },
-  heroIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 15,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  heroCopy: {
-    flex: 1,
-    minWidth: 0,
-  },
-  eyebrow: {
-    fontSize: 9,
-    fontWeight: "900",
-    letterSpacing: 0.8,
-  },
-  heroTitle: {
-    fontSize: 18,
-    lineHeight: 22,
-    fontWeight: "900",
-    marginTop: 2,
-  },
-  heroText: {
-    fontSize: 11,
-    lineHeight: 16,
-    marginTop: 3,
-  },
-  section: {
-    gap: 10,
-  },
-  sectionHead: {
-    gap: 2,
-    paddingHorizontal: 2,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    lineHeight: 20,
-    fontWeight: "900",
-  },
-  sectionText: {
-    fontSize: 10,
-    lineHeight: 15,
-  },
-  grid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 9,
-  },
-  toolCard: {
-    minHeight: 122,
-    padding: 11,
-    position: "relative",
-  },
-  toolCardTwoColumns: {
-    flexGrow: 1,
-    flexBasis: "47%",
-    minWidth: 145,
-  },
-  toolCardOneColumn: {
-    width: "100%",
-  },
-  toolIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 8,
-  },
-  toolTitle: {
-    fontSize: 12,
-    lineHeight: 16,
-    fontWeight: "900",
-    paddingRight: 14,
-  },
-  toolText: {
-    fontSize: 9,
-    lineHeight: 13,
-    marginTop: 3,
-    paddingRight: 12,
-  },
-  chevron: {
-    position: "absolute",
-    right: 9,
-    bottom: 8,
-    fontSize: 18,
-    fontWeight: "900",
-  },
-  logoutCard: {
-    minHeight: 72,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    padding: 11,
-  },
-  logoutCopy: {
-    flex: 1,
-    minWidth: 0,
-  },
-  logoutArrow: {
-    fontSize: 18,
-    fontWeight: "900",
-  },
-});

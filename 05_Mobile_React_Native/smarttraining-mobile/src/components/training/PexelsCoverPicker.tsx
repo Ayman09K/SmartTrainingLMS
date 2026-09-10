@@ -1,12 +1,14 @@
+import { SymbolView } from "expo-symbols";
 import { useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
   Image,
+  KeyboardAvoidingView,
   Linking,
   Modal,
+  Platform,
   Pressable,
-  StyleSheet,
   Text,
   TextInput,
   View,
@@ -25,6 +27,7 @@ type Props = {
   initialQuery?: string;
   disabled?: boolean;
   onSelect: (photo: PexelsCoverPhoto) => void;
+  onSystemBack?: () => void;
 };
 
 function apiErrorMessage(error: unknown): string {
@@ -75,6 +78,7 @@ export function PexelsCoverPicker({
   initialQuery = "",
   disabled = false,
   onSelect,
+  onSystemBack,
 }: Props) {
   const { theme } = useSmartTrainingTheme();
 
@@ -109,6 +113,18 @@ export function PexelsCoverPicker({
     }
   }
 
+  function closeModal(fromSystemBack = false) {
+    if (loading) {
+      return;
+    }
+
+    setOpen(false);
+
+    if (fromSystemBack && onSystemBack) {
+      setTimeout(() => onSystemBack(), 0);
+    }
+  }
+
   return (
     <>
       <Pressable
@@ -123,416 +139,390 @@ export function PexelsCoverPicker({
           );
           setOpen(true);
         }}
-        style={({ pressed }) => [
-          styles.trigger,
-          {
-            borderColor: theme.colors.accent,
-            backgroundColor: theme.colors.surface,
-            opacity:
-              disabled
-                ? 0.55
-                : pressed
-                  ? 0.75
-                  : 1,
-          },
-        ]}
+        android_ripple={{ color: "transparent" }}
+        className={`mt-2.5 min-h-[58px] w-full flex-row items-center rounded-[15px] bg-[#F1E9FF] px-3.5 py-2.5 ${
+          disabled ? "opacity-55" : "opacity-100"
+        }`}
       >
-        <Text
-          style={[
-            styles.triggerText,
-            { color: theme.colors.accent },
-          ]}
-        >
-          {selectedPhoto
-            ? "Changer l’image Pexels"
-            : "Choisir dans Pexels"}
-        </Text>
+        <View className="h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-white">
+          <SymbolView
+            name={{
+              ios: "sparkles",
+              android: "auto_awesome",
+              web: "auto_awesome",
+            }}
+            tintColor="#7C3AED"
+            size={15}
+            weight="bold"
+          />
+        </View>
+
+        <View className="ml-3 min-w-0 flex-1">
+          <Text className="text-[11px] font-black text-[#5B21B6]">
+            {selectedPhoto
+              ? "Changer l’image Pexels"
+              : "Choisir dans Pexels"}
+          </Text>
+
+          <Text
+            numberOfLines={1}
+            className="mt-0.5 text-[9px] text-[#776887]"
+          >
+            Photos professionnelles · recherche intégrée
+          </Text>
+        </View>
+
+        <View className="ml-2 h-9 w-9 shrink-0 items-center justify-center rounded-[11px] bg-[#7C3AED]">
+          <SymbolView
+            name={{
+              ios: "chevron.right",
+              android: "chevron_right",
+              web: "chevron_right",
+            }}
+            tintColor="#FFFFFF"
+            size={11}
+            weight="bold"
+          />
+        </View>
       </Pressable>
 
       {selectedPhoto ? (
-        <Text
-          style={[
-            styles.attribution,
-            { color: theme.colors.foregroundMuted },
-          ]}
-        >
-          Photo : {selectedPhoto.photographer} · Pexels
-        </Text>
+        <View className="mt-1.5 flex-row items-center px-1">
+          <SymbolView
+            name={{
+              ios: "checkmark.circle.fill",
+              android: "check_circle",
+              web: "check_circle",
+            }}
+            tintColor="#16845A"
+            size={10}
+          />
+
+          <Text
+            numberOfLines={1}
+            className="ml-1.5 min-w-0 flex-1 text-[9px]"
+            style={{ color: theme.colors.foregroundMuted }}
+          >
+            Photo : {selectedPhoto.photographer} · Pexels
+          </Text>
+        </View>
       ) : null}
 
       <Modal
         visible={open}
         animationType="slide"
         presentationStyle="pageSheet"
-        onRequestClose={() => {
-          if (!loading) {
-            setOpen(false);
-          }
-        }}
+        onRequestClose={() => closeModal(true)}
       >
-        <View
-          style={[
-            styles.modal,
-            {
-              backgroundColor:
-                theme.colors.background,
-            },
-          ]}
+        <KeyboardAvoidingView
+          className="flex-1"
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
-          <View style={styles.header}>
-            <View style={styles.headerText}>
-              <Text
-                style={[
-                  styles.title,
-                  { color: theme.colors.foreground },
-                ]}
+          <View
+            className="flex-1 px-3.5 pb-2 pt-4"
+            style={{ backgroundColor: theme.colors.background }}
+          >
+            <View
+              className="mb-3 overflow-hidden rounded-[22px] bg-white"
               >
-                Bibliothèque Pexels
-              </Text>
+              <View className="h-1 bg-[#7C3AED]" />
 
-              <Text
-                style={[
-                  styles.subtitle,
-                  {
-                    color:
-                      theme.colors.foregroundMuted,
-                  },
-                ]}
-              >
-                Recherchez une image de couverture au format paysage.
-              </Text>
+              <View className="flex-row items-start px-4 py-3.5">
+                <View className="h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-[#F1E9FF]">
+                  <SymbolView
+                    name={{
+                      ios: "photo.on.rectangle.angled",
+                      android: "collections",
+                      web: "collections",
+                    }}
+                    tintColor="#7C3AED"
+                    size={17}
+                    weight="bold"
+                  />
+                </View>
+
+                <View className="ml-3 min-w-0 flex-1">
+                  <Text className="text-[9px] font-black uppercase tracking-[0.7px] text-[#7C3AED]">
+                    Bibliothèque d’images
+                  </Text>
+
+                  <Text
+                    className="mt-0.5 text-[18px] font-black"
+                    style={{ color: theme.colors.foreground }}
+                  >
+                    Pexels
+                  </Text>
+
+                  <Text
+                    className="mt-1 text-[9px] leading-[14px]"
+                    style={{ color: theme.colors.foregroundMuted }}
+                  >
+                    Recherchez une couverture professionnelle au format paysage.
+                  </Text>
+                </View>
+
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Fermer la bibliothèque Pexels"
+                  disabled={loading}
+                  onPress={() => closeModal(false)}
+                  className="ml-2 h-9 w-9 items-center justify-center rounded-[11px] bg-[#F7F3FC]"
+                  style={{ opacity: loading ? 0.45 : 1 }}
+                >
+                  <SymbolView
+                    name={{
+                      ios: "xmark",
+                      android: "close",
+                      web: "close",
+                    }}
+                    tintColor="#7C3AED"
+                    size={11}
+                    weight="bold"
+                  />
+                </Pressable>
+              </View>
             </View>
 
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Fermer la bibliothèque Pexels"
-              disabled={loading}
-              onPress={() => setOpen(false)}
-              style={[
-                styles.closeButton,
-                {
-                  borderColor: theme.colors.border,
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.closeText,
-                  { color: theme.colors.foreground },
-                ]}
+            <View
+              className="mb-3 rounded-[18px] bg-white p-3.5"
               >
-                Fermer
+              <Text
+                className="text-[11px] font-black"
+                style={{ color: theme.colors.foreground }}
+              >
+                Rechercher une couverture
+              </Text>
+
+              <Text
+                className="mt-0.5 text-[8px]"
+                style={{ color: theme.colors.foregroundMuted }}
+              >
+                Utilisez au moins 2 caractères.
+              </Text>
+
+              <View
+                className="mt-2.5 flex-row items-center rounded-[14px] border border-[#E7E0EB] bg-[#FCFBFD] px-3"
+              >
+                <SymbolView
+                  name={{
+                    ios: "magnifyingglass",
+                    android: "search",
+                    web: "search",
+                  }}
+                  tintColor={theme.colors.foregroundSubtle}
+                  size={14}
+                />
+
+                <TextInput
+                  value={query}
+                  onChangeText={setQuery}
+                  onSubmitEditing={() => void runSearch()}
+                  returnKeyType="search"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  placeholder="Ex. data, leadership, cybersécurité..."
+                  placeholderTextColor={theme.colors.foregroundSubtle}
+                  accessibilityLabel="Rechercher une image Pexels"
+                  className="ml-2 h-[48px] min-w-0 flex-1 text-[12px]"
+                  style={{ color: theme.colors.foreground }}
+                />
+              </View>
+
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Rechercher dans Pexels"
+                disabled={loading}
+                onPress={() => void runSearch()}
+                className="mt-2.5 h-[44px] flex-row items-center justify-center rounded-[13px] bg-[#7C3AED] px-3"
+                style={{ opacity: loading ? 0.65 : 1 }}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <>
+                    <SymbolView
+                      name={{
+                        ios: "magnifyingglass",
+                        android: "search",
+                        web: "search",
+                      }}
+                      tintColor="#FFFFFF"
+                      size={12}
+                      weight="bold"
+                    />
+
+                    <Text className="ml-2 text-[10px] font-black text-white">
+                      Rechercher
+                    </Text>
+                  </>
+                )}
+              </Pressable>
+            </View>
+
+            {error ? (
+              <View className="mb-3 flex-row items-start rounded-[15px] border border-[#F2C6C3] bg-[#FFF4F2] px-3 py-3">
+                <View className="h-8 w-8 items-center justify-center rounded-[10px] bg-white">
+                  <SymbolView
+                    name={{
+                      ios: "exclamationmark.triangle.fill",
+                      android: "error",
+                      web: "error",
+                    }}
+                    tintColor="#C2413D"
+                    size={13}
+                    weight="bold"
+                  />
+                </View>
+
+                <View className="ml-2.5 min-w-0 flex-1">
+                  <Text className="text-[9px] font-black text-[#C2413D]">
+                    Recherche impossible
+                  </Text>
+
+                  <Text
+                    className="mt-0.5 text-[8px] leading-[13px]"
+                    style={{ color: theme.colors.foregroundMuted }}
+                  >
+                    {error}
+                  </Text>
+                </View>
+              </View>
+            ) : null}
+
+            {!loading &&
+            !error &&
+            photos.length === 0 ? (
+              <View className="items-center rounded-[18px] border border-[#E7E0EB] bg-white px-5 py-7">
+                <View className="h-11 w-11 items-center justify-center rounded-[14px] bg-[#F1E9FF]">
+                  <SymbolView
+                    name={{
+                      ios: "photo.stack",
+                      android: "photo_library",
+                      web: "photo_library",
+                    }}
+                    tintColor="#7C3AED"
+                    size={17}
+                  />
+                </View>
+
+                <Text
+                  className="mt-2.5 text-[11px] font-black"
+                  style={{ color: theme.colors.foreground }}
+                >
+                  Aucune recherche lancée
+                </Text>
+
+                <Text
+                  className="mt-1 text-center text-[8px] leading-[13px]"
+                  style={{ color: theme.colors.foregroundMuted }}
+                >
+                  Recherchez un thème pour afficher des couvertures Pexels.
+                </Text>
+              </View>
+            ) : null}
+
+            <FlatList
+              data={photos}
+              keyExtractor={(item) => String(item.id)}
+              numColumns={2}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+              className="flex-1"
+              contentContainerStyle={{
+                paddingBottom: 10,
+              }}
+              columnWrapperStyle={{
+                gap: 10,
+              }}
+              renderItem={({ item }) => {
+                const selected =
+                  selectedPhoto?.id === item.id;
+
+                return (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Photo de ${item.photographer}`}
+                    accessibilityState={{ selected }}
+                    onPress={() => {
+                      onSelect(item);
+                      setOpen(false);
+                    }}
+                    className={`mb-2.5 min-w-0 flex-1 overflow-hidden rounded-[15px] bg-white ${
+                      selected
+                        ? "border-2 border-[#7C3AED]"
+                        : "border border-[#E7E0EB]"
+                    }`}
+                  >
+                    <View className="relative overflow-hidden">
+                      <Image
+                        source={{
+                          uri:
+                            item.previewUrl ||
+                            item.landscapeUrl,
+                        }}
+                        resizeMode="cover"
+                        accessibilityLabel={
+                          item.alt ||
+                          `Photo de ${item.photographer}`
+                        }
+                        className="w-full bg-[#F7F3FC]"
+                        style={{ aspectRatio: 16 / 9 }}
+                      />
+
+                      {selected ? (
+                        <View className="absolute right-2 top-2 h-7 w-7 items-center justify-center rounded-full bg-[#7C3AED]">
+                          <SymbolView
+                            name={{
+                              ios: "checkmark",
+                              android: "check",
+                              web: "check",
+                            }}
+                            tintColor="#FFFFFF"
+                            size={10}
+                            weight="bold"
+                          />
+                        </View>
+                      ) : null}
+                    </View>
+
+                    <View className="px-2.5 py-2">
+                      <Text
+                        numberOfLines={1}
+                        className="text-[9px] font-black"
+                        style={{ color: theme.colors.foreground }}
+                      >
+                        {item.photographer}
+                      </Text>
+
+                      <Text
+                        className="mt-0.5 text-[7px]"
+                        style={{ color: theme.colors.foregroundMuted }}
+                      >
+                        Pexels
+                      </Text>
+                    </View>
+                  </Pressable>
+                );
+              }}
+            />
+
+            <Pressable
+              accessibilityRole="link"
+              accessibilityLabel="Ouvrir Pexels"
+              onPress={() => {
+                void Linking.openURL(
+                  "https://www.pexels.com/",
+                );
+              }}
+              className="self-center px-3 py-2"
+            >
+              <Text className="text-[9px] font-black text-[#7C3AED]">
+                Photos fournies par Pexels
               </Text>
             </Pressable>
           </View>
-
-          <TextInput
-            value={query}
-            onChangeText={setQuery}
-            onSubmitEditing={() => void runSearch()}
-            returnKeyType="search"
-            autoCapitalize="none"
-            autoCorrect={false}
-            placeholder="Ex. data, leadership, cybersécurité..."
-            placeholderTextColor={
-              theme.colors.foregroundSubtle
-            }
-            accessibilityLabel="Rechercher une image Pexels"
-            style={[
-              styles.input,
-              {
-                color: theme.colors.foreground,
-                borderColor: theme.colors.border,
-                backgroundColor: theme.colors.surface,
-              },
-            ]}
-          />
-
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Rechercher dans Pexels"
-            disabled={loading}
-            onPress={() => void runSearch()}
-            style={[
-              styles.searchButton,
-              {
-                backgroundColor: theme.colors.accent,
-                opacity: loading ? 0.65 : 1,
-              },
-            ]}
-          >
-            {loading ? (
-              <ActivityIndicator
-                color={
-                  theme.colors.accentForeground
-                }
-              />
-            ) : (
-              <Text
-                style={[
-                  styles.searchText,
-                  {
-                    color:
-                      theme.colors.accentForeground,
-                  },
-                ]}
-              >
-                Rechercher
-              </Text>
-            )}
-          </Pressable>
-
-          {error ? (
-            <View
-              style={[
-                styles.message,
-                {
-                  backgroundColor: theme.colors.surface,
-                  borderColor: theme.colors.danger,
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.messageText,
-                  { color: theme.colors.danger },
-                ]}
-              >
-                {error}
-              </Text>
-            </View>
-          ) : null}
-
-          {!loading &&
-          !error &&
-          photos.length === 0 ? (
-            <Text
-              style={[
-                styles.empty,
-                {
-                  color:
-                    theme.colors.foregroundMuted,
-                },
-              ]}
-            >
-              Lancez une recherche pour afficher des couvertures.
-            </Text>
-          ) : null}
-
-          <FlatList
-            data={photos}
-            keyExtractor={(item) =>
-              String(item.id)
-            }
-            numColumns={2}
-            columnWrapperStyle={styles.columns}
-            contentContainerStyle={styles.list}
-            keyboardShouldPersistTaps="handled"
-            renderItem={({ item }) => (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={
-                  `Photo de ${item.photographer}`
-                }
-                onPress={() => {
-                  onSelect(item);
-                  setOpen(false);
-                }}
-                style={[
-                  styles.card,
-                  {
-                    backgroundColor:
-                      theme.colors.surface,
-                    borderColor:
-                      selectedPhoto?.id === item.id
-                        ? theme.colors.accent
-                        : theme.colors.border,
-                  },
-                ]}
-              >
-                <Image
-                  source={{
-                    uri:
-                      item.previewUrl ||
-                      item.landscapeUrl,
-                  }}
-                  resizeMode="contain"
-                  accessibilityLabel={
-                    item.alt ||
-                    `Photo de ${item.photographer}`
-                  }
-                  style={[
-                    styles.photo,
-                    {
-                      backgroundColor:
-                        theme.colors.surfaceSoft,
-                    },
-                  ]}
-                />
-
-                <Text
-                  numberOfLines={1}
-                  style={[
-                    styles.photographer,
-                    {
-                      color:
-                        theme.colors.foreground,
-                    },
-                  ]}
-                >
-                  {item.photographer}
-                </Text>
-              </Pressable>
-            )}
-          />
-
-          <Pressable
-            accessibilityRole="link"
-            accessibilityLabel="Ouvrir Pexels"
-            onPress={() => {
-              void Linking.openURL(
-                "https://www.pexels.com/",
-              );
-            }}
-            style={styles.pexelsLink}
-          >
-            <Text
-              style={[
-                styles.pexelsText,
-                { color: theme.colors.accent },
-              ]}
-            >
-              Photos fournies par Pexels
-            </Text>
-          </Pressable>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  trigger: {
-    minHeight: 46,
-    borderWidth: 1,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    marginTop: 10,
-  },
-  triggerText: {
-    fontSize: 13,
-    fontWeight: "900",
-  },
-  attribution: {
-    fontSize: 11,
-    lineHeight: 16,
-    marginTop: 6,
-  },
-  modal: {
-    flex: 1,
-    paddingTop: 18,
-    paddingHorizontal: 14,
-    paddingBottom: 10,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 12,
-    marginBottom: 14,
-  },
-  headerText: {
-    flex: 1,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: "900",
-  },
-  subtitle: {
-    fontSize: 12,
-    lineHeight: 17,
-    marginTop: 3,
-  },
-  closeButton: {
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  closeText: {
-    fontSize: 12,
-    fontWeight: "800",
-  },
-  input: {
-    minHeight: 48,
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    fontSize: 14,
-    marginBottom: 8,
-  },
-  searchButton: {
-    minHeight: 44,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 14,
-    marginBottom: 10,
-  },
-  searchText: {
-    fontSize: 13,
-    fontWeight: "900",
-  },
-  message: {
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 10,
-    marginBottom: 10,
-  },
-  messageText: {
-    fontSize: 12,
-    lineHeight: 17,
-  },
-  empty: {
-    fontSize: 12,
-    lineHeight: 18,
-    textAlign: "center",
-    paddingVertical: 18,
-  },
-  list: {
-    flexGrow: 1,
-    paddingBottom: 8,
-  },
-  columns: {
-    gap: 10,
-  },
-  card: {
-    flex: 1,
-    minWidth: 0,
-    borderWidth: 1,
-    borderRadius: 12,
-    overflow: "hidden",
-    marginBottom: 10,
-  },
-  photo: {
-    width: "100%",
-    aspectRatio: 16 / 9,
-  },
-  photographer: {
-    fontSize: 11,
-    fontWeight: "800",
-    paddingHorizontal: 8,
-    paddingVertical: 8,
-  },
-  pexelsLink: {
-    alignSelf: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  pexelsText: {
-    fontSize: 11,
-    fontWeight: "800",
-  },
-});

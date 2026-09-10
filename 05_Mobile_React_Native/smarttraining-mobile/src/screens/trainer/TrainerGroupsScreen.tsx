@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { SymbolView } from "expo-symbols";
+import type { ComponentProps } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Pressable,
   RefreshControl,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   View,
@@ -12,56 +13,58 @@ import {
 import ErrorMessage from "../../components/ErrorMessage";
 import LoadingState from "../../components/LoadingState";
 import ScreenContainer from "../../components/ScreenContainer";
-import SectionHeader from "../../components/SectionHeader";
-import {
-  getTrainerGroups,
-} from "../../features/trainer/trainerGroupService";
-import {
-  useSmartTrainingTheme,
-} from "../../theme/provider/SmartTrainingThemeProvider";
-import {
-  TrainerLearnerGroup,
-} from "../../types/trainerGroupMobile";
+import { getTrainerGroups } from "../../features/trainer/trainerGroupService";
+import { useSmartTrainingTheme } from "../../theme/provider/SmartTrainingThemeProvider";
+import type { TrainerLearnerGroup } from "../../types/trainerGroupMobile";
 
 type Props = {
   onOpenGroup: (groupId: number) => void;
 };
 
+type SymbolName = ComponentProps<typeof SymbolView>["name"];
+type PaginationItem = number | "ellipsis";
+
+const PAGE_SIZE = 4;
+
+function buildPagination(currentPage: number, totalPages: number): PaginationItem[] {
+  if (totalPages <= 5) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1);
+  }
+  if (currentPage <= 2) return [1, 2, 3, "ellipsis", totalPages];
+  if (currentPage >= totalPages - 1) {
+    return [1, "ellipsis", totalPages - 2, totalPages - 1, totalPages];
+  }
+  return [1, "ellipsis", currentPage, "ellipsis", totalPages];
+}
+
 function formatDate(value?: string | null): string {
-  if (!value) {
-    return "-";
-  }
-
+  if (!value) return "Non disponible";
   const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-
-  return new Intl.DateTimeFormat("fr-FR", {
-    dateStyle: "medium",
-  }).format(date);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium" }).format(date);
 }
 
 function ownerRoleLabel(value?: string | null): string {
-  if (value === "ADMIN") {
-    return "Administrateur";
-  }
-
-  if (value === "FORMATEUR") {
-    return "Formateur";
-  }
-
+  if (value === "ADMIN") return "Administrateur";
+  if (value === "FORMATEUR") return "Formateur";
   return "Gestionnaire";
 }
 
-export default function TrainerGroupsScreen({
-  onOpenGroup,
-}: Props) {
+function groupInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "GR";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0] ?? ""}${parts[parts.length - 1][0] ?? ""}`.toUpperCase();
+}
+
+export default function TrainerGroupsScreen({ onOpenGroup }: Props) {
   const { theme } = useSmartTrainingTheme();
-  const [groups, setGroups] =
-    useState<TrainerLearnerGroup[]>([]);
+  const scrollRef = useRef<ScrollView | null>(null);
+  const listTopRef = useRef(0);
+
+  const [groups, setGroups] = useState<TrainerLearnerGroup[]>([]);
   const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
@@ -76,24 +79,15 @@ export default function TrainerGroupsScreen({
 
     void getTrainerGroups()
       .then((loaded) => {
-        if (!active) {
-          return;
-        }
-
+        if (!active) return;
         setGroups(loaded);
         setError("");
       })
       .catch(() => {
-        if (active) {
-          setError(
-            "Impossible de charger vos groupes.",
-          );
-        }
+        if (active) setError("Impossible de charger vos groupes.");
       })
       .finally(() => {
-        if (active) {
-          setLoading(false);
-        }
+        if (active) setLoading(false);
       });
 
     return () => {
@@ -103,361 +97,525 @@ export default function TrainerGroupsScreen({
 
   async function refresh() {
     setRefreshing(true);
-
     try {
       await load();
       setError("");
     } catch {
-      setError(
-        "Impossible d'actualiser vos groupes.",
-      );
+      setError("Impossible d'actualiser vos groupes.");
     } finally {
       setRefreshing(false);
     }
   }
 
   const visibleGroups = useMemo(() => {
-    const normalized = query
-      .trim()
-      .toLocaleLowerCase("fr");
-
-    if (!normalized) {
-      return groups;
-    }
+    const normalized = query.trim().toLocaleLowerCase("fr");
+    if (!normalized) return groups;
 
     return groups.filter((group) =>
-      [
-        group.name,
-        group.description || "",
-        ownerRoleLabel(group.ownerRole),
-      ]
+      [group.name, group.description || "", ownerRoleLabel(group.ownerRole)]
         .join(" ")
         .toLocaleLowerCase("fr")
         .includes(normalized),
     );
   }, [groups, query]);
 
+  const totalMembers = useMemo(
+    () =>
+      groups.reduce(
+        (sum, group) =>
+          sum + (Number.isFinite(group.memberCount) ? group.memberCount : 0),
+        0,
+      ),
+    [groups],
+  );
+
+  const totalPages = Math.max(1, Math.ceil(visibleGroups.length / PAGE_SIZE));
+  const currentPage = Math.min(Math.max(page, 1), totalPages);
+
+  const paginatedGroups = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return visibleGroups.slice(start, start + PAGE_SIZE);
+  }, [currentPage, visibleGroups]);
+
+  const paginationItems = useMemo(
+    () => buildPagination(currentPage, totalPages),
+    [currentPage, totalPages],
+  );
+
+  const firstVisible =
+    visibleGroups.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
+  const lastVisible = Math.min(currentPage * PAGE_SIZE, visibleGroups.length);
+
+  function updateQuery(value: string) {
+    setQuery(value);
+    setPage(1);
+  }
+
+  function changePage(nextPage: number) {
+    const normalizedPage = Math.min(Math.max(nextPage, 1), totalPages);
+    if (normalizedPage === currentPage) return;
+
+    setPage(normalizedPage);
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollTo({
+        y: Math.max(0, listTopRef.current - 12),
+        animated: true,
+      });
+    });
+  }
+
   if (loading) {
-    return (
-      <LoadingState message="Chargement de vos groupes..." />
-    );
+    return <LoadingState message="Chargement de vos groupes..." />;
   }
 
   return (
-    <ScreenContainer>
+    <ScreenContainer
+      edges={["left", "right", "bottom"]}
+      style={{ padding: 0, backgroundColor: "#F8F6F3" }}
+    >
       <ScrollView
-        style={styles.scrollArea}
-        contentContainerStyle={[
-          styles.content,
-          {
-            paddingBottom: theme.shape.cardPadding * 2,
-          },
-        ]}
+        ref={scrollRef}
+        className="flex-1"
+        contentContainerStyle={{ paddingBottom: 12 }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={() => void refresh()}
             tintColor={theme.colors.accent}
+            colors={[theme.colors.accent]}
           />
         }
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.page}>
-          <SectionHeader
-            title="Groupes / cohortes"
-            subtitle="Consultez les groupes que vous pouvez gerer depuis votre espace formateur."
-          />
+        <View className="mx-auto w-full max-w-[760px] px-4">
+          <View className="pb-3 pt-4">
+            <View className="flex-row items-start">
+              <View className="min-w-0 flex-1">
+                <View
+                  className="self-start rounded-full px-2.5 py-1"
+                  style={{ backgroundColor: "#F3EEFF" }}
+                >
+                  <Text
+                    className="text-[11px] font-black uppercase tracking-[0.7px]"
+                    style={{ color: theme.colors.accent }}
+                  >
+                    Organisation
+                  </Text>
+                </View>
 
-          {error ? (
-            <ErrorMessage
-              message={error}
-              onRetry={() => void refresh()}
-            />
-          ) : null}
+                <Text
+                  className="mt-2 text-[26px] font-black leading-[30px]"
+                  style={{ color: theme.colors.foreground }}
+                >
+                  Groupes / cohortes
+                </Text>
 
-          <TextInput
-            accessibilityLabel="Rechercher un groupe"
-            value={query}
-            onChangeText={setQuery}
-            placeholder="Rechercher un groupe..."
-            placeholderTextColor={
-              theme.colors.foregroundSubtle
-            }
-            style={[
-              styles.search,
-              {
-                backgroundColor: theme.colors.surface,
-                borderColor: theme.colors.border,
-                borderRadius: theme.shape.cardRadius,
-                borderWidth: theme.shape.borderWidth,
-                color: theme.colors.foreground,
-              },
-            ]}
-          />
+                <Text
+                  className="mt-1.5 max-w-[540px] text-[13px] leading-[16px]"
+                  style={{ color: theme.colors.foregroundMuted }}
+                >
+                  Consultez les groupes que vous pouvez gérer depuis votre espace formateur.
+                </Text>
+              </View>
 
-          <View style={styles.summaryRow}>
-            <Text
-              style={[
-                styles.summaryText,
-                { color: theme.colors.foregroundMuted },
-              ]}
-            >
-              {visibleGroups.length} groupe(s)
-            </Text>
+              <View
+                className="ml-3 h-12 w-12 items-center justify-center rounded-[16px]"
+                style={{ backgroundColor: "#F1E9FF" }}
+              >
+                <SymbolView
+                  name={{ ios: "person.3.fill", android: "groups", web: "groups" }}
+                  tintColor="#7C3AED"
+                  size={21}
+                  weight="bold"
+                />
+              </View>
+            </View>
           </View>
 
-          {visibleGroups.length === 0 ? (
-            <View
-              style={[
-                styles.emptyCard,
-                {
-                  backgroundColor: theme.colors.surface,
-                  borderColor: theme.colors.border,
-                  borderRadius: theme.shape.cardRadius,
-                  borderWidth: theme.shape.borderWidth,
-                  padding: theme.shape.cardPadding,
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.emptyTitle,
-                  { color: theme.colors.foreground },
-                ]}
+          <View className="mb-3 flex-row gap-2">
+            <SummaryCard
+              icon={{ ios: "person.3.fill", android: "groups", web: "groups" }}
+              value={String(groups.length)}
+              label="Groupes"
+            />
+            <SummaryCard
+              icon={{ ios: "person.2.fill", android: "group", web: "group" }}
+              value={String(totalMembers)}
+              label="Membres"
+            />
+          </View>
+
+          <View
+            className="mb-4 flex-row items-center rounded-[16px] border bg-white px-3"
+            style={{ borderColor: "#E5DFE8" }}
+          >
+            <SymbolView
+              name={{ ios: "magnifyingglass", android: "search", web: "search" }}
+              tintColor={theme.colors.foregroundSubtle}
+              size={17}
+            />
+            <TextInput
+              accessibilityLabel="Rechercher un groupe"
+              value={query}
+              onChangeText={updateQuery}
+              placeholder="Rechercher un groupe..."
+              placeholderTextColor={theme.colors.foregroundSubtle}
+              className="ml-2 min-h-[48px] flex-1 text-[14px]"
+              style={{ color: theme.colors.foreground }}
+            />
+            {query.trim() ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Effacer la recherche"
+                onPress={() => updateQuery("")}
+                android_ripple={{ color: "transparent" }}
+                className="h-8 w-8 items-center justify-center rounded-full"
               >
-                Aucun groupe a afficher
+                <SymbolView
+                  name={{ ios: "xmark.circle.fill", android: "cancel", web: "cancel" }}
+                  tintColor={theme.colors.foregroundSubtle}
+                  size={15}
+                />
+              </Pressable>
+            ) : null}
+          </View>
+
+          {error ? (
+            <View className="mb-4">
+              <ErrorMessage message={error} onRetry={() => void refresh()} />
+            </View>
+          ) : null}
+
+          <View
+            onLayout={(event) => {
+              listTopRef.current = event.nativeEvent.layout.y;
+            }}
+          >
+            <View className="mb-3">
+              <Text
+                className="text-[19px] font-black"
+                style={{ color: theme.colors.foreground }}
+              >
+                Vos groupes
               </Text>
               <Text
-                style={[
-                  styles.emptyText,
-                  { color: theme.colors.foregroundMuted },
-                ]}
+                className="mt-0.5 text-[12px] font-semibold"
+                style={{ color: theme.colors.foregroundMuted }}
               >
-                Creez ou organisez vos groupes depuis le Web,
-                puis retrouvez-les ici.
+                {visibleGroups.length === 0
+                  ? "Aucun résultat"
+                  : `${firstVisible}–${lastVisible} sur ${visibleGroups.length}`}
               </Text>
             </View>
-          ) : (
-            <View style={styles.list}>
-              {visibleGroups.map((group) => (
-                <Pressable
-                  key={group.id}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Ouvrir le groupe ${group.name}`}
-                  onPress={() => onOpenGroup(group.id)}
-                  style={({ pressed }) => [
-                    styles.card,
-                    {
-                      backgroundColor:
-                        theme.colors.surface,
-                      borderColor: pressed
-                        ? theme.colors.accent
-                        : theme.colors.border,
-                      borderRadius:
-                        theme.shape.cardRadius,
-                      borderWidth:
-                        Math.max(
-                          1,
-                          theme.shape.borderWidth,
-                        ),
-                      padding:
-                        theme.shape.cardPadding,
-                      opacity: pressed ? 0.9 : 1,
-                    },
-                  ]}
+
+            {visibleGroups.length === 0 ? (
+              <View
+                className="items-center rounded-[22px] border bg-white px-5 py-8"
+                style={{ borderColor: "#E5DFE8" }}
+              >
+                <View
+                  className="h-[58px] w-[58px] items-center justify-center rounded-full"
+                  style={{ backgroundColor: "#F1E9FF" }}
                 >
-                  <View style={styles.cardTop}>
-                    <View style={styles.cardCopy}>
-                      <Text
-                        style={[
-                          styles.cardTitle,
-                          {
-                            color:
-                              theme.colors.foreground,
-                          },
-                        ]}
-                      >
-                        {group.name}
-                      </Text>
+                  <SymbolView
+                    name={{ ios: "person.3.fill", android: "groups", web: "groups" }}
+                    tintColor="#7C3AED"
+                    size={23}
+                    weight="bold"
+                  />
+                </View>
+                <Text
+                  className="mt-4 text-[16px] font-black"
+                  style={{ color: theme.colors.foreground }}
+                >
+                  Aucun groupe à afficher
+                </Text>
+                <Text
+                  className="mt-1.5 text-center text-[12px] leading-[15px]"
+                  style={{ color: theme.colors.foregroundMuted }}
+                >
+                  Créez ou organisez vos groupes depuis le Web, puis retrouvez-les ici.
+                </Text>
+              </View>
+            ) : (
+              <>
+                <View className="gap-3">
+                  {paginatedGroups.map((group) => (
+                    <GroupCard key={group.id} group={group} />
+                  ))}
+                </View>
 
-                      {group.description ? (
-                        <Text
-                          numberOfLines={3}
-                          style={[
-                            styles.cardDescription,
-                            {
-                              color:
-                                theme.colors
-                                  .foregroundMuted,
-                            },
-                          ]}
+                <View
+                  className="mb-5 mt-4 rounded-[22px] border bg-white px-3 py-3"
+                  style={{ borderColor: theme.colors.border }}
+                >
+                  <View className="mb-3 flex-row items-center justify-between">
+                    <Text
+                      className="text-[13px] font-bold"
+                      style={{ color: theme.colors.foregroundMuted }}
+                    >
+                      {firstVisible}–{lastVisible} sur {visibleGroups.length}
+                    </Text>
+                    <View className="rounded-full bg-[#F3EEFF] px-2.5 py-1">
+                      <Text
+                        className="text-[12px] font-black"
+                        style={{ color: theme.colors.accent }}
+                      >
+                        Page {currentPage} / {totalPages}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View className="flex-row items-center justify-center gap-1.5">
+                    <PaginationArrow
+                      direction="previous"
+                      disabled={currentPage === 1}
+                      onPress={() => changePage(currentPage - 1)}
+                    />
+
+                    {paginationItems.map((item, index) => {
+                      if (item === "ellipsis") {
+                        return (
+                          <View
+                            key={`ellipsis-${index}`}
+                            className="h-9 w-6 items-center justify-center"
+                          >
+                            <Text
+                              className="text-[15px] font-bold"
+                              style={{ color: theme.colors.foregroundSubtle }}
+                            >
+                              …
+                            </Text>
+                          </View>
+                        );
+                      }
+
+                      const active = item === currentPage;
+
+                      return (
+                        <Pressable
+                          key={item}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Page ${item}`}
+                          accessibilityState={{ selected: active }}
+                          onPress={() => changePage(item)}
+                          android_ripple={{ color: "transparent" }}
+                          className="h-9 w-9 items-center justify-center rounded-xl border"
+                          style={{
+                            backgroundColor: active
+                              ? theme.colors.accent
+                              : theme.colors.surface,
+                            borderColor: active
+                              ? theme.colors.accent
+                              : theme.colors.border,
+                          }}
                         >
-                          {group.description}
-                        </Text>
-                      ) : null}
-                    </View>
+                          <Text
+                            className="text-[13px] font-black"
+                            style={{
+                              color: active
+                                ? theme.colors.accentForeground
+                                : theme.colors.foregroundMuted,
+                            }}
+                          >
+                            {item}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
 
-                    <View
-                      style={[
-                        styles.countBadge,
-                        {
-                          backgroundColor:
-                            theme.colors.surfaceSoft,
-                          borderColor:
-                            theme.colors.border,
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.countValue,
-                          {
-                            color:
-                              theme.colors.accent,
-                          },
-                        ]}
-                      >
-                        {group.memberCount}
-                      </Text>
-                      <Text
-                        style={[
-                          styles.countLabel,
-                          {
-                            color:
-                              theme.colors
-                                .foregroundMuted,
-                          },
-                        ]}
-                      >
-                        membres
-                      </Text>
-                    </View>
+                    <PaginationArrow
+                      direction="next"
+                      disabled={currentPage === totalPages}
+                      onPress={() => changePage(currentPage + 1)}
+                    />
                   </View>
-
-                  <View style={styles.metaRow}>
-                    <Text
-                      style={[
-                        styles.metaText,
-                        {
-                          color:
-                            theme.colors
-                              .foregroundSubtle,
-                        },
-                      ]}
-                    >
-                      {ownerRoleLabel(group.ownerRole)}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.metaText,
-                        {
-                          color:
-                            theme.colors
-                              .foregroundSubtle,
-                        },
-                      ]}
-                    >
-                      Mis a jour : {formatDate(group.updatedAt)}
-                    </Text>
-                  </View>
-                </Pressable>
-              ))}
-            </View>
-          )}
+                </View>
+              </>
+            )}
+          </View>
         </View>
       </ScrollView>
     </ScreenContainer>
   );
-}
 
-const styles = StyleSheet.create({
-  scrollArea: {
-    flex: 1,
-    minHeight: 0,
-  },
-  content: {
-    flexGrow: 1,
-  },
-  page: {
-    width: "100%",
-    maxWidth: 1080,
-    alignSelf: "center",
-  },
-  search: {
-    minHeight: 48,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    fontSize: 14,
-    marginBottom: 10,
-  },
-  summaryRow: {
-    alignItems: "flex-end",
-    marginBottom: 12,
-  },
-  summaryText: {
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  list: {
-    gap: 12,
-  },
-  card: {
-    gap: 14,
-  },
-  cardTop: {
-    flexDirection: "row",
-    gap: 14,
-    alignItems: "flex-start",
-  },
-  cardCopy: {
-    flex: 1,
-    minWidth: 0,
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: "900",
-  },
-  cardDescription: {
-    fontSize: 13,
-    lineHeight: 20,
-    marginTop: 6,
-  },
-  countBadge: {
-    minWidth: 72,
-    alignItems: "center",
-    borderWidth: 1,
-    borderRadius: 14,
-    paddingHorizontal: 10,
-    paddingVertical: 9,
-  },
-  countValue: {
-    fontSize: 20,
-    fontWeight: "900",
-  },
-  countLabel: {
-    fontSize: 10,
-    fontWeight: "700",
-    marginTop: 2,
-  },
-  metaRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-    justifyContent: "space-between",
-  },
-  metaText: {
-    fontSize: 11,
-    lineHeight: 16,
-  },
-  emptyCard: {
-    gap: 6,
-  },
-  emptyTitle: {
-    fontSize: 17,
-    fontWeight: "900",
-  },
-  emptyText: {
-    fontSize: 13,
-    lineHeight: 20,
-  },
-});
+  function SummaryCard({
+    icon,
+    value,
+    label,
+  }: {
+    icon: SymbolName;
+    value: string;
+    label: string;
+  }) {
+    return (
+      <View
+        className="min-w-0 flex-1 rounded-[17px] border bg-white px-3 py-3"
+        style={{ borderColor: "#E5DFE8" }}
+      >
+        <View className="flex-row items-center">
+          <View
+            className="h-8 w-8 items-center justify-center rounded-[10px]"
+            style={{ backgroundColor: "#F1E9FF" }}
+          >
+            <SymbolView name={icon} tintColor="#7C3AED" size={13} weight="bold" />
+          </View>
+          <Text
+            className="ml-2 text-[18px] font-black"
+            style={{ color: theme.colors.foreground }}
+          >
+            {value}
+          </Text>
+        </View>
+        <Text
+          className="mt-1.5 text-[11px] font-bold"
+          style={{ color: theme.colors.foregroundMuted }}
+        >
+          {label}
+        </Text>
+      </View>
+    );
+  }
+
+  function GroupCard({ group }: { group: TrainerLearnerGroup }) {
+    return (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`Ouvrir le groupe ${group.name}`}
+        onPress={() => onOpenGroup(group.id)}
+        android_ripple={{ color: "transparent" }}
+        className="overflow-hidden rounded-[20px] border bg-white"
+        style={{
+          borderColor: "#E5DFE8",
+          shadowColor: "#0F172A",
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.035,
+          shadowRadius: 7,
+          elevation: 1,
+        }}
+      >
+        <View className="p-3.5">
+          <View className="flex-row items-start">
+            <View
+              className="h-11 w-11 items-center justify-center rounded-[14px]"
+              style={{ backgroundColor: "#F1E9FF" }}
+            >
+              <Text className="text-[14px] font-black" style={{ color: "#7C3AED" }}>
+                {groupInitials(group.name)}
+              </Text>
+            </View>
+
+            <View className="ml-3 min-w-0 flex-1">
+              <Text
+                numberOfLines={2}
+                className="text-[15px] font-black leading-[18px]"
+                style={{ color: theme.colors.foreground }}
+              >
+                {group.name}
+              </Text>
+              {group.description ? (
+                <Text
+                  numberOfLines={2}
+                  className="mt-1.5 text-[11px] leading-[14px]"
+                  style={{ color: theme.colors.foregroundMuted }}
+                >
+                  {group.description}
+                </Text>
+              ) : null}
+            </View>
+
+            <View
+              className="ml-2 min-w-[58px] items-center rounded-[13px] px-2 py-2"
+              style={{ backgroundColor: "#F7F3FA" }}
+            >
+              <Text className="text-[16px] font-black" style={{ color: theme.colors.accent }}>
+                {group.memberCount}
+              </Text>
+              <Text
+                className="mt-0.5 text-[9px] font-bold"
+                style={{ color: theme.colors.foregroundMuted }}
+              >
+                membres
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        <View
+          className="flex-row items-center border-t px-3.5 py-2.5"
+          style={{ borderTopColor: "#EEE9F0", backgroundColor: "#FCFBFD" }}
+        >
+          <SymbolView
+            name={{ ios: "person.badge.key.fill", android: "badge", web: "badge" }}
+            tintColor={theme.colors.foregroundSubtle}
+            size={10}
+          />
+          <Text
+            className="ml-1.5 text-[10px]"
+            style={{ color: theme.colors.foregroundMuted }}
+          >
+            {ownerRoleLabel(group.ownerRole)}
+          </Text>
+          <Text className="mx-2 text-[10px]" style={{ color: theme.colors.foregroundSubtle }}>
+            •
+          </Text>
+          <Text
+            className="min-w-0 flex-1 text-[10px]"
+            style={{ color: theme.colors.foregroundMuted }}
+          >
+            Mis à jour : {formatDate(group.updatedAt)}
+          </Text>
+          <Text className="mr-1 text-[11px] font-black" style={{ color: theme.colors.accent }}>
+            Ouvrir
+          </Text>
+          <SymbolView
+            name={{ ios: "chevron.right", android: "chevron_right", web: "chevron_right" }}
+            tintColor={theme.colors.accent}
+            size={12}
+            weight="bold"
+          />
+        </View>
+      </Pressable>
+    );
+  }
+
+  function PaginationArrow({
+    direction,
+    disabled,
+    onPress,
+  }: {
+    direction: "previous" | "next";
+    disabled: boolean;
+    onPress: () => void;
+  }) {
+    const isPrevious = direction === "previous";
+
+    return (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={isPrevious ? "Page précédente" : "Page suivante"}
+        accessibilityState={{ disabled }}
+        disabled={disabled}
+        onPress={onPress}
+        android_ripple={{ color: "transparent" }}
+        className="h-9 w-9 items-center justify-center rounded-xl border"
+        style={{
+          backgroundColor: disabled ? "#F8F6F3" : theme.colors.surface,
+          borderColor: theme.colors.border,
+          opacity: disabled ? 0.45 : 1,
+        }}
+      >
+        <SymbolView
+          name={{
+            ios: isPrevious ? "chevron.left" : "chevron.right",
+            android: isPrevious ? "chevron_left" : "chevron_right",
+            web: isPrevious ? "chevron_left" : "chevron_right",
+          }}
+          tintColor={disabled ? theme.colors.foregroundSubtle : theme.colors.accent}
+          size={14}
+          weight="bold"
+        />
+      </Pressable>
+    );
+  }
+}

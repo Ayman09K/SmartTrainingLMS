@@ -1,8 +1,8 @@
+import { SymbolView } from "expo-symbols";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import {
   Pressable,
-  StyleSheet,
   Text,
   View,
 } from "react-native";
@@ -22,7 +22,9 @@ export default function NotificationShortcut({
   onPress,
 }: NotificationShortcutProps) {
   const { theme } = useSmartTrainingTheme();
-  const [unreadCount, setUnreadCount] = useState<number | null>(0);
+
+  const [unreadCount, setUnreadCount] =
+    useState<number | null>(0);
 
   useFocusEffect(
     useCallback(() => {
@@ -31,7 +33,9 @@ export default function NotificationShortcut({
       void getMyUnreadNotificationCount()
         .then((count) => {
           if (active) {
-            setUnreadCount(Math.max(0, count));
+            setUnreadCount(
+              Math.max(0, count),
+            );
           }
         })
         .catch(() => {
@@ -46,6 +50,17 @@ export default function NotificationShortcut({
     }, []),
   );
 
+  const hasUnread =
+    unreadCount === null ||
+    unreadCount > 0;
+
+  const badgeLabel =
+    unreadCount === null
+      ? "!"
+      : unreadCount > 99
+        ? "99+"
+        : String(unreadCount);
+
   return (
     <Pressable
       accessibilityRole="button"
@@ -53,77 +68,55 @@ export default function NotificationShortcut({
         unreadCount === null
           ? "Notifications, compteur temporairement indisponible"
           : unreadCount > 0
-            ? `Notifications, ${unreadCount} non lue${unreadCount > 1 ? "s" : ""}`
+            ? `Notifications, ${unreadCount} non lue${
+                unreadCount > 1 ? "s" : ""
+              }`
             : "Notifications"
       }
+      hitSlop={8}
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.button,
-        pressed ? styles.pressed : null,
-      ]}
+      android_ripple={{
+        color: "transparent",
+      }}
+      className="relative h-10 w-10 items-center justify-center rounded-[14px] border"
+      style={{
+        backgroundColor:
+          "rgba(255,255,255,0.08)",
+        borderColor:
+          "rgba(255,255,255,0.12)",
+      }}
     >
-      <Text
-        style={[
-          styles.bell,
-          { color: theme.colors.headerForeground },
-        ]}
-      >
-        {"\uD83D\uDD14"}
-      </Text>
+      <SymbolView
+        name={{
+          ios: hasUnread
+            ? "bell.fill"
+            : "bell",
+          android:
+            "notifications_none",
+          web: "notifications",
+        }}
+        tintColor={
+          theme.colors.headerForeground
+        }
+        size={19}
+        weight="medium"
+      />
 
-      {unreadCount === null || unreadCount > 0 ? (
+      {hasUnread ? (
         <View
-          style={[
-            styles.badge,
-            {
-              backgroundColor: theme.colors.surfaceSoft,
-              borderColor: theme.colors.accent,
-            },
-          ]}
+          className="absolute -right-1 -top-1 min-w-[18px] items-center justify-center rounded-full border-2 px-1"
+          style={{
+            height: 18,
+            backgroundColor: "#F04438",
+            borderColor:
+              theme.colors.headerBackground,
+          }}
         >
-          <Text
-            style={[
-              styles.badgeText,
-              { color: theme.colors.accent },
-            ]}
-          >
-            {unreadCount === null ? "!" : unreadCount > 99 ? "99+" : unreadCount}
+          <Text className="text-[8px] font-black leading-[10px] text-white">
+            {badgeLabel}
           </Text>
         </View>
       ) : null}
     </Pressable>
   );
 }
-
-const styles = StyleSheet.create({
-  button: {
-    width: 44,
-    height: 44,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 2,
-  },
-  bell: {
-    fontSize: 20,
-    lineHeight: 24,
-  },
-  badge: {
-    position: "absolute",
-    right: -2,
-    top: 1,
-    minWidth: 20,
-    height: 20,
-    borderWidth: 1,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 4,
-  },
-  badgeText: {
-    fontSize: 10,
-    fontWeight: "900",
-  },
-  pressed: {
-    opacity: 0.7,
-  },
-});

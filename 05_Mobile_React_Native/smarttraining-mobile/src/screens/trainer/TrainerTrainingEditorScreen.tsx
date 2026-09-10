@@ -1,4 +1,5 @@
 import * as ImagePicker from "expo-image-picker";
+import { SymbolView } from "expo-symbols";
 import { useEffect, useMemo, useState } from "react";
 import type { ComponentProps, ReactNode } from "react";
 import {
@@ -283,46 +284,77 @@ function StepCard({
 }) {
   const { theme } = useSmartTrainingTheme();
 
+  const iconName: ComponentProps<typeof SymbolView>["name"] =
+    title.includes("Pédagog") || title.includes("Conception")
+      ? {
+          ios: "book.closed.fill",
+          android: "menu_book",
+          web: "menu_book",
+        }
+      : title.includes("Paramètres")
+        ? {
+            ios: "slider.horizontal.3",
+            android: "tune",
+            web: "tune",
+          }
+        : title.includes("Accès")
+          ? {
+              ios: "lock.fill",
+              android: "lock",
+              web: "lock",
+            }
+          : title.includes("Résumé")
+            ? {
+                ios: "checklist",
+                android: "fact_check",
+                web: "fact_check",
+              }
+            : {
+                ios: "rectangle.and.pencil.and.ellipsis",
+                android: "edit_note",
+                web: "edit_note",
+              };
+
   return (
     <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: theme.colors.surface,
-          borderColor: theme.colors.border,
-          borderRadius: theme.shape.cardRadius,
-          borderWidth: theme.shape.borderWidth,
-        },
-      ]}
+      className="mb-4 rounded-[22px] border bg-white p-4"
+      style={{
+        borderColor: theme.colors.border,
+        shadowColor: "#0F172A",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.035,
+        shadowRadius: 8,
+        elevation: 1,
+      }}
     >
-      <View
-        style={[
-          styles.cardHeader,
-          {
-            backgroundColor: theme.colors.surfaceSoft,
-            borderBottomColor: theme.colors.border,
-          },
-        ]}
-      >
-        <Text
-          style={[
-            styles.cardTitle,
-            { color: theme.colors.foreground },
-          ]}
-        >
-          {title}
-        </Text>
-        <Text
-          style={[
-            styles.cardDescription,
-            { color: theme.colors.foregroundMuted },
-          ]}
-        >
-          {description}
-        </Text>
+      <View className="mb-4 flex-row items-center">
+        <View className="h-10 w-10 shrink-0 items-center justify-center rounded-[14px] bg-[#F3EEFF]">
+          <SymbolView
+            name={iconName}
+            tintColor={theme.colors.accent}
+            size={18}
+            weight="bold"
+          />
+        </View>
+
+        <View className="ml-3 min-w-0 flex-1">
+          <Text
+            className="text-[16px] font-black leading-[20px]"
+            style={{ color: theme.colors.foreground }}
+          >
+            {title}
+          </Text>
+          <Text
+            className="mt-0.5 text-[11px] leading-[16px]"
+            style={{ color: theme.colors.foregroundMuted }}
+          >
+            {description}
+          </Text>
+        </View>
       </View>
 
-      <View style={styles.cardBody}>{children}</View>
+      <View className="h-px bg-[#F0ECE7]" />
+      <View className="pt-4">{children}</View>
     </View>
   );
 }
@@ -340,12 +372,10 @@ function Field({
   const { theme } = useSmartTrainingTheme();
 
   return (
-    <View style={styles.field}>
+    <View className="mb-4">
       <Text
-        style={[
-          styles.label,
-          { color: theme.colors.foregroundMuted },
-        ]}
+        className="mb-2 text-[11px] font-extrabold"
+        style={{ color: theme.colors.foregroundMuted }}
       >
         {label}
       </Text>
@@ -354,19 +384,18 @@ function Field({
         {...props}
         accessibilityLabel={props.accessibilityLabel ?? label}
         multiline={multiline}
-        placeholderTextColor={theme.colors.foregroundSubtle}
-        style={[
-          styles.input,
-          multiline && styles.multiline,
-          large && styles.largeInput,
-          {
-            color: theme.colors.foreground,
-            backgroundColor: theme.colors.background,
-            borderColor: theme.colors.border,
-            borderRadius: theme.shape.controlRadius,
-            borderWidth: theme.shape.borderWidth,
-          },
-        ]}
+        placeholderTextColor="#98A2B3"
+        className="rounded-[16px] border px-4 text-[14px]"
+        style={{
+          minHeight: multiline ? (large ? 118 : 92) : 50,
+          paddingTop: multiline ? 13 : 0,
+          paddingBottom: multiline ? 13 : 0,
+          textAlignVertical: multiline ? "top" : "center",
+          color: theme.colors.foreground,
+          backgroundColor: "#FCFBF9",
+          borderColor: "#E7E2EB",
+          borderWidth: 1,
+        }}
       />
     </View>
   );
@@ -386,12 +415,10 @@ function SelectField({
   const { theme } = useSmartTrainingTheme();
 
   return (
-    <View style={styles.field}>
+    <View className="mb-4">
       <Text
-        style={[
-          styles.label,
-          { color: theme.colors.foregroundMuted },
-        ]}
+        className="mb-2 text-[11px] font-extrabold"
+        style={{ color: theme.colors.foregroundMuted }}
       >
         {label}
       </Text>
@@ -400,43 +427,36 @@ function SelectField({
         accessibilityRole="button"
         accessibilityLabel={`${label} : ${value || "Non renseigné"}`}
         onPress={onPress}
-        style={({ pressed }) => [
-          styles.select,
-          {
-            backgroundColor: pressed
-              ? theme.colors.surfaceSoft
-              : theme.colors.background,
-            borderColor: warning
-              ? theme.colors.accent
-              : theme.colors.border,
-            borderRadius: theme.shape.controlRadius,
-          },
-        ]}
+        android_ripple={{ color: "transparent" }}
+        className="min-h-[50px] flex-row items-center rounded-[16px] border px-4"
+        style={{
+          backgroundColor: "#FCFBF9",
+          borderColor: warning ? theme.colors.accent : "#E7E2EB",
+          borderWidth: 1,
+        }}
       >
         <Text
           numberOfLines={1}
-          style={[
-            styles.selectValue,
-            {
-              color: value
-                ? theme.colors.foreground
-                : theme.colors.foregroundSubtle,
-            },
-          ]}
+          className="min-w-0 flex-1 text-[14px] font-bold"
+          style={{
+            color: value
+              ? theme.colors.foreground
+              : theme.colors.foregroundSubtle,
+          }}
         >
           {value}
         </Text>
 
-        <Text
-          style={[
-            styles.selectChevron,
-            { color: theme.colors.accent },
-          ]}
-          accessibilityElementsHidden
-          importantForAccessibility="no"
-        >
-          ▾
-        </Text>
+        <SymbolView
+          name={{
+            ios: "chevron.down",
+            android: "keyboard_arrow_down",
+            web: "keyboard_arrow_down",
+          }}
+          tintColor={theme.colors.accent}
+          size={17}
+          weight="bold"
+        />
       </Pressable>
     </View>
   );
@@ -450,32 +470,23 @@ function SummaryStrip({
   const { theme } = useSmartTrainingTheme();
 
   return (
-    <View style={styles.summaryGrid}>
+    <View className="flex-row flex-wrap gap-2">
       {items.map(([label, value]) => (
         <View
           key={`${label}-${value}`}
-          style={[
-            styles.summaryItem,
-            {
-              backgroundColor: theme.colors.surfaceSoft,
-              borderColor: theme.colors.border,
-            },
-          ]}
+          className="min-w-[46%] flex-1 rounded-[16px] border bg-[#FBFAF8] px-3 py-3"
+          style={{ borderColor: theme.colors.border }}
         >
           <Text
-            style={[
-              styles.summaryKey,
-              { color: theme.colors.foregroundSubtle },
-            ]}
+            className="text-[8px] font-black uppercase tracking-[0.6px]"
+            style={{ color: theme.colors.foregroundSubtle }}
           >
             {label}
           </Text>
           <Text
             numberOfLines={2}
-            style={[
-              styles.summaryValue,
-              { color: theme.colors.foreground },
-            ]}
+            className="mt-1 text-[11px] font-extrabold leading-[15px]"
+            style={{ color: theme.colors.foreground }}
           >
             {value}
           </Text>
@@ -1042,6 +1053,17 @@ export default function TrainerTrainingEditorScreen({
     ];
   }
 
+  function selectedPickerKey(): string | null {
+    if (picker === "CATEGORY") {
+      return form.categoryId ? String(form.categoryId) : null;
+    }
+    if (picker === "LEVEL") return form.level;
+    if (picker === "LANGUAGE") return form.language;
+    if (picker === "VISIBILITY") return form.visibility;
+    if (picker === "ENROLLMENT") return form.enrollmentMode;
+    return null;
+  }
+
   function selectPickerOption(option: PickerOption) {
     setValidationMessage("");
 
@@ -1123,77 +1145,103 @@ export default function TrainerTrainingEditorScreen({
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.page}>
-          <View style={styles.hero}>
-            <Text
-              style={[
-                styles.eyebrow,
-                { color: theme.colors.accent },
-              ]}
-            >
-              FORMATION · ÉTAPE {step + 1} SUR 4
-            </Text>
-
-            <Text
-              style={[
-                styles.pageTitle,
-                { color: theme.colors.foreground },
-              ]}
-            >
-              {editing
-                ? "Modifier la formation"
-                : "Créer une formation"}
-            </Text>
-
-            <Text
-              style={[
-                styles.pageSubtitle,
-                { color: theme.colors.foregroundMuted },
-              ]}
-            >
-              {stepMeta[step].subtitle}
-            </Text>
-
-            <View style={styles.progressRow}>
-              {stepMeta.map((item, index) => (
-                <Pressable
-                  key={item.title}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Étape ${index + 1} : ${item.title}`}
-                  accessibilityState={{ selected: index === step }}
-                  onPress={() => {
-                    if (index <= step || validateStep(step)) {
-                      setStep(index);
-                    }
-                  }}
-                  style={styles.progressItem}
+          <View className="mb-4">
+            <View className="mb-2 flex-row items-center justify-between">
+              <View className="rounded-full bg-[#F3EEFF] px-3 py-1.5">
+                <Text
+                  className="text-[9px] font-black uppercase tracking-[0.9px]"
+                  style={{ color: theme.colors.accent }}
                 >
-                  <View
-                    style={[
-                      styles.progressBar,
-                      {
-                        backgroundColor:
-                          index <= step
-                            ? theme.colors.accent
-                            : theme.colors.border,
-                      },
-                    ]}
-                  />
-                  <Text
-                    numberOfLines={1}
-                    style={[
-                      styles.progressLabel,
-                      {
-                        color:
-                          index === step
-                            ? theme.colors.foreground
-                            : theme.colors.foregroundSubtle,
-                      },
-                    ]}
+                  Étape {step + 1} sur 4
+                </Text>
+              </View>
+
+              <Text
+                className="text-[10px] font-bold"
+                style={{ color: theme.colors.foregroundSubtle }}
+              >
+                {stepMeta[step].subtitle}
+              </Text>
+            </View>
+
+            <Text
+              className="text-[24px] font-black leading-[29px] tracking-[-0.7px]"
+              style={{ color: theme.colors.foreground }}
+            >
+              {editing ? "Modifier la formation" : "Créer une formation"}
+            </Text>
+
+            <View
+              className="mt-4 flex-row rounded-[18px] border bg-white p-1.5"
+              style={{ borderColor: theme.colors.border }}
+            >
+              {stepMeta.map((item, index) => {
+                const active = index === step;
+                const completed = index < step;
+
+                return (
+                  <Pressable
+                    key={item.title}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Étape ${index + 1} : ${item.title}`}
+                    accessibilityState={{ selected: active }}
+                    onPress={() => {
+                      if (index <= step || validateStep(step)) {
+                        setStep(index);
+                      }
+                    }}
+                    android_ripple={{ color: "transparent" }}
+                    className="min-h-[48px] min-w-0 flex-1 items-center justify-center rounded-[13px] px-1"
+                    style={{
+                      backgroundColor: active
+                        ? theme.colors.accent
+                        : completed
+                          ? "#F3EEFF"
+                          : "transparent",
+                    }}
                   >
-                    {item.title}
-                  </Text>
-                </Pressable>
-              ))}
+                    <View className="flex-row items-center justify-center">
+                      {completed ? (
+                        <SymbolView
+                          name={{
+                            ios: "checkmark.circle.fill",
+                            android: "check_circle",
+                            web: "check_circle",
+                          }}
+                          tintColor={theme.colors.accent}
+                          size={12}
+                          weight="bold"
+                        />
+                      ) : (
+                        <Text
+                          className="text-[9px] font-black"
+                          style={{
+                            color: active
+                              ? theme.colors.accentForeground
+                              : theme.colors.foregroundSubtle,
+                          }}
+                        >
+                          {index + 1}
+                        </Text>
+                      )}
+
+                      <Text
+                        numberOfLines={1}
+                        className="ml-1 text-[8px] font-extrabold"
+                        style={{
+                          color: active
+                            ? theme.colors.accentForeground
+                            : completed
+                              ? theme.colors.accent
+                              : theme.colors.foregroundSubtle,
+                        }}
+                      >
+                        {item.title}
+                      </Text>
+                    </View>
+                  </Pressable>
+                );
+              })}
             </View>
           </View>
 
@@ -1337,51 +1385,70 @@ export default function TrainerTrainingEditorScreen({
                       style={[
                         styles.coverPlaceholder,
                         {
-                          backgroundColor: theme.colors.surfaceSoft,
-                          borderColor: theme.colors.border,
+                          backgroundColor: "#F7F2FF",
+                          borderColor: "#D9C9F7",
                         },
                       ]}
                     >
+                      <View className="mb-3 h-12 w-12 items-center justify-center rounded-2xl bg-white">
+                        <SymbolView
+                          name={{
+                            ios: "photo.on.rectangle.angled",
+                            android: "image",
+                            web: "image",
+                          }}
+                          tintColor={theme.colors.accent}
+                          size={21}
+                          weight="bold"
+                        />
+                      </View>
+
                       <Text
                         style={[
                           styles.coverPlaceholderTitle,
                           { color: theme.colors.foreground },
                         ]}
                       >
-                        Aucune couverture
+                        Ajoutez une couverture
                       </Text>
+
                       <Text
                         style={[
                           styles.coverPlaceholderText,
                           { color: theme.colors.foregroundMuted },
                         ]}
                       >
-                        Ajoutez une image 16:9 pour valoriser la formation.
+                        Format recommandé 16:9 · JPEG, PNG ou WebP.
                       </Text>
                     </View>
                   )}
 
                   <View
                     pointerEvents="none"
-                    style={[
-                      styles.coverOverlay,
-                      {
-                        backgroundColor: theme.colors.surfaceElevated,
-                        borderColor: theme.colors.border,
-                      },
-                    ]}
+                    className="absolute bottom-3 right-3 flex-row items-center rounded-full bg-white px-3 py-2"
+                    style={{
+                      borderWidth: 1,
+                      borderColor: theme.colors.border,
+                    }}
                   >
+                    <SymbolView
+                      name={{
+                        ios: "photo",
+                        android: "image",
+                        web: "image",
+                      }}
+                      tintColor={theme.colors.accent}
+                      size={13}
+                    />
                     <Text
-                      style={[
-                        styles.coverOverlayText,
-                        { color: theme.colors.accent },
-                      ]}
+                      className="ml-1.5 text-[9px] font-black"
+                      style={{ color: theme.colors.accent }}
                     >
                       {selectingCover
                         ? "Ouverture..."
                         : coverPreviewUri || coverImageUrl
-                          ? "Changer la couverture"
-                          : "Choisir une couverture"}
+                          ? "Changer"
+                          : "Ajouter"}
                     </Text>
                   </View>
                 </Pressable>
@@ -1600,15 +1667,18 @@ export default function TrainerTrainingEditorScreen({
             </>
           ) : null}
 
-          <View style={styles.footer}>
-            <View style={styles.footerSecondary}>
+          <View
+            className="mt-1 flex-row gap-3 rounded-[20px] border bg-white p-2"
+            style={{ borderColor: theme.colors.border }}
+          >
+            <View className="flex-1">
               {step > 0 ? (
                 <AppButton
                   title="Précédent"
                   onPress={previous}
                   variant="secondary"
                   disabled={saving}
-                  style={styles.footerButton}
+                  style={{ width: "100%" }}
                 />
               ) : (
                 <AppButton
@@ -1616,17 +1686,17 @@ export default function TrainerTrainingEditorScreen({
                   onPress={requestCancel}
                   variant="secondary"
                   disabled={saving}
-                  style={styles.footerButton}
+                  style={{ width: "100%" }}
                 />
               )}
             </View>
 
-            <View style={styles.footerPrimary}>
+            <View className="flex-[1.25]">
               {step < 3 ? (
                 <AppButton
-                  title="Suivant"
+                  title="Continuer"
                   onPress={next}
-                  style={styles.footerButton}
+                  style={{ width: "100%" }}
                 />
               ) : (
                 <AppButton
@@ -1639,7 +1709,7 @@ export default function TrainerTrainingEditorScreen({
                   }
                   onPress={() => void save()}
                   loading={saving}
-                  style={styles.footerButton}
+                  style={{ width: "100%" }}
                 />
               )}
             </View>
@@ -1668,7 +1738,7 @@ export default function TrainerTrainingEditorScreen({
         animationType="fade"
         onRequestClose={() => setPicker(null)}
       >
-        <View style={[styles.modalBackdrop, { paddingBottom: Math.max(14, insets.bottom + 8) }]}>
+        <View style={[styles.modalBackdrop, { paddingBottom: Math.max(12, insets.bottom + 6) }]}>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Fermer le sélecteur"
@@ -1710,22 +1780,19 @@ export default function TrainerTrainingEditorScreen({
                 accessibilityRole="button"
                 accessibilityLabel="Fermer le sélecteur"
                 onPress={() => setPicker(null)}
-                style={[
-                  styles.closeButton,
-                  {
-                    backgroundColor: theme.colors.surfaceSoft,
-                    borderColor: theme.colors.border,
-                  },
-                ]}
+                android_ripple={{ color: "transparent" }}
+                className="h-10 w-10 items-center justify-center rounded-2xl bg-[#F3EEFF]"
               >
-                <Text
-                  style={[
-                    styles.closeText,
-                    { color: theme.colors.foreground },
-                  ]}
-                >
-                  Fermer
-                </Text>
+                <SymbolView
+                  name={{
+                    ios: "xmark",
+                    android: "close",
+                    web: "close",
+                  }}
+                  tintColor={theme.colors.accent}
+                  size={16}
+                  weight="bold"
+                />
               </Pressable>
             </View>
 
@@ -1733,47 +1800,91 @@ export default function TrainerTrainingEditorScreen({
               style={styles.modalList}
               showsVerticalScrollIndicator={false}
             >
-              {pickerOptions().map((option) => (
-                <Pressable
-                  key={option.key}
-                  accessibilityRole="button"
-                  accessibilityLabel={option.label}
-                  onPress={() => selectPickerOption(option)}
-                  style={({ pressed }) => [
-                    styles.optionRow,
-                    {
-                      backgroundColor: pressed
-                        ? theme.colors.surfaceSoft
-                        : theme.colors.surface,
-                      borderColor: theme.colors.border,
-                    },
-                  ]}
-                >
-                  <View style={styles.optionText}>
-                    <Text
-                      style={[
-                        styles.optionLabel,
-                        { color: theme.colors.foreground },
-                      ]}
+              {pickerOptions().map((option) => {
+                const selected = selectedPickerKey() === option.key;
+
+                return (
+                  <Pressable
+                    key={option.key}
+                    accessibilityRole="button"
+                    accessibilityLabel={option.label}
+                    accessibilityState={{ selected }}
+                    onPress={() => selectPickerOption(option)}
+                    android_ripple={{ color: "transparent" }}
+                    className="mb-2 min-h-[56px] flex-row items-center rounded-[16px] border px-3.5 py-2.5"
+                    style={{
+                      backgroundColor: selected ? "#F7F2FF" : "#FFFFFF",
+                      borderColor: selected
+                        ? "#D8C7FF"
+                        : theme.colors.border,
+                    }}
+                  >
+                    <View
+                      className="h-9 w-9 shrink-0 items-center justify-center rounded-[12px]"
+                      style={{
+                        backgroundColor: selected ? "#EDE4FF" : "#F8F6F3",
+                      }}
                     >
-                      {option.label}
-                    </Text>
+                      {selected ? (
+                        <SymbolView
+                          name={{
+                            ios: "checkmark",
+                            android: "check",
+                            web: "check",
+                          }}
+                          tintColor={theme.colors.accent}
+                          size={14}
+                          weight="bold"
+                        />
+                      ) : (
+                        <SymbolView
+                          name={{
+                            ios: "tag",
+                            android: "label",
+                            web: "label",
+                          }}
+                          tintColor={theme.colors.foregroundSubtle}
+                          size={14}
+                        />
+                      )}
+                    </View>
 
-                    {option.helper ? (
+                    <View className="ml-3 min-w-0 flex-1">
                       <Text
-                        style={[
-                          styles.optionHelper,
-                          { color: theme.colors.foregroundMuted },
-                        ]}
+                        className="text-[13px] font-extrabold"
+                        style={{ color: theme.colors.foreground }}
                       >
-                        {option.helper}
+                        {option.label}
                       </Text>
-                    ) : null}
-                  </View>
 
+                      {option.helper ? (
+                        <Text
+                          numberOfLines={2}
+                          className="mt-0.5 text-[9px] leading-[13px]"
+                          style={{ color: theme.colors.foregroundMuted }}
+                        >
+                          {option.helper}
+                        </Text>
+                      ) : null}
+                    </View>
 
-                </Pressable>
-              ))}
+                    <SymbolView
+                      name={{
+                        ios: selected ? "checkmark.circle.fill" : "chevron.right",
+                        android: selected ? "check_circle" : "chevron_right",
+                        web: selected ? "check_circle" : "chevron_right",
+                      }}
+                      tintColor={
+                        selected
+                          ? theme.colors.accent
+                          : theme.colors.foregroundSubtle
+                      }
+                      size={16}
+                      weight="bold"
+                    />
+                  </Pressable>
+                );
+              })}
             </ScrollView>
           </View>
         </View>
@@ -1790,7 +1901,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flexGrow: 1,
-    paddingBottom: 36,
+    paddingBottom: 32,
   },
   page: {
     width: "100%",
@@ -1798,113 +1909,113 @@ const styles = StyleSheet.create({
     alignSelf: "center",
   },
   hero: {
-    marginBottom: 18,
+    marginBottom: 14,
   },
   eyebrow: {
-    fontSize: 11,
+    fontSize: 9,
     fontWeight: "900",
-    letterSpacing: 1.1,
-    marginBottom: 7,
+    letterSpacing: 1,
+    marginBottom: 6,
   },
   pageTitle: {
-    fontSize: 28,
-    lineHeight: 34,
+    fontSize: 24,
+    lineHeight: 29,
     fontWeight: "900",
+    letterSpacing: -0.6,
   },
   pageSubtitle: {
-    fontSize: 14,
-    lineHeight: 20,
-    marginTop: 5,
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 4,
   },
   progressRow: {
     flexDirection: "row",
-    gap: 8,
-    marginTop: 18,
+    gap: 6,
+    marginTop: 14,
   },
   progressItem: {
     flex: 1,
     minWidth: 0,
   },
   progressBar: {
-    height: 4,
+    height: 3,
     borderRadius: 999,
   },
   progressLabel: {
-    fontSize: 10,
+    fontSize: 8,
     fontWeight: "800",
-    marginTop: 6,
+    marginTop: 5,
   },
   notice: {
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 12,
-    marginBottom: 14,
+    marginBottom: 12,
   },
   validationNotice: {
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 12,
-    marginBottom: 14,
+    marginBottom: 12,
   },
   validationTitle: {
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: "900",
   },
   validationText: {
-    fontSize: 12,
-    lineHeight: 18,
+    fontSize: 10,
+    lineHeight: 16,
     marginTop: 3,
   },
   card: {
     overflow: "hidden",
-    marginBottom: 16,
+    marginBottom: 14,
   },
   cardHeader: {
-    paddingHorizontal: 18,
-    paddingVertical: 15,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     borderBottomWidth: 1,
   },
   cardTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "900",
   },
   cardDescription: {
-    fontSize: 12,
-    lineHeight: 18,
-    marginTop: 4,
+    fontSize: 11,
+    lineHeight: 16,
+    marginTop: 3,
   },
   cardBody: {
-    padding: 18,
+    padding: 16,
   },
   field: {
-    marginBottom: 16,
+    marginBottom: 14,
   },
   label: {
     fontSize: 11,
-    fontWeight: "900",
-    letterSpacing: 0.25,
+    fontWeight: "800",
     marginBottom: 7,
   },
   input: {
     minHeight: 50,
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: 11,
     fontSize: 14,
   },
   multiline: {
-    minHeight: 96,
+    minHeight: 90,
     textAlignVertical: "top",
   },
   largeInput: {
-    minHeight: 132,
+    minHeight: 118,
   },
   select: {
-    minHeight: 52,
+    minHeight: 50,
     borderWidth: 1,
     paddingHorizontal: 14,
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 9,
   },
   selectValue: {
     flex: 1,
@@ -1912,41 +2023,40 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   selectChevron: {
-    fontSize: 26,
+    fontSize: 20,
     fontWeight: "500",
-    lineHeight: 28,
   },
   fieldHelp: {
-    fontSize: 12,
-    lineHeight: 18,
-    marginTop: -4,
+    fontSize: 10,
+    lineHeight: 16,
+    marginTop: -2,
     marginBottom: 12,
   },
   coverSection: {
-    marginTop: 2,
+    marginTop: 0,
   },
   coverPicker: {
     position: "relative",
     width: "100%",
-    borderRadius: 14,
+    borderRadius: 18,
     overflow: "hidden",
     marginBottom: 10,
   },
   coverPickerPressed: {
-    opacity: 0.82,
+    opacity: 0.98,
   },
   coverPreview: {
     width: "100%",
     aspectRatio: 16 / 9,
     borderWidth: 1,
-    borderRadius: 14,
+    borderRadius: 18,
   },
   coverPlaceholder: {
     width: "100%",
     aspectRatio: 16 / 9,
     borderWidth: 1,
     borderStyle: "dashed",
-    borderRadius: 14,
+    borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
     padding: 18,
@@ -1957,11 +2067,11 @@ const styles = StyleSheet.create({
     bottom: 12,
     borderWidth: 1,
     borderRadius: 999,
-    paddingHorizontal: 13,
+    paddingHorizontal: 12,
     paddingVertical: 8,
   },
   coverOverlayText: {
-    fontSize: 11,
+    fontSize: 9,
     fontWeight: "900",
   },
   coverPlaceholderTitle: {
@@ -1969,70 +2079,70 @@ const styles = StyleSheet.create({
     fontWeight: "900",
   },
   coverPlaceholderText: {
-    fontSize: 12,
-    lineHeight: 18,
+    fontSize: 10,
+    lineHeight: 15,
     textAlign: "center",
     marginTop: 4,
   },
   coverHelp: {
-    fontSize: 11,
-    lineHeight: 16,
-    marginBottom: 8,
+    fontSize: 10,
+    lineHeight: 15,
+    marginBottom: 7,
   },
   coverFileName: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "800",
-    marginBottom: 8,
+    marginBottom: 7,
   },
   twoColumns: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 12,
+    gap: 10,
   },
   column: {
     flexGrow: 1,
-    flexBasis: 220,
+    flexBasis: 150,
     minWidth: 0,
   },
   summaryGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 10,
+    gap: 8,
   },
   summaryItem: {
     flexGrow: 1,
-    flexBasis: 150,
+    flexBasis: 140,
     minWidth: 0,
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 12,
   },
   summaryKey: {
-    fontSize: 10,
+    fontSize: 8,
     fontWeight: "900",
     textTransform: "uppercase",
-    letterSpacing: 0.6,
+    letterSpacing: 0.5,
   },
   summaryValue: {
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 11,
+    lineHeight: 15,
     fontWeight: "800",
-    marginTop: 5,
+    marginTop: 4,
   },
   draftNotice: {
     borderWidth: 1,
-    borderRadius: 12,
-    padding: 14,
-    marginTop: 14,
+    borderRadius: 16,
+    padding: 13,
+    marginTop: 12,
   },
   draftNoticeTitle: {
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: "900",
   },
   draftNoticeText: {
-    fontSize: 12,
-    lineHeight: 18,
-    marginTop: 5,
+    fontSize: 10,
+    lineHeight: 16,
+    marginTop: 4,
   },
   footer: {
     flexDirection: "row",
@@ -2050,44 +2160,48 @@ const styles = StyleSheet.create({
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.48)",
+    backgroundColor: "rgba(15,23,42,0.46)",
     justifyContent: "flex-end",
-    padding: 14,
+    paddingHorizontal: 10,
   },
   modalCard: {
     width: "100%",
     maxWidth: 680,
-    maxHeight: "76%",
+    maxHeight: "78%",
     alignSelf: "center",
     borderWidth: 1,
     overflow: "hidden",
+    borderRadius: 28,
   },
   modalHeader: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    padding: 18,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 12,
   },
   modalHeaderText: {
     flex: 1,
     minWidth: 0,
   },
   modalTitle: {
-    fontSize: 19,
+    fontSize: 18,
+    lineHeight: 22,
     fontWeight: "900",
   },
   modalSubtitle: {
-    fontSize: 12,
-    marginTop: 3,
+    fontSize: 10,
+    marginTop: 2,
   },
   closeButton: {
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 12,
+    borderWidth: 0,
+    borderRadius: 14,
+    paddingHorizontal: 10,
     paddingVertical: 8,
   },
   closeText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "800",
   },
   modalList: {
@@ -2095,31 +2209,31 @@ const styles = StyleSheet.create({
     paddingBottom: 14,
   },
   optionRow: {
-    minHeight: 58,
+    minHeight: 56,
     borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
+    borderRadius: 16,
+    paddingHorizontal: 13,
+    paddingVertical: 10,
     marginBottom: 8,
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 10,
   },
   optionText: {
     flex: 1,
     minWidth: 0,
   },
   optionLabel: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "800",
   },
   optionHelper: {
-    fontSize: 11,
-    lineHeight: 16,
-    marginTop: 3,
+    fontSize: 9,
+    lineHeight: 13,
+    marginTop: 2,
   },
   chevron: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: "500",
   },
 });

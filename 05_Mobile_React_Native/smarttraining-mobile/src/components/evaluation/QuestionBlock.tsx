@@ -1,15 +1,14 @@
-import { useSmartTrainingTheme } from "../../theme/provider/SmartTrainingThemeProvider";
 import { useState } from "react";
 import {
   Platform,
   Pressable,
-  StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
 
-import {
+import { useSmartTrainingTheme } from "../../theme/provider/SmartTrainingThemeProvider";
+import type {
   Question,
   SubmittedAnswerRequest,
 } from "../../types/evaluation";
@@ -83,6 +82,17 @@ function typeLabel(question: Question): string {
   return "Une seule réponse peut être sélectionnée";
 }
 
+function typeShortLabel(question: Question): string {
+  if (question.type === "MULTIPLE_CHOICE") return "Choix multiple";
+  if (question.type === "TRUE_FALSE") return "Vrai / Faux";
+  if (question.type === "FILL_BLANK") return "Texte à trous";
+  if (question.type === "ORDERING") return "Ordonnancement";
+  if (question.type === "MATCHING") return "Association";
+  if (question.type === "DRAG_DROP") return "Glisser-déposer";
+  if (question.type === "NUMERIC") return "Numérique";
+  return "Choix unique";
+}
+
 function moveItem(items: string[], from: number, to: number): string[] {
   if (to < 0 || to >= items.length || from === to) {
     return items;
@@ -100,7 +110,6 @@ export default function QuestionBlock({
   onChange,
 }: Props) {
   const { theme } = useSmartTrainingTheme();
-  const styles = makeStyles(theme);
   const [matchingFocusLeftId, setMatchingFocusLeftId] = useState<string | null>(
     null,
   );
@@ -213,7 +222,7 @@ export default function QuestionBlock({
     const selectedOptionIds = answer.selectedOptionIds ?? [];
 
     return (
-      <View style={styles.options}>
+      <View className="gap-2.5">
         {question.options.map((option) => (
           <AnswerOptionItem
             key={option.id}
@@ -231,7 +240,10 @@ export default function QuestionBlock({
 
     if (blankIds.length === 0) {
       return (
-        <Text style={styles.configError}>
+        <Text
+          className="text-[13px] font-bold leading-[20px]"
+          style={{ color: theme.colors.danger }}
+        >
           Configuration du texte à trous indisponible.
         </Text>
       );
@@ -242,15 +254,20 @@ export default function QuestionBlock({
     }
 
     return (
-      <View style={styles.editorGroup}>
+      <View className="gap-3">
         {blankIds.map((blankId, index) => {
           const value =
             answer.blankAnswers?.find((item) => item.blankId === blankId)
               ?.value ?? "";
 
           return (
-            <View key={blankId} style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>Réponse {index + 1}</Text>
+            <View key={blankId} className="gap-1.5">
+              <Text
+                className="text-[12px] font-extrabold"
+                style={{ color: theme.colors.foregroundSubtle }}
+              >
+                Réponse {index + 1}
+              </Text>
               <TextInput
                 accessibilityLabel={`Réponse du trou ${index + 1}`}
                 value={value}
@@ -258,7 +275,12 @@ export default function QuestionBlock({
                 placeholder="Saisis ta réponse"
                 placeholderTextColor={theme.colors.foregroundMuted}
                 autoCapitalize="sentences"
-                style={styles.textInput}
+                className="min-h-[52px] rounded-[16px] border px-4 py-3 text-[15px]"
+                style={{
+                  backgroundColor: theme.colors.surfaceElevated,
+                  borderColor: theme.colors.border,
+                  color: theme.colors.foreground,
+                }}
               />
             </View>
           );
@@ -272,7 +294,10 @@ export default function QuestionBlock({
 
     if (configured.length === 0) {
       return (
-        <Text style={styles.configError}>
+        <Text
+          className="text-[13px] font-bold leading-[20px]"
+          style={{ color: theme.colors.danger }}
+        >
           Configuration d’ordonnancement indisponible.
         </Text>
       );
@@ -282,41 +307,79 @@ export default function QuestionBlock({
     const byId = new Map(configured.map((item) => [item.id, item]));
 
     return (
-      <View style={styles.editorGroup}>
-        <Text style={styles.assistiveText}>
+      <View className="gap-2.5">
+        <Text
+          className="mb-1 text-[12px] leading-[18px]"
+          style={{ color: theme.colors.foregroundMuted }}
+        >
           Utilise Monter / Descendre. Si l’ordre affiché te convient, confirme-le.
         </Text>
 
         {ids.map((id, index) => (
-          <View key={id} style={styles.orderRow}>
-            <Text style={styles.orderIndex}>{index + 1}</Text>
-            <Text style={styles.orderText}>{byId.get(id)?.text ?? id}</Text>
-            <View style={styles.orderActions}>
+          <View
+            key={id}
+            className="min-h-[56px] flex-row items-center gap-2 rounded-[17px] border p-2.5"
+            style={{
+              backgroundColor: theme.colors.surfaceSoft,
+              borderColor: theme.colors.border,
+            }}
+          >
+            <View
+              className="h-8 w-8 shrink-0 items-center justify-center rounded-[10px]"
+              style={{ backgroundColor: theme.colors.surface }}
+            >
+              <Text
+                maxFontSizeMultiplier={1}
+                className="text-[13px] font-black"
+                style={{ color: theme.colors.accent }}
+              >
+                {index + 1}
+              </Text>
+            </View>
+
+            <Text
+              className="min-w-0 flex-1 text-[14px] font-bold leading-[20px]"
+              style={{ color: theme.colors.foreground }}
+            >
+              {byId.get(id)?.text ?? id}
+            </Text>
+
+            <View className="flex-row gap-1.5">
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={`Monter ${byId.get(id)?.text ?? id}`}
                 disabled={index === 0}
                 onPress={() => setOrdering(moveItem(ids, index, index - 1))}
-                style={({ pressed }) => [
-                  styles.miniButton,
-                  index === 0 ? styles.disabledButton : null,
-                  pressed ? styles.pressedButton : null,
-                ]}
+                className="h-10 w-10 items-center justify-center rounded-[12px] border active:opacity-70 disabled:opacity-30"
+                style={{
+                  backgroundColor: theme.colors.surfaceElevated,
+                  borderColor: theme.colors.border,
+                }}
               >
-                <Text style={styles.miniButtonText}>↑</Text>
+                <Text
+                  className="text-[17px] font-black"
+                  style={{ color: theme.colors.foreground }}
+                >
+                  ↑
+                </Text>
               </Pressable>
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={`Descendre ${byId.get(id)?.text ?? id}`}
                 disabled={index === ids.length - 1}
                 onPress={() => setOrdering(moveItem(ids, index, index + 1))}
-                style={({ pressed }) => [
-                  styles.miniButton,
-                  index === ids.length - 1 ? styles.disabledButton : null,
-                  pressed ? styles.pressedButton : null,
-                ]}
+                className="h-10 w-10 items-center justify-center rounded-[12px] border active:opacity-70 disabled:opacity-30"
+                style={{
+                  backgroundColor: theme.colors.surfaceElevated,
+                  borderColor: theme.colors.border,
+                }}
               >
-                <Text style={styles.miniButtonText}>↓</Text>
+                <Text
+                  className="text-[17px] font-black"
+                  style={{ color: theme.colors.foreground }}
+                >
+                  ↓
+                </Text>
               </Pressable>
             </View>
           </View>
@@ -327,12 +390,15 @@ export default function QuestionBlock({
             accessibilityRole="button"
             accessibilityLabel="Conserver cet ordre"
             onPress={() => setOrdering(ids)}
-            style={({ pressed }) => [
-              styles.confirmButton,
-              pressed ? styles.pressedButton : null,
-            ]}
+            className="min-h-11 items-center justify-center rounded-[14px] px-4 py-2.5 active:opacity-75"
+            style={{ backgroundColor: theme.colors.accent }}
           >
-            <Text style={styles.confirmButtonText}>Conserver cet ordre</Text>
+            <Text
+              className="font-black"
+              style={{ color: theme.colors.accentForeground }}
+            >
+              Conserver cet ordre
+            </Text>
           </Pressable>
         ) : null}
       </View>
@@ -345,7 +411,10 @@ export default function QuestionBlock({
 
     if (left.length === 0 || right.length === 0) {
       return (
-        <Text style={styles.configError}>
+        <Text
+          className="text-[13px] font-bold leading-[20px]"
+          style={{ color: theme.colors.danger }}
+        >
           Configuration d’association indisponible.
         </Text>
       );
@@ -362,8 +431,14 @@ export default function QuestionBlock({
     const activeLeft = left.find((item) => item.id === activeLeftId) ?? left[0];
 
     return (
-      <View style={styles.editorGroup}>
-        <Text style={styles.stepLabel}>1. Choisis l’élément à associer</Text>
+      <View className="gap-2.5">
+        <Text
+          className="text-[12px] font-black"
+          style={{ color: theme.colors.foregroundSubtle }}
+        >
+          1. Choisis l’élément à associer
+        </Text>
+
         {left.map((leftItem) => {
           const pair = pairs.find((entry) => entry.leftId === leftItem.id);
           const rightItem = right.find((item) => item.id === pair?.rightId);
@@ -378,15 +453,26 @@ export default function QuestionBlock({
                 rightItem ? `Associé à ${rightItem.text}` : "À associer"
               }`}
               onPress={() => setMatchingFocusLeftId(leftItem.id)}
-              style={({ pressed }) => [
-                styles.matchCard,
-                active ? styles.matchCardActive : null,
-                pressed ? styles.pressedButton : null,
-              ]}
+              className="gap-1.5 rounded-[16px] border p-3 active:opacity-75"
+              style={{
+                backgroundColor: theme.colors.surfaceSoft,
+                borderColor: active ? theme.colors.accent : theme.colors.border,
+                borderWidth: active ? 2 : 1,
+              }}
             >
-              <Text style={styles.matchLeft}>{leftItem.text}</Text>
               <Text
-                style={rightItem ? styles.matchAnswer : styles.matchAnswerEmpty}
+                className="text-[14px] font-black leading-[20px]"
+                style={{ color: theme.colors.foreground }}
+              >
+                {leftItem.text}
+              </Text>
+              <Text
+                className="text-[13px] font-bold leading-[19px]"
+                style={{
+                  color: rightItem
+                    ? theme.colors.accent
+                    : theme.colors.foregroundMuted,
+                }}
               >
                 {rightItem ? `→ ${rightItem.text}` : "À associer"}
               </Text>
@@ -394,10 +480,14 @@ export default function QuestionBlock({
           );
         })}
 
-        <Text style={styles.stepLabel}>
+        <Text
+          className="mt-1 text-[12px] font-black"
+          style={{ color: theme.colors.foregroundSubtle }}
+        >
           2. Correspondance pour « {activeLeft.text} »
         </Text>
-        <View style={styles.chipWrap}>
+
+        <View className="flex-row flex-wrap gap-2">
           {right.map((rightItem) => {
             const owner = pairs.find((pair) => pair.rightId === rightItem.id);
             const selected = owner?.leftId === activeLeftId;
@@ -409,18 +499,24 @@ export default function QuestionBlock({
                 accessibilityState={{ selected }}
                 accessibilityLabel={`Associer ${activeLeft.text} à ${rightItem.text}`}
                 onPress={() => setMatching(activeLeftId, rightItem.id)}
-                style={({ pressed }) => [
-                  styles.choiceChip,
-                  selected ? styles.choiceChipSelected : null,
-                  owner && !selected ? styles.choiceChipUsed : null,
-                  pressed ? styles.pressedButton : null,
-                ]}
+                className="min-h-11 justify-center rounded-full border px-3 py-2 active:opacity-75"
+                style={{
+                  opacity: owner && !selected ? 0.55 : 1,
+                  backgroundColor: selected
+                    ? theme.colors.accent
+                    : theme.colors.surfaceElevated,
+                  borderColor: selected
+                    ? theme.colors.accent
+                    : theme.colors.border,
+                }}
               >
                 <Text
-                  style={[
-                    styles.choiceChipText,
-                    selected ? styles.choiceChipTextSelected : null,
-                  ]}
+                  className="text-[13px] font-bold"
+                  style={{
+                    color: selected
+                      ? theme.colors.accentForeground
+                      : theme.colors.foreground,
+                  }}
                 >
                   {rightItem.text}
                   {owner && !selected ? " · déjà associé" : ""}
@@ -439,7 +535,10 @@ export default function QuestionBlock({
 
     if (items.length === 0 || zones.length === 0) {
       return (
-        <Text style={styles.configError}>
+        <Text
+          className="text-[13px] font-bold leading-[20px]"
+          style={{ color: theme.colors.danger }}
+        >
           Configuration de glisser-déposer indisponible.
         </Text>
       );
@@ -448,15 +547,24 @@ export default function QuestionBlock({
     const placements = answer.dragPlacements ?? [];
 
     return (
-      <View style={styles.editorGroup}>
-        <Text style={styles.assistiveText}>
+      <View className="gap-2.5">
+        <Text
+          className="text-[12px] leading-[18px]"
+          style={{ color: theme.colors.foregroundMuted }}
+        >
           {Platform.OS === "web"
             ? "Glisse un élément vers une zone. Alternative clavier ou tactile : sélectionne l’élément, puis la zone."
             : "Sélectionne un élément, puis touche sa zone cible."}
         </Text>
 
-        <Text style={styles.stepLabel}>Éléments à déplacer</Text>
-        <View style={styles.dragItemBank}>
+        <Text
+          className="mt-1 text-[12px] font-black"
+          style={{ color: theme.colors.foregroundSubtle }}
+        >
+          Éléments à déplacer
+        </Text>
+
+        <View className="gap-2">
           {items.map((item) => {
             const placement = placements.find((entry) => entry.itemId === item.id);
             const zone = zones.find((entry) => entry.id === placement?.zoneId);
@@ -482,16 +590,30 @@ export default function QuestionBlock({
                   zone ? `Placé dans ${zone.text}` : "Non placé"
                 }`}
                 onPress={() => setDragFocusItemId(item.id)}
-                style={({ pressed }) => [
-                  styles.dragItem,
-                  selected ? styles.dragItemSelected : null,
-                  pressed ? styles.pressedButton : null,
-                ]}
+                className="min-h-[58px] flex-row items-center gap-2.5 rounded-[16px] border px-3 py-2.5 active:opacity-75"
+                style={{
+                  backgroundColor: theme.colors.surfaceElevated,
+                  borderColor: selected ? theme.colors.accent : theme.colors.border,
+                  borderWidth: selected ? 2 : 1,
+                }}
               >
-                <Text style={styles.dragHandle}>⋮⋮</Text>
-                <View style={styles.dragItemContent}>
-                  <Text style={styles.dragItemText}>{item.text}</Text>
-                  <Text style={styles.dragItemMeta}>
+                <Text
+                  className="text-[20px] font-black"
+                  style={{ color: theme.colors.accent }}
+                >
+                  ⋮⋮
+                </Text>
+                <View className="min-w-0 flex-1 gap-0.5">
+                  <Text
+                    className="text-[14px] font-black leading-[20px]"
+                    style={{ color: theme.colors.foreground }}
+                  >
+                    {item.text}
+                  </Text>
+                  <Text
+                    className="text-[11px]"
+                    style={{ color: theme.colors.foregroundMuted }}
+                  >
                     {zone ? `Placée : ${zone.text}` : "À placer"}
                   </Text>
                 </View>
@@ -500,7 +622,13 @@ export default function QuestionBlock({
           })}
         </View>
 
-        <Text style={styles.stepLabel}>Zones cibles</Text>
+        <Text
+          className="mt-1 text-[12px] font-black"
+          style={{ color: theme.colors.foregroundSubtle }}
+        >
+          Zones cibles
+        </Text>
+
         {zones.map((zone) => {
           const placedItems = items.filter((item) =>
             placements.some(
@@ -541,24 +669,43 @@ export default function QuestionBlock({
                   setDragPlacement(dragFocusItemId, zone.id);
                 }
               }}
-              style={({ pressed }) => [
-                styles.dropZone,
-                active ? styles.dropZoneActive : null,
-                pressed ? styles.pressedButton : null,
-              ]}
+              className="min-h-[80px] rounded-[18px] border border-dashed p-3.5 active:opacity-75"
+              style={{
+                backgroundColor: active
+                  ? theme.colors.surfaceSoft
+                  : theme.colors.surfaceElevated,
+                borderColor: active ? theme.colors.accent : theme.colors.border,
+                borderWidth: active ? 2 : 1,
+              }}
             >
-              <Text style={styles.dropZoneTitle}>{zone.text}</Text>
+              <Text
+                className="text-[14px] font-black"
+                style={{ color: theme.colors.foreground }}
+              >
+                {zone.text}
+              </Text>
+
               {placedItems.length === 0 ? (
-                <Text style={styles.dropZoneHint}>
-                  {dragFocusItemId
-                    ? "Dépose ou touche ici"
-                    : "Dépose un élément ici"}
+                <Text
+                  className="mt-1.5 text-[12px] leading-[18px]"
+                  style={{ color: theme.colors.foregroundMuted }}
+                >
+                  {dragFocusItemId ? "Dépose ou touche ici" : "Dépose un élément ici"}
                 </Text>
               ) : (
-                <View style={styles.placedItems}>
+                <View className="mt-2 flex-row flex-wrap gap-1.5">
                   {placedItems.map((item) => (
-                    <View key={item.id} style={styles.placedItem}>
-                      <Text style={styles.placedItemText}>{item.text}</Text>
+                    <View
+                      key={item.id}
+                      className="rounded-full px-2.5 py-1.5"
+                      style={{ backgroundColor: theme.colors.surfaceSoft }}
+                    >
+                      <Text
+                        className="text-[11px] font-bold"
+                        style={{ color: theme.colors.foreground }}
+                      >
+                        {item.text}
+                      </Text>
                     </View>
                   ))}
                 </View>
@@ -572,9 +719,15 @@ export default function QuestionBlock({
 
   function renderNumericQuestion() {
     return (
-      <View style={styles.fieldGroup}>
-        <Text style={styles.fieldLabel}>
-          Valeur{question.typeConfig?.numericUnit ? ` (${question.typeConfig.numericUnit})` : ""}
+      <View className="gap-1.5">
+        <Text
+          className="text-[12px] font-extrabold"
+          style={{ color: theme.colors.foregroundSubtle }}
+        >
+          Valeur
+          {question.typeConfig?.numericUnit
+            ? ` (${question.typeConfig.numericUnit})`
+            : ""}
         </Text>
         <TextInput
           accessibilityLabel="Réponse numérique"
@@ -586,7 +739,12 @@ export default function QuestionBlock({
           }
           placeholderTextColor={theme.colors.foregroundMuted}
           selectTextOnFocus
-          style={styles.textInput}
+          className="min-h-[52px] rounded-[16px] border px-4 py-3 text-[15px]"
+          style={{
+            backgroundColor: theme.colors.surfaceElevated,
+            borderColor: theme.colors.border,
+            color: theme.colors.foreground,
+          }}
         />
       </View>
     );
@@ -624,15 +782,17 @@ export default function QuestionBlock({
 
     if (!segments) {
       return (
-        <Text style={styles.question}>
-          {question.orderIndex}. {question.content}
+        <Text
+          className="text-[17px] font-black leading-[24px]"
+          style={{ color: theme.colors.foreground }}
+        >
+          {question.content}
         </Text>
       );
     }
 
     return (
-      <View style={styles.inlinePrompt}>
-        <Text style={styles.question}>{question.orderIndex}. </Text>
+      <View className="flex-row flex-wrap items-center gap-1.5">
         {segments.map((segment, index) => {
           const blankId = blankIds[index];
           const value = blankId
@@ -641,8 +801,18 @@ export default function QuestionBlock({
             : "";
 
           return (
-            <View key={`segment-${index}`} style={styles.inlinePromptPart}>
-              {segment ? <Text style={styles.question}>{segment}</Text> : null}
+            <View
+              key={`segment-${index}`}
+              className="flex-row flex-wrap items-center gap-1.5"
+            >
+              {segment ? (
+                <Text
+                  className="text-[17px] font-black leading-[24px]"
+                  style={{ color: theme.colors.foreground }}
+                >
+                  {segment}
+                </Text>
+              ) : null}
               {blankId ? (
                 <TextInput
                   accessibilityLabel={`Réponse du trou ${index + 1}`}
@@ -651,7 +821,12 @@ export default function QuestionBlock({
                   placeholder={`Réponse ${index + 1}`}
                   placeholderTextColor={theme.colors.foregroundMuted}
                   autoCapitalize="none"
-                  style={[styles.textInput, styles.inlineBlankInput]}
+                  className="min-h-10 min-w-[140px] rounded-[14px] border px-3 py-1.5 text-[14px]"
+                  style={{
+                    backgroundColor: theme.colors.surfaceElevated,
+                    borderColor: theme.colors.border,
+                    color: theme.colors.foreground,
+                  }}
                 />
               ) : null}
             </View>
@@ -662,290 +837,70 @@ export default function QuestionBlock({
   }
 
   return (
-    <View style={styles.card}>
+    <View
+      className="mb-3.5 overflow-hidden rounded-[24px] border p-4"
+      style={{
+        backgroundColor: theme.colors.surface,
+        borderColor: theme.colors.border,
+        shadowColor: theme.colors.shadow,
+        shadowOpacity: 0.035,
+        shadowRadius: 12,
+        shadowOffset: { width: 0, height: 5 },
+        elevation: 1,
+      }}
+    >
+      <View className="mb-3 flex-row items-center justify-between gap-2">
+        <View className="flex-row items-center gap-2">
+          <View
+            className="h-9 w-9 items-center justify-center rounded-[12px]"
+            style={{ backgroundColor: theme.colors.surfaceSoft }}
+          >
+            <Text
+              maxFontSizeMultiplier={1}
+              className="text-[14px] font-black"
+              style={{ color: theme.colors.accent }}
+            >
+              {question.orderIndex}
+            </Text>
+          </View>
+          <View
+            className="rounded-full px-2.5 py-1.5"
+            style={{ backgroundColor: theme.colors.surfaceSoft }}
+          >
+            <Text
+              maxFontSizeMultiplier={1}
+              className="text-[10px] font-extrabold"
+              style={{ color: theme.colors.foregroundMuted }}
+            >
+              {typeShortLabel(question)}
+            </Text>
+          </View>
+        </View>
+
+        <View
+          className="rounded-full px-2.5 py-1.5"
+          style={{ backgroundColor: theme.colors.surfaceSoft }}
+        >
+          <Text
+            maxFontSizeMultiplier={1}
+            className="text-[10px] font-black"
+            style={{ color: theme.colors.accent }}
+          >
+            {question.points} pt{question.points > 1 ? "s" : ""}
+          </Text>
+        </View>
+      </View>
+
       {renderQuestionPrompt()}
 
-      <Text style={styles.help}>{typeLabel(question)}</Text>
-      <Text style={styles.points}>{question.points} point(s)</Text>
+      <Text
+        className="mb-4 mt-2 text-[13px] leading-[19px]"
+        style={{ color: theme.colors.foregroundMuted }}
+      >
+        {typeLabel(question)}
+      </Text>
 
       {renderAnswerEditor()}
     </View>
   );
-}
-
-function makeStyles(theme: ReturnType<typeof useSmartTrainingTheme>["theme"]) {
-  return StyleSheet.create({
-    card: {
-      backgroundColor: theme.colors.surface,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-      borderRadius: theme.shape.cardRadius,
-      padding: 18,
-      marginBottom: 14,
-    },
-    question: {
-      color: theme.colors.foreground,
-      fontSize: 16,
-      fontWeight: "900",
-      lineHeight: 23,
-    },
-    help: {
-      color: theme.colors.foregroundMuted,
-      marginTop: 8,
-      lineHeight: 19,
-    },
-    points: {
-      color: theme.colors.accent,
-      fontWeight: "800",
-      marginTop: 5,
-      marginBottom: 14,
-    },
-    options: {
-      gap: 8,
-    },
-    editorGroup: {
-      gap: 10,
-    },
-    fieldGroup: {
-      gap: 6,
-    },
-    fieldLabel: {
-      color: theme.colors.foregroundSubtle,
-      fontWeight: "800",
-      fontSize: 13,
-    },
-    textInput: {
-      minHeight: 46,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-      borderRadius: theme.shape.controlRadius,
-      backgroundColor: theme.colors.surfaceElevated,
-      color: theme.colors.foreground,
-      paddingHorizontal: 12,
-      paddingVertical: 10,
-      fontSize: 15,
-    },
-    inlinePrompt: {
-      flexDirection: "row",
-      flexWrap: "wrap",
-      alignItems: "center",
-      gap: 6,
-    },
-    inlinePromptPart: {
-      flexDirection: "row",
-      flexWrap: "wrap",
-      alignItems: "center",
-      gap: 6,
-    },
-    inlineBlankInput: {
-      minWidth: 140,
-      minHeight: 40,
-      paddingVertical: 6,
-    },
-    configError: {
-      color: theme.colors.danger,
-      lineHeight: 20,
-      fontWeight: "700",
-    },
-    assistiveText: {
-      color: theme.colors.foregroundMuted,
-      fontSize: 12,
-      lineHeight: 18,
-    },
-    stepLabel: {
-      color: theme.colors.foregroundSubtle,
-      fontSize: 13,
-      fontWeight: "900",
-      marginTop: 4,
-    },
-    orderRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 8,
-      minHeight: 50,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-      borderRadius: theme.shape.controlRadius,
-      padding: 8,
-      backgroundColor: theme.colors.surfaceSoft,
-    },
-    orderIndex: {
-      color: theme.colors.accent,
-      fontWeight: "900",
-      width: 24,
-      textAlign: "center",
-    },
-    orderText: {
-      flex: 1,
-      color: theme.colors.foreground,
-      fontWeight: "700",
-    },
-    orderActions: {
-      flexDirection: "row",
-      gap: 6,
-    },
-    miniButton: {
-      minWidth: 44,
-      minHeight: 44,
-      alignItems: "center",
-      justifyContent: "center",
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-      borderRadius: theme.shape.controlRadius,
-      backgroundColor: theme.colors.surfaceElevated,
-    },
-    miniButtonText: {
-      color: theme.colors.foreground,
-      fontSize: 18,
-      fontWeight: "900",
-    },
-    disabledButton: {
-      opacity: 0.35,
-    },
-    pressedButton: {
-      opacity: 0.7,
-    },
-    confirmButton: {
-      minHeight: 44,
-      alignItems: "center",
-      justifyContent: "center",
-      borderRadius: theme.shape.controlRadius,
-      backgroundColor: theme.colors.accent,
-      paddingHorizontal: 14,
-      paddingVertical: 10,
-    },
-    confirmButtonText: {
-      color: theme.colors.accentForeground,
-      fontWeight: "900",
-    },
-    matchCard: {
-      gap: 8,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-      borderRadius: theme.shape.controlRadius,
-      padding: 10,
-      backgroundColor: theme.colors.surfaceSoft,
-    },
-    matchCardActive: {
-      borderColor: theme.colors.accent,
-      borderWidth: 2,
-    },
-    matchLeft: {
-      color: theme.colors.foreground,
-      fontWeight: "900",
-      lineHeight: 20,
-    },
-    matchAnswer: {
-      color: theme.colors.accent,
-      fontWeight: "800",
-      lineHeight: 19,
-    },
-    matchAnswerEmpty: {
-      color: theme.colors.foregroundMuted,
-      fontStyle: "italic",
-      lineHeight: 19,
-    },
-    chipWrap: {
-      flexDirection: "row",
-      flexWrap: "wrap",
-      gap: 8,
-    },
-    choiceChip: {
-      minHeight: 44,
-      justifyContent: "center",
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-      borderRadius: 999,
-      backgroundColor: theme.colors.surfaceElevated,
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-    },
-    choiceChipSelected: {
-      borderColor: theme.colors.accent,
-      backgroundColor: theme.colors.accent,
-    },
-    choiceChipUsed: {
-      opacity: 0.55,
-    },
-    choiceChipText: {
-      color: theme.colors.foreground,
-      fontWeight: "700",
-    },
-    choiceChipTextSelected: {
-      color: theme.colors.accentForeground,
-    },
-    dragItemBank: {
-      gap: 8,
-    },
-    dragItem: {
-      minHeight: 54,
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 10,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-      borderRadius: theme.shape.controlRadius,
-      backgroundColor: theme.colors.surfaceElevated,
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-    },
-    dragItemSelected: {
-      borderColor: theme.colors.accent,
-      borderWidth: 2,
-    },
-    dragHandle: {
-      color: theme.colors.accent,
-      fontSize: 22,
-      fontWeight: "900",
-    },
-    dragItemContent: {
-      flex: 1,
-      gap: 2,
-    },
-    dragItemText: {
-      color: theme.colors.foreground,
-      fontWeight: "900",
-    },
-    dragItemMeta: {
-      color: theme.colors.foregroundMuted,
-      fontSize: 12,
-    },
-    dropZone: {
-      minHeight: 76,
-      borderWidth: 2,
-      borderStyle: "dashed",
-      borderColor: theme.colors.border,
-      borderRadius: theme.shape.controlRadius,
-      backgroundColor: theme.colors.surfaceSoft,
-      padding: 12,
-      gap: 8,
-    },
-    dropZoneActive: {
-      borderColor: theme.colors.accent,
-      backgroundColor: theme.colors.surfaceElevated,
-    },
-    dropZoneTitle: {
-      color: theme.colors.foreground,
-      fontWeight: "900",
-    },
-    dropZoneHint: {
-      color: theme.colors.foregroundMuted,
-      fontStyle: "italic",
-    },
-    placedItems: {
-      flexDirection: "row",
-      flexWrap: "wrap",
-      gap: 6,
-    },
-    placedItem: {
-      borderRadius: 999,
-      backgroundColor: theme.colors.accent,
-      paddingHorizontal: 10,
-      paddingVertical: 6,
-    },
-    placedItemText: {
-      color: theme.colors.accentForeground,
-      fontWeight: "800",
-    },
-  });
 }

@@ -1,4 +1,6 @@
 import * as DocumentPicker from "expo-document-picker";
+import { SymbolView } from "expo-symbols";
+import type { ComponentProps } from "react";
 import { useEffect, useMemo, useState } from "react";
 import {
   Modal,
@@ -25,9 +27,7 @@ import {
   uploadTrainerLessonScorm,
   uploadTrainerLessonVideo,
 } from "../../features/trainer/trainerAuthoringService";
-import {
-  useSmartTrainingTheme,
-} from "../../theme/provider/SmartTrainingThemeProvider";
+import { useSmartTrainingTheme } from "../../theme/provider/SmartTrainingThemeProvider";
 import type {
   MobileResourceType,
   MobileStorageMode,
@@ -55,45 +55,53 @@ type ResourceDraft = {
   file: TrainerPickedFile | null;
 };
 
+type SymbolName = ComponentProps<typeof SymbolView>["name"];
+
+type ResourceVisual = {
+  icon: SymbolName;
+  soft: string;
+  color: string;
+};
+
 const resourceTypes: {
   value: MobileResourceType;
   label: string;
   help: string;
 }[] = [
   {
-    value: "TEXT",
-    label: "Texte",
-    help: "Contenu pédagogique saisi directement.",
-  },
-  {
-    value: "EXTERNAL_LINK",
-    label: "Lien",
-    help: "Lien HTTP/HTTPS vers une ressource externe.",
-  },
-  {
-    value: "IMAGE",
-    label: "Image",
-    help: "PNG, JPG, JPEG, WEBP ou GIF.",
-  },
-  {
     value: "PDF",
-    label: "PDF",
-    help: "Document PDF.",
-  },
-  {
-    value: "DOCUMENT",
-    label: "Document",
-    help: "DOC, DOCX, PPT, PPTX, XLS, XLSX, TXT, ODT, ODS ou ODP.",
+    label: "Document PDF",
+    help: "Supports de cours, guides",
   },
   {
     value: "VIDEO",
     label: "Vidéo",
-    help: "Vidéo MP4.",
+    help: "Vidéos de formation",
+  },
+  {
+    value: "IMAGE",
+    label: "Image",
+    help: "Illustrations, schémas",
+  },
+  {
+    value: "DOCUMENT",
+    label: "Document",
+    help: "Word, PPT, Excel, texte",
+  },
+  {
+    value: "EXTERNAL_LINK",
+    label: "Lien externe",
+    help: "Sites web, articles",
   },
   {
     value: "SCORM",
     label: "SCORM",
-    help: "Package ZIP SCORM. Le manifest est validé par le backend.",
+    help: "Contenu e-learning",
+  },
+  {
+    value: "TEXT",
+    label: "Texte",
+    help: "Contenu textuel simple",
   },
 ];
 
@@ -110,6 +118,90 @@ const documentExtensions = [
   ".odp",
 ];
 
+function resourceVisual(type?: string): ResourceVisual {
+  if (type === "PDF") {
+    return {
+      icon: {
+        ios: "doc.fill",
+        android: "picture_as_pdf",
+        web: "picture_as_pdf",
+      },
+      soft: "#FFF0F2",
+      color: "#E23D52",
+    };
+  }
+
+  if (type === "VIDEO") {
+    return {
+      icon: {
+        ios: "play.fill",
+        android: "play_arrow",
+        web: "play_arrow",
+      },
+      soft: "#EAF3FF",
+      color: "#2F80ED",
+    };
+  }
+
+  if (type === "IMAGE") {
+    return {
+      icon: {
+        ios: "photo.fill",
+        android: "image",
+        web: "image",
+      },
+      soft: "#FFF4E8",
+      color: "#F97316",
+    };
+  }
+
+  if (type === "DOCUMENT") {
+    return {
+      icon: {
+        ios: "doc.text.fill",
+        android: "description",
+        web: "description",
+      },
+      soft: "#F1EBFF",
+      color: "#7C3AED",
+    };
+  }
+
+  if (type === "EXTERNAL_LINK") {
+    return {
+      icon: {
+        ios: "link",
+        android: "link",
+        web: "link",
+      },
+      soft: "#EAFBF3",
+      color: "#10A36A",
+    };
+  }
+
+  if (type === "SCORM") {
+    return {
+      icon: {
+        ios: "shippingbox.fill",
+        android: "inventory_2",
+        web: "inventory_2",
+      },
+      soft: "#E9FAFC",
+      color: "#0EA5A8",
+    };
+  }
+
+  return {
+    icon: {
+      ios: "text.alignleft",
+      android: "notes",
+      web: "notes",
+    },
+    soft: "#EEF1F6",
+    color: "#667085",
+  };
+}
+
 function errorText(error: unknown): string {
   if (error instanceof Error && error.message) {
     return error.message;
@@ -120,8 +212,7 @@ function errorText(error: unknown): string {
 
 function labelForType(type?: string): string {
   return (
-    resourceTypes.find((item) => item.value === type)
-      ?.label ??
+    resourceTypes.find((item) => item.value === type)?.label ??
     type ??
     "Ressource"
   );
@@ -143,7 +234,29 @@ function formatSize(size?: number | null): string {
   return `${(size / (1024 * 1024)).toFixed(1)} Mo`;
 }
 
-// PATCH16_A8C5L_AUTHORING_CONTENT_CLARITY_V1
+function trainingStatusLabel(value?: string | null): string {
+  if (value === "DRAFT") return "Brouillon";
+  if (value === "PUBLISHED") return "Publiée";
+  if (value === "ARCHIVED") return "Archivée";
+
+  return value || "Statut inconnu";
+}
+
+function formatDuration(seconds?: number | null): string | null {
+  if (
+    seconds === null ||
+    seconds === undefined ||
+    seconds < 0
+  ) {
+    return null;
+  }
+
+  const minutes = Math.floor(seconds / 60);
+  const remaining = seconds % 60;
+
+  return `${minutes}:${String(remaining).padStart(2, "0")}`;
+}
+
 function normalizedPedagogicalText(value?: string): string {
   return (value || "")
     .trim()
@@ -151,27 +264,28 @@ function normalizedPedagogicalText(value?: string): string {
     .toLocaleLowerCase("fr");
 }
 
-function samePedagogicalText(left?: string, right?: string): boolean {
+function samePedagogicalText(
+  left?: string,
+  right?: string,
+): boolean {
   const normalizedLeft = normalizedPedagogicalText(left);
+
   return Boolean(
-    normalizedLeft && normalizedLeft === normalizedPedagogicalText(right),
+    normalizedLeft &&
+      normalizedLeft === normalizedPedagogicalText(right),
   );
 }
 
 function storageModeFor(
   type: MobileResourceType,
 ): "TEXT_CONTENT" | "EXTERNAL_URL" {
-  return type === "TEXT"
-    ? "TEXT_CONTENT"
-    : "EXTERNAL_URL";
+  return type === "TEXT" ? "TEXT_CONTENT" : "EXTERNAL_URL";
 }
 
 function canonicalResourceType(
   value?: string,
 ): MobileResourceType | null {
-  return resourceTypes.some(
-    (item) => item.value === value,
-  )
+  return resourceTypes.some((item) => item.value === value)
     ? (value as MobileResourceType)
     : null;
 }
@@ -324,12 +438,11 @@ function blankDraft(
   };
 }
 
-// MOBILE_RESOURCE_STABLE_EDITOR_INPUT_SAFE_V1
 function EditorInput({
   multiline = false,
   large = false,
   ...props
-}: React.ComponentProps<typeof TextInput> & {
+}: ComponentProps<typeof TextInput> & {
   multiline?: boolean;
   large?: boolean;
 }) {
@@ -339,21 +452,19 @@ function EditorInput({
     <TextInput
       {...props}
       multiline={multiline}
-      placeholderTextColor={
-        theme.colors.foregroundSubtle
-      }
-      style={[
-        styles.input,
-        multiline && styles.multiline,
-        large && styles.largeInput,
-        {
-          color: theme.colors.foreground,
-          backgroundColor: theme.colors.background,
-          borderColor: theme.colors.border,
-          borderRadius:
-            theme.shape.controlRadius,
-        },
-      ]}
+      placeholderTextColor={theme.colors.foregroundSubtle}
+      className={[
+        "mb-4 min-h-[50px] rounded-[15px] border bg-white px-3.5 py-3 text-[13px]",
+        multiline ? "min-h-[92px]" : "",
+        large ? "min-h-[138px]" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+      style={{
+        color: theme.colors.foreground,
+        borderColor: "#DCE2EA",
+        textAlignVertical: multiline ? "top" : "center",
+      }}
     />
   );
 }
@@ -374,9 +485,13 @@ export default function TrainerLessonResourcesScreen({
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
+  const [typePickerOpen, setTypePickerOpen] =
+    useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
   const [draft, setDraft] =
     useState<ResourceDraft | null>(null);
+  const [actionTarget, setActionTarget] =
+    useState<TrainerResourceResponse | null>(null);
   const [deleteTarget, setDeleteTarget] =
     useState<TrainerResourceResponse | null>(null);
 
@@ -410,6 +525,33 @@ export default function TrainerLessonResourcesScreen({
       ),
     [context],
   );
+
+  const stats = useMemo(() => {
+    const fileCount = resources.filter((resource) =>
+      [
+        "PDF",
+        "DOCUMENT",
+        "IMAGE",
+        "SCORM",
+      ].includes(resource.type || ""),
+    ).length;
+
+    const videoCount = resources.filter(
+      (resource) => resource.type === "VIDEO",
+    ).length;
+
+    const linkCount = resources.filter(
+      (resource) =>
+        resource.type === "EXTERNAL_LINK",
+    ).length;
+
+    return {
+      total: resources.length,
+      files: fileCount,
+      videos: videoCount,
+      links: linkCount,
+    };
+  }, [resources]);
 
   const editable = training?.status === "DRAFT";
 
@@ -501,6 +643,7 @@ export default function TrainerLessonResourcesScreen({
   }
 
   function openCreate(type: MobileResourceType) {
+    setTypePickerOpen(false);
     setDraft(blankDraft(type, nextOrder()));
     setError("");
     setNotice("");
@@ -520,6 +663,7 @@ export default function TrainerLessonResourcesScreen({
         ? "EXTERNAL_LINK"
         : "TEXT";
 
+    setActionTarget(null);
     setDraft({
       id: resource.id,
       type,
@@ -613,7 +757,9 @@ export default function TrainerLessonResourcesScreen({
     const orderIndex = Number(draft.orderIndex);
 
     if (!title) {
-      setError("Le titre de la ressource est obligatoire.");
+      setError(
+        "Le titre de la ressource est obligatoire.",
+      );
       return;
     }
 
@@ -626,8 +772,14 @@ export default function TrainerLessonResourcesScreen({
 
     if (
       draft.type === "TEXT" &&
-      (samePedagogicalText(draft.textContent, title) ||
-        samePedagogicalText(draft.textContent, description))
+      (samePedagogicalText(
+        draft.textContent,
+        title,
+      ) ||
+        samePedagogicalText(
+          draft.textContent,
+          description,
+        ))
     ) {
       setError(
         "Le texte complémentaire doit être différent du titre et de l’introduction.",
@@ -635,7 +787,10 @@ export default function TrainerLessonResourcesScreen({
       return;
     }
 
-    if (!Number.isInteger(orderIndex) || orderIndex <= 0) {
+    if (
+      !Number.isInteger(orderIndex) ||
+      orderIndex <= 0
+    ) {
       setError(
         "L’ordre de la ressource doit être un entier positif.",
       );
@@ -678,10 +833,8 @@ export default function TrainerLessonResourcesScreen({
     if (
       draft.type === "VIDEO" &&
       durationSeconds !== undefined &&
-      (
-        !Number.isInteger(durationSeconds) ||
-        durationSeconds < 0
-      )
+      (!Number.isInteger(durationSeconds) ||
+        durationSeconds < 0)
     ) {
       setError(
         "La durée vidéo doit être un nombre entier positif ou nul.",
@@ -806,6 +959,7 @@ export default function TrainerLessonResourcesScreen({
     try {
       await deleteTrainerResource(deleteTarget.id);
       setDeleteTarget(null);
+      setActionTarget(null);
       setNotice("Ressource supprimée.");
       await load();
     } catch (caught) {
@@ -861,6 +1015,7 @@ export default function TrainerLessonResourcesScreen({
         ),
       ]);
 
+      setActionTarget(null);
       setNotice("Ordre des ressources mis à jour.");
       await load();
     } catch (caught) {
@@ -888,454 +1043,631 @@ export default function TrainerLessonResourcesScreen({
   }
 
   return (
-    <ScreenContainer>
+    <ScreenContainer
+      edges={["left", "right", "bottom"]}
+      style={{
+        padding: 0,
+        backgroundColor: "#F8F6F3",
+      }}
+    >
       <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.content}
+        className="flex-1"
+        contentContainerStyle={{ paddingBottom: 28 }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.page}>
-          <AppButton
-            title="Retour au contenu"
-            variant="secondary"
-            onPress={onBack}
-            style={styles.backButton}
-          />
-
-          <Text
-            style={[
-              styles.eyebrow,
-              { color: theme.colors.accent },
-            ]}
-          >
-            RESSOURCES PÉDAGOGIQUES
-          </Text>
-
-          <Text
-            style={[
-              styles.title,
-              { color: theme.colors.foreground },
-            ]}
-          >
-            {context.lesson.title}
-          </Text>
-
-          <Text
-            style={[
-              styles.subtitle,
-              { color: theme.colors.foregroundMuted },
-            ]}
-          >
-            {context.module.title} · {training.title}
-          </Text>
-
+        <View className="mx-auto w-full max-w-[760px] px-4">
+          {/* LESSON CARD */}
           <View
-            style={[
-              styles.statusCard,
-              {
-                backgroundColor: theme.colors.surfaceSoft,
-                borderColor: theme.colors.border,
+            className="mt-3 overflow-hidden rounded-[20px] px-4 py-3.5"
+            style={{
+              backgroundColor: "#7C3AED",
+              shadowColor: "#7C3AED",
+              shadowOffset: {
+                width: 0,
+                height: 8,
               },
-            ]}
+              shadowOpacity: 0.22,
+              shadowRadius: 16,
+              elevation: 5,
+            }}
           >
-            <Text
+            <View
               style={[
-                styles.statusTitle,
-                { color: theme.colors.foreground },
-              ]}
-            >
-              {editable
-                ? "Leçon modifiable"
-                : "Ressources en lecture seule"}
-            </Text>
-
-            <Text
-              style={[
-                styles.statusText,
+                StyleSheet.absoluteFill,
                 {
-                  color:
-                    theme.colors.foregroundMuted,
+                  backgroundColor: "#8D63F0",
+                  opacity: 0.4,
+                  transform: [
+                    {
+                      translateX: 115,
+                    },
+                  ],
                 },
               ]}
-            >
-              {editable
-                ? "Ajoutez du texte, des liens, des médias, des documents ou un package SCORM."
-                : "Remettez la formation en brouillon avant de modifier les ressources."}
-            </Text>
+            />
+
+            <View className="flex-row items-center">
+              <View className="h-[48px] w-[48px] items-center justify-center rounded-[15px] bg-white/15">
+                <SymbolView
+                  name={{
+                    ios: "book.fill",
+                    android: "menu_book",
+                    web: "menu_book",
+                  }}
+                  tintColor="#FFFFFF"
+                  size={22}
+                  weight="bold"
+                />
+              </View>
+
+              <View className="ml-3 min-w-0 flex-1">
+                <Text className="text-[8px] font-black uppercase tracking-[0.8px] text-white/70">
+                  Leçon
+                </Text>
+
+                <Text className="mt-1 text-[15px] font-black leading-[19px] text-white">
+                  {context.lesson.title}
+                </Text>
+
+                <Text
+                  numberOfLines={2}
+                  className="mt-1.5 text-[9px] leading-[13px] text-white/70"
+                >
+                  {context.module.title} · {training.title}
+                </Text>
+              </View>
+
+              <View className="ml-2 rounded-[13px] bg-white px-2.5 py-2">
+                <Text
+                  className="text-[8px] font-black"
+                  style={{ color: "#7C3AED" }}
+                >
+                  {editable
+                    ? "Brouillon"
+                    : trainingStatusLabel(training.status)}
+                </Text>
+              </View>
+            </View>
           </View>
 
-          {error ? (
-            <ErrorMessage
-              message={error}
-              onRetry={() => setError("")}
+          {/* STATS */}
+          <View
+            className="mt-3 flex-row rounded-[17px] border bg-white px-1.5 py-2.5"
+            style={{
+              borderColor: "#E5E8EE",
+              shadowColor: "#0F172A",
+              shadowOffset: {
+                width: 0,
+                height: 2,
+              },
+              shadowOpacity: 0.04,
+              shadowRadius: 8,
+              elevation: 1,
+            }}
+          >
+            <StatItem
+              icon={{
+                ios: "square.stack.3d.up.fill",
+                android: "layers",
+                web: "layers",
+              }}
+              value={stats.total}
+              label="Ressources"
+              color="#7C3AED"
+              soft="#F1EBFF"
             />
+
+            <StatDivider />
+
+            <StatItem
+              icon={{
+                ios: "doc.fill",
+                android: "description",
+                web: "description",
+              }}
+              value={stats.files}
+              label="Fichiers"
+              color="#10A36A"
+              soft="#EAFBF3"
+            />
+
+            <StatDivider />
+
+            <StatItem
+              icon={{
+                ios: "play.fill",
+                android: "play_arrow",
+                web: "play_arrow",
+              }}
+              value={stats.videos}
+              label="Vidéos"
+              color="#2F80ED"
+              soft="#EAF3FF"
+            />
+
+            <StatDivider />
+
+            <StatItem
+              icon={{
+                ios: "link",
+                android: "link",
+                web: "link",
+              }}
+              value={stats.links}
+              label="Liens"
+              color="#0EA5A8"
+              soft="#E9FAFC"
+            />
+          </View>
+
+          {editable ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Ajouter une ressource"
+              onPress={() => setTypePickerOpen(true)}
+              android_ripple={{ color: "transparent" }}
+              className="mt-4 flex-row items-center justify-center rounded-[16px] px-4 py-3.5"
+              style={{
+                backgroundColor: "#7C3AED",
+                shadowColor: "#7C3AED",
+                shadowOffset: {
+                  width: 0,
+                  height: 5,
+                },
+                shadowOpacity: 0.2,
+                shadowRadius: 10,
+                elevation: 4,
+              }}
+            >
+              <SymbolView
+                name={{
+                  ios: "plus",
+                  android: "add",
+                  web: "add",
+                }}
+                tintColor="#FFFFFF"
+                size={15}
+                weight="bold"
+              />
+
+              <Text className="ml-2 text-[11px] font-black text-white">
+                Ajouter une ressource
+              </Text>
+            </Pressable>
+          ) : (
+            <View
+              className="mt-3 flex-row items-center rounded-[15px] border px-3 py-2.5"
+              style={{
+                backgroundColor: "#FFF9EE",
+                borderColor: "#F1DFC0",
+              }}
+            >
+              <SymbolView
+                name={{
+                  ios: "lock.fill",
+                  android: "lock",
+                  web: "lock",
+                }}
+                tintColor="#D97706"
+                size={14}
+                weight="bold"
+              />
+
+              <Text
+                className="ml-2 flex-1 text-[9px] leading-[13px]"
+                style={{
+                  color: theme.colors.foregroundMuted,
+                }}
+              >
+                Remettez la formation en brouillon pour modifier les ressources.
+              </Text>
+            </View>
+          )}
+
+          {error ? (
+            <View className="mt-4">
+              <ErrorMessage
+                message={error}
+                onRetry={() => setError("")}
+              />
+            </View>
           ) : null}
 
           {notice ? (
             <View
-              style={[
-                styles.notice,
-                {
-                  backgroundColor:
-                    theme.colors.surfaceSoft,
-                  borderColor: theme.colors.border,
-                },
-              ]}
+              className="mt-4 flex-row items-center rounded-[16px] border bg-white p-3"
+              style={{
+                borderColor: "#D6EBE0",
+              }}
             >
+              <View
+                className="h-8 w-8 items-center justify-center rounded-full"
+                style={{
+                  backgroundColor: "#EAFBF3",
+                }}
+              >
+                <SymbolView
+                  name={{
+                    ios: "checkmark",
+                    android: "check",
+                    web: "check",
+                  }}
+                  tintColor="#10A36A"
+                  size={14}
+                  weight="bold"
+                />
+              </View>
+
               <Text
-                style={[
-                  styles.noticeText,
-                  { color: theme.colors.foreground },
-                ]}
+                className="ml-2.5 flex-1 text-[10px] font-extrabold"
+                style={{
+                  color: theme.colors.foreground,
+                }}
               >
                 {notice}
               </Text>
             </View>
           ) : null}
 
-          {editable ? (
-            <>
+          {/* RESOURCE LIST */}
+          <View className="mb-3 mt-5 flex-row items-end">
+            <View className="flex-1">
               <Text
-                style={[
-                  styles.sectionTitle,
-                  { color: theme.colors.foreground },
-                ]}
+                className="text-[17px] font-black"
+                style={{
+                  color: theme.colors.foreground,
+                }}
               >
-                Ajouter une ressource
+                Ressources
               </Text>
 
               <Text
-                style={[
-                  styles.sectionHelp,
-                  {
-                    color:
-                      theme.colors.foregroundMuted,
-                  },
-                ]}
+                className="mt-0.5 text-[9px]"
+                style={{
+                  color: theme.colors.foregroundMuted,
+                }}
               >
-                Choisissez le type. Le package SCORM reste
-                validé et extrait côté serveur.
+                {resources.length} ressource
+                {resources.length > 1 ? "s" : ""} dans cette leçon
               </Text>
-
-              <View style={styles.typeGrid}>
-                {resourceTypes.map((item) => (
-                  <Pressable
-                    key={item.value}
-                    onPress={() =>
-                      openCreate(item.value)
-                    }
-                    accessibilityRole="button"
-                    accessibilityLabel={`Ajouter ${item.label}`}
-                    style={[
-                      styles.typeCard,
-                      {
-                        backgroundColor:
-                          theme.colors.surface,
-                        borderColor:
-                          theme.colors.border,
-                        borderRadius:
-                          theme.shape.controlRadius,
-                        borderWidth:
-                          theme.shape.borderWidth,
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.typeTitle,
-                        {
-                          color:
-                            theme.colors.foreground,
-                        },
-                      ]}
-                    >
-                      {item.label}
-                    </Text>
-
-                    <Text
-                      style={[
-                        styles.typeHelp,
-                        {
-                          color:
-                            theme.colors
-                              .foregroundMuted,
-                        },
-                      ]}
-                    >
-                      {item.help}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            </>
-          ) : null}
-
-          <View style={styles.listHeader}>
-            <Text
-              style={[
-                styles.sectionTitle,
-                { color: theme.colors.foreground },
-              ]}
-            >
-              Ressources
-            </Text>
-
-            <Text
-              style={[
-                styles.countText,
-                {
-                  color:
-                    theme.colors.foregroundMuted,
-                },
-              ]}
-            >
-              {resources.length}
-            </Text>
+            </View>
           </View>
 
           {resources.length === 0 ? (
             <View
-              style={[
-                styles.emptyCard,
-                {
-                  backgroundColor: theme.colors.surface,
-                  borderColor: theme.colors.border,
-                  borderRadius:
-                    theme.shape.cardRadius,
-                  borderWidth:
-                    theme.shape.borderWidth,
-                },
-              ]}
+              className="items-center rounded-[20px] border bg-white px-5 py-8"
+              style={{
+                borderColor: "#E5E8EE",
+              }}
             >
+              <View
+                className="h-[62px] w-[62px] items-center justify-center rounded-full"
+                style={{
+                  backgroundColor: "#F1EBFF",
+                }}
+              >
+                <SymbolView
+                  name={{
+                    ios: "tray.fill",
+                    android: "inbox",
+                    web: "inbox",
+                  }}
+                  tintColor="#7C3AED"
+                  size={25}
+                  weight="bold"
+                />
+              </View>
+
               <Text
-                style={[
-                  styles.emptyTitle,
-                  { color: theme.colors.foreground },
-                ]}
+                className="mt-4 text-[15px] font-black"
+                style={{
+                  color: theme.colors.foreground,
+                }}
               >
                 Aucune ressource
               </Text>
 
               <Text
-                style={[
-                  styles.emptyText,
-                  {
-                    color:
-                      theme.colors.foregroundMuted,
-                  },
-                ]}
+                className="mt-1.5 text-center text-[9px] leading-[14px]"
+                style={{
+                  color: theme.colors.foregroundMuted,
+                }}
               >
-                Cette leçon ne contient encore aucune
-                ressource pédagogique.
+                Cette leçon ne contient encore aucune ressource pédagogique.
               </Text>
             </View>
           ) : (
-            resources.map((resource, resourceIndex) => (
-              <View
-                key={resource.id}
-                style={[
-                  styles.resourceCard,
-                  {
-                    backgroundColor:
-                      theme.colors.surface,
-                    borderColor: theme.colors.border,
-                    borderRadius:
-                      theme.shape.cardRadius,
-                    borderWidth:
-                      theme.shape.borderWidth,
-                  },
-                ]}
-              >
-                <View style={styles.resourceTop}>
+            resources.map((resource, resourceIndex) => {
+              const visual = resourceVisual(resource.type);
+              const duration =
+                resource.type === "VIDEO"
+                  ? formatDuration(
+                      resource.durationSeconds,
+                    )
+                  : null;
+
+              return (
+                <View
+                  key={resource.id}
+                  className="mb-2.5 flex-row items-center rounded-[18px] border bg-white px-3 py-3"
+                  style={{
+                    borderColor: "#E5E8EE",
+                    shadowColor: "#0F172A",
+                    shadowOffset: {
+                      width: 0,
+                      height: 2,
+                    },
+                    shadowOpacity: 0.035,
+                    shadowRadius: 7,
+                    elevation: 1,
+                  }}
+                >
                   <View
-                    style={[
-                      styles.orderBadge,
-                      {
-                        backgroundColor:
-                          theme.colors.surfaceSoft,
-                      },
-                    ]}
+                    className="h-8 w-8 items-center justify-center rounded-full"
+                    style={{
+                      backgroundColor: "#F1F3F7",
+                    }}
                   >
                     <Text
-                      style={[
-                        styles.orderText,
-                        {
-                          color:
-                            theme.colors.accent,
-                        },
-                      ]}
+                      className="text-[10px] font-black"
+                      style={{
+                        color: "#475467",
+                      }}
                     >
                       {resource.orderIndex ?? "-"}
                     </Text>
                   </View>
 
-                  <View style={styles.resourceMain}>
-                    <View style={styles.resourceTitleRow}>
-                      <Text
-                        style={[
-                          styles.resourceTitle,
-                          {
-                            color:
-                              theme.colors.foreground,
-                          },
-                        ]}
-                      >
-                        {resource.title}
-                      </Text>
+                  <View
+                    className="ml-2.5 h-10 w-10 items-center justify-center rounded-[12px]"
+                    style={{
+                      backgroundColor: visual.soft,
+                    }}
+                  >
+                    <SymbolView
+                      name={visual.icon}
+                      tintColor={visual.color}
+                      size={17}
+                      weight="bold"
+                    />
+                  </View>
 
-                      <View
-                        style={[
-                          styles.typeBadge,
-                          {
-                            backgroundColor:
-                              theme.colors.surfaceSoft,
-                          },
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.typeBadgeText,
-                            {
-                              color:
-                                theme.colors.accent,
-                            },
-                          ]}
-                        >
-                          {labelForType(resource.type)}
-                        </Text>
-                      </View>
-                    </View>
+                  <View className="ml-3 min-w-0 flex-1">
+                    <Text
+                      numberOfLines={1}
+                      className="text-[11px] font-black"
+                      style={{
+                        color: theme.colors.foreground,
+                      }}
+                    >
+                      {resource.title}
+                    </Text>
 
-                    {resource.description ? (
-                      <Text
-                        style={[
-                          styles.resourceDescription,
-                          {
-                            color:
-                              theme.colors
-                                .foregroundMuted,
-                          },
-                        ]}
-                      >
-                        {resource.description}
-                      </Text>
-                    ) : null}
-
-                    {resource.originalFileName ? (
-                      <Text
-                        style={[
-                          styles.fileMeta,
-                          {
-                            color:
-                              theme.colors
-                                .foregroundSubtle,
-                          },
-                        ]}
-                      >
-                        {resource.originalFileName} ·{" "}
-                        {formatSize(resource.fileSize)}
-                      </Text>
-                    ) : null}
+                    <Text
+                      numberOfLines={1}
+                      className="mt-1 text-[8px]"
+                      style={{
+                        color: theme.colors.foregroundMuted,
+                      }}
+                    >
+                      {labelForType(resource.type)}
+                      {resource.fileSize
+                        ? ` · ${formatSize(
+                            resource.fileSize,
+                          )}`
+                        : ""}
+                      {duration ? ` · ${duration}` : ""}
+                    </Text>
 
                     {resource.type === "EXTERNAL_LINK" &&
                     resource.url ? (
                       <Text
-                        style={[
-                          styles.fileMeta,
-                          {
-                            color:
-                              theme.colors
-                                .foregroundSubtle,
-                          },
-                        ]}
-                        numberOfLines={2}
+                        numberOfLines={1}
+                        className="mt-1 text-[7px]"
+                        style={{
+                          color: visual.color,
+                        }}
                       >
                         {resource.url}
                       </Text>
                     ) : null}
 
-                    {resource.type === "SCORM" ? (
+                    {resource.type === "SCORM" &&
+                    resource.scormPackageId ? (
                       <Text
-                        style={[
-                          styles.fileMeta,
-                          {
-                            color:
-                              theme.colors
-                                .foregroundSubtle,
-                          },
-                        ]}
+                        numberOfLines={1}
+                        className="mt-1 text-[7px]"
+                        style={{
+                          color:
+                            theme.colors.foregroundSubtle,
+                        }}
                       >
-                        Package SCORM
-                        {resource.scormPackageId
-                          ? ` #${resource.scormPackageId}`
-                          : ""}
+                        Package #{resource.scormPackageId}
                       </Text>
                     ) : null}
                   </View>
-                </View>
 
-                {editable ? (
-                  <View style={styles.actions}>
-                    <AppButton
-                      title="Monter"
-                      variant="secondary"
-                      disabled={
-                        working || resourceIndex === 0
-                      }
+                  {editable ? (
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`Actions pour ${resource.title}`}
                       onPress={() =>
-                        void moveResource(resource, -1)
+                        setActionTarget(resource)
                       }
-                      style={styles.actionButton}
-                    />
-
-                    <AppButton
-                      title="Descendre"
-                      variant="secondary"
-                      disabled={
-                        working ||
-                        resourceIndex ===
-                          resources.length - 1
-                      }
-                      onPress={() =>
-                        void moveResource(resource, 1)
-                      }
-                      style={styles.actionButton}
-                    />
-
-                    {isEditableJsonResource(
-                      resource,
-                    ) ? (
-                      <AppButton
-                        title="Modifier"
-                        variant="secondary"
-                        onPress={() =>
-                          openEdit(resource)
-                        }
-                        style={styles.actionButton}
+                      android_ripple={{
+                        color: "transparent",
+                      }}
+                      className="ml-2 h-9 w-9 items-center justify-center rounded-full"
+                    >
+                      <SymbolView
+                        name={{
+                          ios: "ellipsis",
+                          android: "more_horiz",
+                          web: "more_horiz",
+                        }}
+                        tintColor="#0F172A"
+                        size={18}
+                        weight="bold"
                       />
-                    ) : null}
-
-                    <AppButton
-                      title="Supprimer"
-                      variant="secondary"
-                      onPress={() =>
-                        setDeleteTarget(resource)
-                      }
-                      style={styles.actionButton}
-                    />
-                  </View>
-                ) : null}
-              </View>
-            ))
+                    </Pressable>
+                  ) : null}
+                </View>
+              );
+            })
           )}
         </View>
       </ScrollView>
 
+      {/* TYPE PICKER */}
+      <Modal
+        visible={typePickerOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() =>
+          setTypePickerOpen(false)
+        }
+      >
+        <View style={styles.modalBackdrop}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            android_ripple={{ color: "transparent" }}
+            onPress={() =>
+              setTypePickerOpen(false)
+            }
+          />
+
+          <View style={styles.typeSheet}>
+            <View className="items-center">
+              <View
+                className="h-1.5 w-12 rounded-full"
+                style={{
+                  backgroundColor: "#D7DCE4",
+                }}
+              />
+            </View>
+
+            <View className="mt-4 flex-row items-start">
+              <View className="flex-1">
+                <Text
+                  className="text-[20px] font-black"
+                  style={{
+                    color: theme.colors.foreground,
+                  }}
+                >
+                  Ajouter une ressource
+                </Text>
+
+                <Text
+                  className="mt-1 text-[10px]"
+                  style={{
+                    color: theme.colors.foregroundMuted,
+                  }}
+                >
+                  Choisissez le type de ressource à ajouter
+                </Text>
+              </View>
+
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Fermer"
+                onPress={() =>
+                  setTypePickerOpen(false)
+                }
+                android_ripple={{
+                  color: "transparent",
+                }}
+                className="h-9 w-9 items-center justify-center rounded-full"
+                style={{
+                  backgroundColor: "#F1F3F7",
+                }}
+              >
+                <SymbolView
+                  name={{
+                    ios: "xmark",
+                    android: "close",
+                    web: "close",
+                  }}
+                  tintColor="#344054"
+                  size={15}
+                  weight="bold"
+                />
+              </Pressable>
+            </View>
+
+            <View className="mt-5 flex-row flex-wrap justify-between gap-y-3">
+              {resourceTypes.map((item) => {
+                const visual = resourceVisual(item.value);
+                const fullWidth = item.value === "TEXT";
+
+                return (
+                  <Pressable
+                    key={item.value}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Ajouter ${item.label}`}
+                    onPress={() =>
+                      openCreate(item.value)
+                    }
+                    android_ripple={{
+                      color: "transparent",
+                    }}
+                    className="rounded-[18px] border bg-white p-3.5"
+                    style={{
+                      width: fullWidth
+                        ? "100%"
+                        : "48.5%",
+                      borderColor: "#E1E6ED",
+                    }}
+                  >
+                    <View className="flex-row items-center">
+                      <View
+                        className="h-10 w-10 items-center justify-center rounded-[13px]"
+                        style={{
+                          backgroundColor: visual.soft,
+                        }}
+                      >
+                        <SymbolView
+                          name={visual.icon}
+                          tintColor={visual.color}
+                          size={17}
+                          weight="bold"
+                        />
+                      </View>
+
+                      <View className="ml-2.5 flex-1">
+                        <Text
+                          className="text-[10px] font-black"
+                          style={{
+                            color: theme.colors.foreground,
+                          }}
+                        >
+                          {item.label}
+                        </Text>
+
+                        <Text
+                          className="mt-1 text-[7px] leading-[11px]"
+                          style={{
+                            color:
+                              theme.colors.foregroundMuted,
+                          }}
+                        >
+                          {item.help}
+                        </Text>
+                      </View>
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* EDITOR */}
       <Modal
         visible={editorOpen}
         transparent
-        animationType="fade"
+        animationType="slide"
         onRequestClose={() => {
           if (!working && !picking) {
             setEditorOpen(false);
@@ -1344,66 +1676,87 @@ export default function TrainerLessonResourcesScreen({
         }}
       >
         <View style={styles.modalBackdrop}>
-          <ScrollView
-            style={styles.modalScroll}
-            contentContainerStyle={
-              styles.modalScrollContent
-            }
-            keyboardShouldPersistTaps="handled"
-          >
-            <View
-              style={[
-                styles.modalCard,
-                {
-                  backgroundColor:
-                    theme.colors.surfaceElevated,
-                  borderColor: theme.colors.border,
-                  borderRadius:
-                    theme.shape.cardRadius,
-                  borderWidth:
-                    theme.shape.borderWidth,
-                },
-              ]}
+          <View style={styles.editorSheet}>
+            <View className="items-center">
+              <View
+                className="h-1.5 w-12 rounded-full"
+                style={{
+                  backgroundColor: "#D7DCE4",
+                }}
+              />
+            </View>
+
+            <ScrollView
+              className="mt-2"
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{
+                paddingBottom: 18,
+              }}
             >
               {draft ? (
                 <>
-                  <Text
-                    style={[
-                      styles.modalEyebrow,
-                      {
-                        color: theme.colors.accent,
-                      },
-                    ]}
-                  >
-                    {labelForType(draft.type).toUpperCase()}
-                  </Text>
+                  <View className="flex-row items-start">
+                    <View className="flex-1">
+                      <Text
+                        className="text-[20px] font-black"
+                        style={{
+                          color: theme.colors.foreground,
+                        }}
+                      >
+                        {draft.id
+                          ? "Modifier la ressource"
+                          : "Nouvelle ressource"}
+                      </Text>
+
+                      <Text
+                        className="mt-1 text-[10px]"
+                        style={{
+                          color:
+                            theme.colors.foregroundMuted,
+                        }}
+                      >
+                        {labelForType(draft.type)}
+                      </Text>
+                    </View>
+
+                    <View
+                      className="h-10 w-10 items-center justify-center rounded-[13px]"
+                      style={{
+                        backgroundColor:
+                          resourceVisual(draft.type).soft,
+                      }}
+                    >
+                      <SymbolView
+                        name={
+                          resourceVisual(draft.type).icon
+                        }
+                        tintColor={
+                          resourceVisual(draft.type).color
+                        }
+                        size={17}
+                        weight="bold"
+                      />
+                    </View>
+                  </View>
+
+                  <View
+                    className="my-5 h-px"
+                    style={{
+                      backgroundColor: "#E8ECF1",
+                    }}
+                  />
 
                   <Text
-                    style={[
-                      styles.modalTitle,
-                      {
-                        color:
-                          theme.colors.foreground,
-                      },
-                    ]}
+                    className="mb-3 text-[14px] font-black"
+                    style={{
+                      color: theme.colors.foreground,
+                    }}
                   >
-                    {draft.id
-                      ? "Modifier la ressource"
-                      : "Nouvelle ressource"}
+                    Informations de la ressource
                   </Text>
 
-                  <Text
-                    style={[
-                      styles.editorGuide,
-                      { color: theme.colors.foregroundMuted },
-                    ]}
-                  >
-                    {draft.type === "TEXT"
-                      ? "Utilisez ce bloc pour une synthèse, un exemple ou un point à retenir, sans recopier l’explication principale de la leçon."
-                      : "Le titre nomme précisément la ressource. L’introduction explique brièvement son utilité avant le média ou le document."}
-                  </Text>
-
-                  <FieldLabel text="Titre affiché à l’apprenant" />
+                  <FieldLabel text="Titre" required />
                   <EditorInput
                     value={draft.title}
                     onChangeText={(value) =>
@@ -1416,10 +1769,10 @@ export default function TrainerLessonResourcesScreen({
                           : current,
                       )
                     }
-                    placeholder="Ex. Vidéo — les trois réflexes essentiels"
+                    placeholder="Ex. Introduction au marketing digital"
                   />
 
-                  <FieldLabel text="Introduction de la ressource (facultative)" />
+                  <FieldLabel text="Description" />
                   <EditorInput
                     value={draft.description}
                     onChangeText={(value) =>
@@ -1432,13 +1785,16 @@ export default function TrainerLessonResourcesScreen({
                           : current,
                       )
                     }
-                    placeholder="Expliquez en une phrase pourquoi cette ressource est utile, sans répéter son titre."
+                    placeholder="Décrivez brièvement cette ressource..."
                     multiline
                   />
 
                   {draft.type === "TEXT" ? (
                     <>
-                      <FieldLabel text="Texte à retenir ou complément" />
+                      <FieldLabel
+                        text="Contenu texte"
+                        required
+                      />
                       <EditorInput
                         value={draft.textContent}
                         onChangeText={(value) =>
@@ -1446,13 +1802,12 @@ export default function TrainerLessonResourcesScreen({
                             current
                               ? {
                                   ...current,
-                                  textContent:
-                                    value,
+                                  textContent: value,
                                 }
                               : current,
                           )
                         }
-                        placeholder="Ajoutez une synthèse, un exemple ou un point à retenir."
+                        placeholder="Saisissez le contenu pédagogique..."
                         multiline
                         large
                       />
@@ -1461,7 +1816,10 @@ export default function TrainerLessonResourcesScreen({
 
                   {draft.type === "EXTERNAL_LINK" ? (
                     <>
-                      <FieldLabel text="Lien HTTP/HTTPS" />
+                      <FieldLabel
+                        text="Lien HTTP/HTTPS"
+                        required
+                      />
                       <EditorInput
                         value={draft.url}
                         onChangeText={(value) =>
@@ -1483,75 +1841,83 @@ export default function TrainerLessonResourcesScreen({
 
                   {draft.type !== "TEXT" &&
                   draft.type !== "EXTERNAL_LINK" ? (
-                    <View
-                      style={[
-                        styles.filePickerCard,
-                        {
-                          backgroundColor:
-                            theme.colors.surfaceSoft,
-                          borderColor:
-                            theme.colors.border,
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.filePickerTitle,
-                          {
-                            color:
-                              theme.colors.foreground,
-                          },
-                        ]}
-                      >
-                        {draft.file
-                          ? draft.file.name
-                          : "Aucun fichier sélectionné"}
-                      </Text>
-
-                      <Text
-                        style={[
-                          styles.filePickerMeta,
-                          {
-                            color:
-                              theme.colors
-                                .foregroundMuted,
-                          },
-                        ]}
-                      >
-                        {draft.file
-                          ? `${formatSize(
-                              draft.file.size,
-                            )}${
-                              draft.file.mimeType
-                                ? ` · ${draft.file.mimeType}`
-                                : ""
-                            }`
-                          : resourceTypes.find(
-                                (item) =>
-                                  item.value ===
-                                  draft.type,
-                              )?.help}
-                      </Text>
-
-                      <AppButton
-                        title={
-                          picking
-                            ? "Sélection..."
-                            : draft.file
-                              ? "Changer le fichier"
-                              : "Sélectionner un fichier"
-                        }
-                        variant="secondary"
-                        disabled={picking || working}
+                    <>
+                      <FieldLabel text="Fichier" required />
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel="Sélectionner un fichier"
                         onPress={() =>
                           void pickFile()
                         }
-                        style={styles.pickButton}
-                      />
-                    </View>
+                        disabled={picking || working}
+                        android_ripple={{
+                          color: "transparent",
+                        }}
+                        className="mb-4 items-center rounded-[18px] border border-dashed px-4 py-5"
+                        style={{
+                          borderColor: "#C8D0DC",
+                          backgroundColor: "#FBFCFD",
+                          opacity:
+                            picking || working
+                              ? 0.55
+                              : 1,
+                        }}
+                      >
+                        <View
+                          className="h-10 w-10 items-center justify-center rounded-[13px]"
+                          style={{
+                            backgroundColor: "#F1EBFF",
+                          }}
+                        >
+                          <SymbolView
+                            name={{
+                              ios: "arrow.up.doc.fill",
+                              android: "upload_file",
+                              web: "upload_file",
+                            }}
+                            tintColor="#7C3AED"
+                            size={17}
+                            weight="bold"
+                          />
+                        </View>
+
+                        <Text
+                          className="mt-3 text-[10px] font-black"
+                          style={{
+                            color: theme.colors.foreground,
+                          }}
+                        >
+                          {draft.file
+                            ? draft.file.name
+                            : "Sélectionner un fichier"}
+                        </Text>
+
+                        <Text
+                          className="mt-1 text-center text-[8px] leading-[12px]"
+                          style={{
+                            color:
+                              theme.colors.foregroundMuted,
+                          }}
+                        >
+                          {draft.file
+                            ? `${formatSize(
+                                draft.file.size,
+                              )}${
+                                draft.file.mimeType
+                                  ? ` · ${draft.file.mimeType}`
+                                  : ""
+                              }`
+                            : resourceTypes.find(
+                                  (item) =>
+                                    item.value ===
+                                    draft.type,
+                                )?.help}
+                        </Text>
+                      </Pressable>
+                    </>
                   ) : null}
 
-                  <FieldLabel text="Ordre" />
+                  <FieldLabel text="Ordre" required />
                   <EditorInput
                     value={draft.orderIndex}
                     onChangeText={(value) =>
@@ -1570,7 +1936,7 @@ export default function TrainerLessonResourcesScreen({
 
                   {draft.type === "VIDEO" ? (
                     <>
-                      <FieldLabel text="Durée vidéo en secondes (facultatif)" />
+                      <FieldLabel text="Durée vidéo en secondes" />
                       <EditorInput
                         value={draft.durationSeconds}
                         onChangeText={(value) =>
@@ -1578,8 +1944,7 @@ export default function TrainerLessonResourcesScreen({
                             current
                               ? {
                                   ...current,
-                                  durationSeconds:
-                                    value,
+                                  durationSeconds: value,
                                 }
                               : current,
                           )
@@ -1592,47 +1957,38 @@ export default function TrainerLessonResourcesScreen({
 
                   {draft.type === "SCORM" ? (
                     <View
-                      style={[
-                        styles.scormInfo,
-                        {
-                          backgroundColor:
-                            theme.colors.surfaceSoft,
-                          borderColor:
-                            theme.colors.border,
-                        },
-                      ]}
+                      className="mb-4 rounded-[16px] border p-3.5"
+                      style={{
+                        backgroundColor: "#F8F5FF",
+                        borderColor: "#E3DAF7",
+                      }}
                     >
                       <Text
-                        style={[
-                          styles.scormInfoTitle,
-                          {
-                            color:
-                              theme.colors.foreground,
-                          },
-                        ]}
+                        className="text-[10px] font-black"
+                        style={{ color: "#6D28D9" }}
                       >
                         Validation SCORM côté serveur
                       </Text>
 
                       <Text
-                        style={[
-                          styles.scormInfoText,
-                          {
-                            color:
-                              theme.colors
-                                .foregroundMuted,
-                          },
-                        ]}
+                        className="mt-1.5 text-[8px] leading-[13px]"
+                        style={{
+                          color:
+                            theme.colors.foregroundMuted,
+                        }}
                       >
-                        Le Mobile transmet le ZIP. Le
-                        training-service reste responsable
-                        de l’extraction, du manifest et de
-                        la création de la ressource SCORM.
+                        Le ZIP est transmis au training-service qui valide le manifest et crée la ressource SCORM.
                       </Text>
                     </View>
                   ) : null}
 
-                  <View style={styles.modalActions}>
+                  {error ? (
+                    <View className="mb-4">
+                      <ErrorMessage message={error} />
+                    </View>
+                  ) : null}
+
+                  <View className="flex-row gap-3">
                     <AppButton
                       title="Annuler"
                       variant="secondary"
@@ -1641,7 +1997,7 @@ export default function TrainerLessonResourcesScreen({
                         setEditorOpen(false);
                         setDraft(null);
                       }}
-                      style={styles.modalButton}
+                      style={styles.editorButton}
                     />
 
                     <AppButton
@@ -1653,7 +2009,7 @@ export default function TrainerLessonResourcesScreen({
                             : draft.type === "TEXT" ||
                                 draft.type ===
                                   "EXTERNAL_LINK"
-                              ? "Créer"
+                              ? "Ajouter"
                               : "Importer"
                       }
                       loading={working}
@@ -1661,16 +2017,187 @@ export default function TrainerLessonResourcesScreen({
                       onPress={() =>
                         void saveResource()
                       }
-                      style={styles.modalButton}
+                      style={styles.editorButton}
                     />
                   </View>
                 </>
               ) : null}
-            </View>
-          </ScrollView>
+            </ScrollView>
+          </View>
         </View>
       </Modal>
 
+      {/* ACTION MENU */}
+      <Modal
+        visible={actionTarget !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() =>
+          setActionTarget(null)
+        }
+      >
+        <View style={styles.modalBackdrop}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            android_ripple={{
+              color: "transparent",
+            }}
+            onPress={() =>
+              setActionTarget(null)
+            }
+          />
+
+          <View style={styles.actionSheet}>
+            {actionTarget ? (
+              <>
+                <View className="items-center">
+                  <View
+                    className="h-1.5 w-12 rounded-full"
+                    style={{
+                      backgroundColor: "#D7DCE4",
+                    }}
+                  />
+                </View>
+
+                <View className="mt-4 flex-row items-center">
+                  <View
+                    className="h-10 w-10 items-center justify-center rounded-[12px]"
+                    style={{
+                      backgroundColor:
+                        resourceVisual(
+                          actionTarget.type,
+                        ).soft,
+                    }}
+                  >
+                    <SymbolView
+                      name={
+                        resourceVisual(
+                          actionTarget.type,
+                        ).icon
+                      }
+                      tintColor={
+                        resourceVisual(
+                          actionTarget.type,
+                        ).color
+                      }
+                      size={16}
+                      weight="bold"
+                    />
+                  </View>
+
+                  <View className="ml-3 flex-1">
+                    <Text
+                      numberOfLines={1}
+                      className="text-[12px] font-black"
+                      style={{
+                        color: theme.colors.foreground,
+                      }}
+                    >
+                      {actionTarget.title}
+                    </Text>
+
+                    <Text
+                      className="mt-0.5 text-[8px]"
+                      style={{
+                        color:
+                          theme.colors.foregroundMuted,
+                      }}
+                    >
+                      {labelForType(actionTarget.type)}
+                    </Text>
+                  </View>
+                </View>
+
+                <View
+                  className="my-4 h-px"
+                  style={{
+                    backgroundColor: "#E8ECF1",
+                  }}
+                />
+
+                <ActionRow
+                  icon={{
+                    ios: "arrow.up",
+                    android: "arrow_upward",
+                    web: "arrow_upward",
+                  }}
+                  label="Monter"
+                  disabled={
+                    working ||
+                    resources.findIndex(
+                      (item) =>
+                        item.id === actionTarget.id,
+                    ) === 0
+                  }
+                  onPress={() =>
+                    void moveResource(
+                      actionTarget,
+                      -1,
+                    )
+                  }
+                />
+
+                <ActionRow
+                  icon={{
+                    ios: "arrow.down",
+                    android: "arrow_downward",
+                    web: "arrow_downward",
+                  }}
+                  label="Descendre"
+                  disabled={
+                    working ||
+                    resources.findIndex(
+                      (item) =>
+                        item.id === actionTarget.id,
+                    ) ===
+                      resources.length - 1
+                  }
+                  onPress={() =>
+                    void moveResource(
+                      actionTarget,
+                      1,
+                    )
+                  }
+                />
+
+                {isEditableJsonResource(
+                  actionTarget,
+                ) ? (
+                  <ActionRow
+                    icon={{
+                      ios: "pencil",
+                      android: "edit",
+                      web: "edit",
+                    }}
+                    label="Modifier"
+                    onPress={() =>
+                      openEdit(actionTarget)
+                    }
+                  />
+                ) : null}
+
+                <ActionRow
+                  icon={{
+                    ios: "trash.fill",
+                    android: "delete",
+                    web: "delete",
+                  }}
+                  label="Supprimer"
+                  danger
+                  onPress={() => {
+                    setActionTarget(null);
+                    setDeleteTarget(
+                      actionTarget,
+                    );
+                  }}
+                />
+              </>
+            ) : null}
+          </View>
+        </View>
+      </Modal>
+
+      {/* DELETE CONFIRM */}
       <Modal
         visible={deleteTarget !== null}
         transparent
@@ -1682,53 +2209,60 @@ export default function TrainerLessonResourcesScreen({
         }}
       >
         <View style={styles.modalBackdrop}>
-          <View
-            style={[
-              styles.modalCard,
-              {
-                backgroundColor:
-                  theme.colors.surfaceElevated,
-                borderColor: theme.colors.border,
-                borderRadius:
-                  theme.shape.cardRadius,
-                borderWidth:
-                  theme.shape.borderWidth,
-              },
-            ]}
-          >
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            android_ripple={{
+              color: "transparent",
+            }}
+            onPress={() => {
+              if (!working) {
+                setDeleteTarget(null);
+              }
+            }}
+          />
+
+          <View style={styles.deleteCard}>
+            <View className="h-11 w-11 items-center justify-center rounded-[14px] bg-[#FFF0F2]">
+              <SymbolView
+                name={{
+                  ios: "trash.fill",
+                  android: "delete",
+                  web: "delete",
+                }}
+                tintColor="#DC2626"
+                size={18}
+                weight="bold"
+              />
+            </View>
+
             <Text
-              style={[
-                styles.modalTitle,
-                { color: theme.colors.foreground },
-              ]}
+              className="mt-4 text-[18px] font-black"
+              style={{
+                color: theme.colors.foreground,
+              }}
             >
               Supprimer la ressource ?
             </Text>
 
             <Text
-              style={[
-                styles.confirmText,
-                {
-                  color:
-                    theme.colors.foregroundMuted,
-                },
-              ]}
+              className="mt-2 text-[10px] leading-[16px]"
+              style={{
+                color: theme.colors.foregroundMuted,
+              }}
             >
-              La suppression est envoyée au backend, qui
-              applique les règles d’ownership et
-              d’immutabilité de la formation.
+              La suppression est envoyée au backend, qui applique les règles d’ownership et d’immutabilité de la formation.
             </Text>
 
             <Text
-              style={[
-                styles.confirmName,
-                { color: theme.colors.foreground },
-              ]}
+              className="mt-3 text-[12px] font-black"
+              style={{
+                color: theme.colors.foreground,
+              }}
             >
               {deleteTarget?.title}
             </Text>
 
-            <View style={styles.modalActions}>
+            <View className="mt-5 flex-row gap-3">
               <AppButton
                 title="Annuler"
                 variant="secondary"
@@ -1736,7 +2270,7 @@ export default function TrainerLessonResourcesScreen({
                 onPress={() =>
                   setDeleteTarget(null)
                 }
-                style={styles.modalButton}
+                style={styles.editorButton}
               />
 
               <AppButton
@@ -1749,7 +2283,7 @@ export default function TrainerLessonResourcesScreen({
                 onPress={() =>
                   void confirmDelete()
                 }
-                style={styles.modalButton}
+                style={styles.editorButton}
               />
             </View>
           </View>
@@ -1758,308 +2292,249 @@ export default function TrainerLessonResourcesScreen({
     </ScreenContainer>
   );
 
+  function StatItem({
+    icon,
+    value,
+    label,
+    color,
+    soft,
+  }: {
+    icon: SymbolName;
+    value: number;
+    label: string;
+    color: string;
+    soft: string;
+  }) {
+    return (
+      <View className="flex-1 items-center">
+        <View
+          className="h-7 w-7 items-center justify-center rounded-[9px]"
+          style={{
+            backgroundColor: soft,
+          }}
+        >
+          <SymbolView
+            name={icon}
+            tintColor={color}
+            size={14}
+            weight="bold"
+          />
+        </View>
+
+        <Text
+          className="mt-1 text-[11px] font-black"
+          style={{
+            color: theme.colors.foreground,
+          }}
+        >
+          {value}
+        </Text>
+
+        <Text
+          numberOfLines={1}
+          className="mt-0.5 text-[7px]"
+          style={{
+            color: theme.colors.foregroundMuted,
+          }}
+        >
+          {label}
+        </Text>
+      </View>
+    );
+  }
+
+  function StatDivider() {
+    return (
+      <View
+        className="my-1 w-px"
+        style={{
+          backgroundColor: "#E8ECF1",
+        }}
+      />
+    );
+  }
+
   function FieldLabel({
     text,
+    required = false,
   }: {
     text: string;
+    required?: boolean;
   }) {
     return (
       <Text
-        style={[
-          styles.label,
-          { color: theme.colors.foregroundMuted },
-        ]}
+        className="mb-1.5 text-[10px] font-black"
+        style={{
+          color: theme.colors.foreground,
+        }}
       >
         {text}
+        {required ? (
+          <Text style={{ color: "#DC2626" }}> *</Text>
+        ) : null}
       </Text>
     );
   }
 
+  function ActionRow({
+    icon,
+    label,
+    onPress,
+    disabled = false,
+    danger = false,
+  }: {
+    icon: SymbolName;
+    label: string;
+    onPress: () => void;
+    disabled?: boolean;
+    danger?: boolean;
+  }) {
+    return (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        accessibilityState={{ disabled }}
+        disabled={disabled}
+        onPress={onPress}
+        android_ripple={{
+          color: "transparent",
+        }}
+        className="mb-2 flex-row items-center rounded-[14px] px-3 py-3"
+        style={{
+          backgroundColor: danger
+            ? "#FFF6F7"
+            : "#F8FAFC",
+          opacity: disabled ? 0.4 : 1,
+        }}
+      >
+        <View
+          className="h-9 w-9 items-center justify-center rounded-[11px]"
+          style={{
+            backgroundColor: danger
+              ? "#FFF0F2"
+              : "#EEF1F5",
+          }}
+        >
+          <SymbolView
+            name={icon}
+            tintColor={
+              danger
+                ? "#DC2626"
+                : "#475467"
+            }
+            size={15}
+            weight="bold"
+          />
+        </View>
+
+        <Text
+          className="ml-3 flex-1 text-[10px] font-black"
+          style={{
+            color: danger
+              ? "#DC2626"
+              : theme.colors.foreground,
+          }}
+        >
+          {label}
+        </Text>
+
+        <SymbolView
+          name={{
+            ios: "chevron.right",
+            android: "chevron_right",
+            web: "chevron_right",
+          }}
+          tintColor={
+            danger
+              ? "#DC2626"
+              : theme.colors.foregroundSubtle
+          }
+          size={14}
+          weight="bold"
+        />
+      </Pressable>
+    );
+  }
 }
 
 const styles = StyleSheet.create({
-  scroll: {
-    flex: 1,
-    minHeight: 0,
-  },
-  content: {
-    flexGrow: 1,
-    paddingBottom: 42,
-  },
-  page: {
-    width: "100%",
-    maxWidth: 900,
-    alignSelf: "center",
-  },
-  backButton: {
-    alignSelf: "flex-start",
-    marginBottom: 18,
-  },
-  eyebrow: {
-    fontSize: 11,
-    fontWeight: "900",
-    letterSpacing: 1,
-    marginBottom: 6,
-  },
-  title: {
-    fontSize: 27,
-    lineHeight: 33,
-    fontWeight: "900",
-  },
-  subtitle: {
-    fontSize: 13,
-    lineHeight: 19,
-    marginTop: 5,
-    marginBottom: 16,
-  },
-  statusCard: {
-    borderWidth: 1,
-    borderRadius: 14,
-    padding: 15,
-    marginBottom: 14,
-  },
-  statusTitle: {
-    fontSize: 14,
-    fontWeight: "900",
-  },
-  statusText: {
-    fontSize: 12,
-    lineHeight: 18,
-    marginTop: 4,
-  },
-  notice: {
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 14,
-  },
-  noticeText: {
-    fontSize: 13,
-    fontWeight: "800",
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "900",
-  },
-  sectionHelp: {
-    fontSize: 12,
-    lineHeight: 18,
-    marginTop: 4,
-    marginBottom: 12,
-  },
-  typeGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 9,
-    marginBottom: 24,
-  },
-  typeCard: {
-    flexGrow: 1,
-    flexBasis: 180,
-    minWidth: 150,
-    padding: 13,
-  },
-  typeTitle: {
-    fontSize: 14,
-    fontWeight: "900",
-  },
-  typeHelp: {
-    fontSize: 10,
-    lineHeight: 15,
-    marginTop: 4,
-  },
-  listHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 10,
-  },
-  countText: {
-    fontSize: 12,
-    fontWeight: "800",
-  },
-  emptyCard: {
-    padding: 21,
-  },
-  emptyTitle: {
-    fontSize: 16,
-    fontWeight: "900",
-  },
-  emptyText: {
-    fontSize: 12,
-    lineHeight: 18,
-    marginTop: 5,
-  },
-  resourceCard: {
-    padding: 15,
-    marginBottom: 11,
-  },
-  resourceTop: {
-    flexDirection: "row",
-    gap: 11,
-  },
-  orderBadge: {
-    width: 36,
-    height: 36,
-    borderRadius: 11,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  orderText: {
-    fontSize: 13,
-    fontWeight: "900",
-  },
-  resourceMain: {
-    flex: 1,
-    minWidth: 0,
-  },
-  resourceTitleRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "center",
-    gap: 8,
-  },
-  resourceTitle: {
-    flexShrink: 1,
-    fontSize: 15,
-    fontWeight: "900",
-  },
-  typeBadge: {
-    borderRadius: 999,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  typeBadgeText: {
-    fontSize: 9,
-    fontWeight: "900",
-  },
-  resourceDescription: {
-    fontSize: 12,
-    lineHeight: 18,
-    marginTop: 5,
-  },
-  fileMeta: {
-    fontSize: 10,
-    lineHeight: 15,
-    marginTop: 6,
-  },
-  actions: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginTop: 12,
-  },
-  actionButton: {
-    minWidth: 110,
-  },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.55)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 18,
-  },
-  modalScroll: {
-    width: "100%",
-  },
-  modalScrollContent: {
-    flexGrow: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingVertical: 18,
-  },
-  modalCard: {
-    width: "100%",
-    maxWidth: 680,
-    padding: 18,
-  },
-  modalEyebrow: {
-    fontSize: 10,
-    fontWeight: "900",
-    letterSpacing: 1,
-    marginBottom: 5,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "900",
-    marginBottom: 16,
-  },
-  editorGuide: {
-    fontSize: 12,
-    lineHeight: 18,
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 11,
-    fontWeight: "900",
-    marginBottom: 7,
-  },
-  input: {
-    minHeight: 48,
-    borderWidth: 1,
-    paddingHorizontal: 13,
-    paddingVertical: 11,
-    fontSize: 14,
-    marginBottom: 14,
-  },
-  multiline: {
-    minHeight: 86,
-    textAlignVertical: "top",
-  },
-  largeInput: {
-    minHeight: 135,
-  },
-  filePickerCard: {
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 13,
-    marginBottom: 14,
-  },
-  filePickerTitle: {
-    fontSize: 13,
-    fontWeight: "900",
-  },
-  filePickerMeta: {
-    fontSize: 10,
-    lineHeight: 15,
-    marginTop: 4,
-    marginBottom: 10,
-  },
-  pickButton: {
-    alignSelf: "flex-start",
-  },
-  scormInfo: {
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 14,
-  },
-  scormInfoTitle: {
-    fontSize: 12,
-    fontWeight: "900",
-  },
-  scormInfoText: {
-    fontSize: 10,
-    lineHeight: 16,
-    marginTop: 4,
-  },
-  modalActions: {
-    flexDirection: "row",
-    flexWrap: "wrap",
     justifyContent: "flex-end",
-    gap: 9,
-    marginTop: 18,
+    backgroundColor: "rgba(15, 23, 42, 0.42)",
   },
-  modalButton: {
-    minWidth: 125,
+  typeSheet: {
+    width: "100%",
+    maxHeight: "88%",
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: 18,
+    paddingTop: 10,
+    paddingBottom: 24,
+    shadowColor: "#0F172A",
+    shadowOffset: {
+      width: 0,
+      height: -6,
+    },
+    shadowOpacity: 0.14,
+    shadowRadius: 18,
+    elevation: 14,
   },
-  confirmText: {
-    fontSize: 13,
-    lineHeight: 20,
+  editorSheet: {
+    width: "100%",
+    maxHeight: "94%",
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: 18,
+    paddingTop: 10,
+    paddingBottom: 8,
+    shadowColor: "#0F172A",
+    shadowOffset: {
+      width: 0,
+      height: -6,
+    },
+    shadowOpacity: 0.14,
+    shadowRadius: 18,
+    elevation: 14,
   },
-  confirmName: {
-    fontSize: 15,
-    fontWeight: "900",
-    marginTop: 12,
+  actionSheet: {
+    width: "100%",
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: 18,
+    paddingTop: 10,
+    paddingBottom: 22,
+    shadowColor: "#0F172A",
+    shadowOffset: {
+      width: 0,
+      height: -6,
+    },
+    shadowOpacity: 0.14,
+    shadowRadius: 18,
+    elevation: 14,
+  },
+  deleteCard: {
+    width: "100%",
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: 18,
+    paddingTop: 18,
+    paddingBottom: 24,
+    shadowColor: "#0F172A",
+    shadowOffset: {
+      width: 0,
+      height: -6,
+    },
+    shadowOpacity: 0.14,
+    shadowRadius: 18,
+    elevation: 14,
+  },
+  editorButton: {
+    flex: 1,
+    minWidth: 0,
   },
 });

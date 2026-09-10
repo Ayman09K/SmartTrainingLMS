@@ -1,4 +1,6 @@
 import { isAxiosError } from "axios";
+import { SymbolView } from "expo-symbols";
+import type { ComponentProps, ReactNode } from "react";
 import { Href, router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
@@ -14,20 +16,15 @@ import AppButton from "../../components/AppButton";
 import ErrorMessage from "../../components/ErrorMessage";
 import LoadingState from "../../components/LoadingState";
 import ScreenContainer from "../../components/ScreenContainer";
-import SectionHeader from "../../components/SectionHeader";
 import {
   archiveTrainerTraining,
   deleteTrainerTraining,
   moveTrainerTrainingToDraft,
   publishTrainerTraining,
 } from "../../features/trainer/trainerAuthoringService";
-import {
-  getTrainerTrainingDetail,
-} from "../../features/trainer/trainerTrainingService";
-import {
-  useSmartTrainingTheme,
-} from "../../theme/provider/SmartTrainingThemeProvider";
-import {
+import { getTrainerTrainingDetail } from "../../features/trainer/trainerTrainingService";
+import { useSmartTrainingTheme } from "../../theme/provider/SmartTrainingThemeProvider";
+import type {
   TrainerEnrollment,
   TrainerTraining,
   TrainerTrainingMetrics,
@@ -53,12 +50,31 @@ type Props = {
   onPreview: () => void;
 };
 
+type SymbolName = ComponentProps<typeof SymbolView>["name"];
+type Tone = "violet" | "blue" | "green" | "orange" | "red";
+
+const TONES: Record<Tone, { soft: string; icon: string }> = {
+  violet: { soft: "#F1E9FF", icon: "#7C3AED" },
+  blue: { soft: "#EAF2FF", icon: "#397BE8" },
+  green: { soft: "#EAFBF3", icon: "#12A66A" },
+  orange: { soft: "#FFF4E5", icon: "#F59E0B" },
+  red: { soft: "#FFF0F1", icon: "#E5484D" },
+};
+
 function statusLabel(value?: string | null): string {
   if (value === "PUBLISHED") return "Publiée";
   if (value === "DRAFT") return "Brouillon";
   if (value === "ARCHIVED") return "Archivée";
 
   return value || "Non renseigné";
+}
+
+function statusTone(value?: string | null): Tone {
+  if (value === "PUBLISHED") return "green";
+  if (value === "DRAFT") return "orange";
+  if (value === "ARCHIVED") return "blue";
+
+  return "violet";
 }
 
 function levelLabel(value?: string | null): string {
@@ -107,6 +123,7 @@ function actionTitle(action: LifecycleAction): string {
   if (action === "DRAFT") return "Remettre en brouillon";
   if (action === "ARCHIVE") return "Archiver la formation";
   if (action === "DELETE") return "Supprimer définitivement";
+
   return "";
 }
 
@@ -143,10 +160,7 @@ function errorText(error: unknown): string {
         (data as { message?: unknown }).message ??
         (data as { error?: unknown }).error;
 
-      if (
-        typeof candidate === "string" &&
-        candidate.trim()
-      ) {
+      if (typeof candidate === "string" && candidate.trim()) {
         return candidate.trim();
       }
     }
@@ -178,6 +192,7 @@ export default function TrainerTrainingDetailScreen({
   onPreview,
 }: Props) {
   const { theme } = useSmartTrainingTheme();
+
   const [detail, setDetail] = useState<Detail | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -204,9 +219,7 @@ export default function TrainerTrainingDetailScreen({
       })
       .catch(() => {
         if (active) {
-          setError(
-            "Impossible de charger cette formation.",
-          );
+          setError("Impossible de charger cette formation.");
         }
       })
       .finally(() => {
@@ -227,9 +240,7 @@ export default function TrainerTrainingDetailScreen({
       await load();
       setError("");
     } catch {
-      setError(
-        "Impossible d’actualiser cette formation.",
-      );
+      setError("Impossible d’actualiser cette formation.");
     } finally {
       setRefreshing(false);
     }
@@ -270,9 +281,7 @@ export default function TrainerTrainingDetailScreen({
 
       if (
         confirmAction === "PUBLISH" &&
-        lifecycleError.includes(
-          "au moins un module",
-        )
+        lifecycleError.includes("au moins un module")
       ) {
         setError("");
         onManageContent();
@@ -286,18 +295,14 @@ export default function TrainerTrainingDetailScreen({
   }
 
   if (loading) {
-    return (
-      <LoadingState message="Chargement de la formation..." />
-    );
+    return <LoadingState message="Chargement de la formation..." />;
   }
 
   if (!detail) {
     return (
       <ScreenContainer>
         <ErrorMessage
-          message={
-            error || "Formation indisponible."
-          }
+          message={error || "Formation indisponible."}
           onRetry={() => void refresh()}
         />
       </ScreenContainer>
@@ -305,17 +310,19 @@ export default function TrainerTrainingDetailScreen({
   }
 
   const { training, enrollments, metrics } = detail;
+  const currentStatusTone = TONES[statusTone(training.status)];
 
   return (
-    <ScreenContainer>
+    <ScreenContainer
+      edges={["left", "right", "bottom"]}
+      style={{
+        padding: 0,
+        backgroundColor: "#F8F6F3",
+      }}
+    >
       <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={[
-          styles.content,
-          {
-            paddingBottom: theme.shape.cardPadding * 2,
-          },
-        ]}
+        className="flex-1"
+        contentContainerStyle={{ paddingBottom: 24 }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -325,443 +332,511 @@ export default function TrainerTrainingDetailScreen({
         }
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.page}>
-          <SectionHeader
-            title={training.title}
-            subtitle="Pilotez la formation, son statut et le suivi apprenant depuis le mobile."
-          />
+        <View className="mx-auto w-full max-w-[760px] px-4">
+          {/* HERO FORMATION */}
+          <View
+            className="-mx-4 rounded-b-[26px] px-5 pb-5 pt-4"
+            style={{
+              backgroundColor: theme.colors.headerBackground,
+              shadowColor: "#0F172A",
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.1,
+              shadowRadius: 12,
+              elevation: 3,
+            }}
+          >
+            <View className="flex-row items-start">
+              <View
+                className="h-[52px] w-[52px] items-center justify-center rounded-[16px]"
+                style={{ backgroundColor: "#2B1A49" }}
+              >
+                <SymbolView
+                  name={{
+                    ios: "rectangle.stack.fill",
+                    android: "menu_book",
+                    web: "menu_book",
+                  }}
+                  tintColor="#C4B5FD"
+                  size={22}
+                  weight="bold"
+                />
+              </View>
+
+              <View className="ml-3 min-w-0 flex-1">
+                <Text className="text-[9px] font-black uppercase tracking-[0.8px] text-[#C4B5FD]">
+                  Suivi de la formation
+                </Text>
+
+                <Text
+                  className="mt-1 text-[21px] font-black leading-[26px] text-white"
+                >
+                  {training.title}
+                </Text>
+
+                <Text className="mt-2 text-[10px] leading-[15px] text-white/65">
+                  Pilotez son statut, son contenu et le suivi apprenant depuis
+                  le mobile.
+                </Text>
+              </View>
+            </View>
+
+            <View className="mt-4 flex-row flex-wrap gap-2">
+              <View
+                className="rounded-full px-3 py-1.5"
+                style={{ backgroundColor: currentStatusTone.soft }}
+              >
+                <Text
+                  className="text-[9px] font-black"
+                  style={{ color: currentStatusTone.icon }}
+                >
+                  {statusLabel(training.status)}
+                </Text>
+              </View>
+
+              <View className="rounded-full bg-white/10 px-3 py-1.5">
+                <Text className="text-[9px] font-extrabold text-white/85">
+                  {training.category || "Sans catégorie"}
+                </Text>
+              </View>
+
+              <View className="rounded-full bg-white/10 px-3 py-1.5">
+                <Text className="text-[9px] font-extrabold text-white/85">
+                  {levelLabel(training.level)}
+                </Text>
+              </View>
+            </View>
+          </View>
 
           {error ? (
-            <ErrorMessage
-              message={error}
-              onRetry={() => setError("")}
-            />
+            <View className="mt-4">
+              <ErrorMessage
+                message={error}
+                onRetry={() => setError("")}
+              />
+            </View>
           ) : null}
 
           {notice ? (
             <View
-              style={[
-                styles.notice,
-                {
-                  backgroundColor: theme.colors.surfaceSoft,
-                  borderColor: theme.colors.border,
-                },
-              ]}
+              className="mt-4 flex-row items-center rounded-[16px] border p-3"
+              style={{
+                backgroundColor: theme.colors.surfaceSoft,
+                borderColor: theme.colors.border,
+              }}
             >
+              <View className="h-8 w-8 items-center justify-center rounded-full bg-white">
+                <SymbolView
+                  name={{
+                    ios: "checkmark",
+                    android: "check",
+                    web: "check",
+                  }}
+                  tintColor={theme.colors.success}
+                  size={14}
+                  weight="bold"
+                />
+              </View>
+
               <Text
-                style={[
-                  styles.noticeText,
-                  { color: theme.colors.foreground },
-                ]}
+                className="ml-2.5 flex-1 text-[10px] font-extrabold"
+                style={{ color: theme.colors.foreground }}
               >
                 {notice}
               </Text>
             </View>
           ) : null}
 
-          <View style={styles.badges}>
-            <View
-              style={[
-                styles.badge,
-                {
-                  backgroundColor: theme.colors.surfaceSoft,
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.badgeText,
-                  { color: theme.colors.accent },
-                ]}
-              >
-                {statusLabel(training.status)}
-              </Text>
-            </View>
+          {/* KPI COMPACTS */}
+          <View className="mt-5 flex-row gap-2.5">
+            <MetricCard
+              icon={{
+                ios: "person.2.fill",
+                android: "groups",
+                web: "groups",
+              }}
+              value={String(metrics.learners)}
+              label="Apprenants"
+              tone="violet"
+            />
 
-            <View
-              style={[
-                styles.badge,
-                {
-                  backgroundColor: theme.colors.surfaceSoft,
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.badgeText,
-                  { color: theme.colors.foreground },
-                ]}
-              >
-                {training.category || "Sans catégorie"}
-              </Text>
-            </View>
+            <MetricCard
+              icon={{
+                ios: "chart.line.uptrend.xyaxis",
+                android: "trending_up",
+                web: "trending_up",
+              }}
+              value={`${metrics.averageProgress} %`}
+              label="Progression"
+              tone="blue"
+            />
 
-            <View
-              style={[
-                styles.badge,
-                {
-                  backgroundColor: theme.colors.surfaceSoft,
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.badgeText,
-                  { color: theme.colors.foreground },
-                ]}
-              >
-                {levelLabel(training.level)}
-              </Text>
-            </View>
+            <MetricCard
+              icon={{
+                ios: "star.fill",
+                android: "star",
+                web: "star",
+              }}
+              value={
+                typeof training.averageRating === "number"
+                  ? training.averageRating.toFixed(1)
+                  : "-"
+              }
+              label="Note"
+              tone="orange"
+            />
           </View>
 
-          <View
-            style={[
-              styles.lifecycleCard,
-              {
-                backgroundColor: theme.colors.surface,
-                borderColor: theme.colors.border,
-                borderRadius: theme.shape.cardRadius,
-                borderWidth: theme.shape.borderWidth,
-              },
-            ]}
-          >
-            <View style={styles.lifecycleHeader}>
-              <View style={styles.lifecycleHeaderText}>
-                <Text
-                  style={[
-                    styles.lifecycleTitle,
-                    { color: theme.colors.foreground },
-                  ]}
-                >
-                  Cycle de vie
-                </Text>
-                <Text
-                  style={[
-                    styles.lifecycleText,
-                    { color: theme.colors.foregroundMuted },
-                  ]}
-                >
-                  Gérez le statut de cette formation directement depuis le mobile.
-                </Text>
+          {/* CYCLE DE VIE */}
+          <SectionHeading
+            icon={{
+              ios: "arrow.triangle.2.circlepath",
+              android: "sync",
+              web: "sync",
+            }}
+            title="Cycle de vie"
+            subtitle="Gérez le statut de cette formation."
+          />
+
+          <SurfaceCard>
+            <View className="flex-row items-center">
+              <View
+                className="h-11 w-11 items-center justify-center rounded-[14px]"
+                style={{ backgroundColor: currentStatusTone.soft }}
+              >
+                <SymbolView
+                  name={{
+                    ios: "checkmark.seal.fill",
+                    android: "verified",
+                    web: "verified",
+                  }}
+                  tintColor={currentStatusTone.icon}
+                  size={19}
+                  weight="bold"
+                />
               </View>
 
-              <View
-                style={[
-                  styles.currentStatus,
-                  {
-                    backgroundColor: theme.colors.surfaceSoft,
-                    borderColor: theme.colors.border,
-                  },
-                ]}
-              >
+              <View className="ml-3 flex-1">
                 <Text
-                  style={[
-                    styles.currentStatusLabel,
-                    { color: theme.colors.foregroundSubtle },
-                  ]}
+                  className="text-[8px] font-black uppercase tracking-[0.7px]"
+                  style={{ color: theme.colors.foregroundSubtle }}
                 >
-                  STATUT
+                  Statut actuel
                 </Text>
+
                 <Text
-                  style={[
-                    styles.currentStatusValue,
-                    { color: theme.colors.accent },
-                  ]}
+                  className="mt-0.5 text-[16px] font-black"
+                  style={{ color: theme.colors.foreground }}
                 >
                   {statusLabel(training.status)}
                 </Text>
               </View>
             </View>
 
-            <View style={styles.lifecycleActions}>
+            <View className="mt-4 flex-row flex-wrap gap-2">
               {training.status === "DRAFT" ? (
-                <AppButton
+                <LifecycleButton
                   title="Publier"
+                  icon={{
+                    ios: "paperplane.fill",
+                    android: "publish",
+                    web: "publish",
+                  }}
+                  tone="primary"
                   onPress={() => setConfirmAction("PUBLISH")}
-                  style={styles.action}
                 />
               ) : null}
 
               {training.status === "PUBLISHED" ||
               training.status === "ARCHIVED" ? (
-                <AppButton
+                <LifecycleButton
                   title="Remettre en brouillon"
+                  icon={{
+                    ios: "arrow.uturn.backward",
+                    android: "undo",
+                    web: "undo",
+                  }}
                   onPress={() => setConfirmAction("DRAFT")}
-                  variant="secondary"
-                  style={styles.action}
                 />
               ) : null}
 
               {training.status !== "ARCHIVED" ? (
-                <AppButton
+                <LifecycleButton
                   title="Archiver"
+                  icon={{
+                    ios: "archivebox.fill",
+                    android: "archive",
+                    web: "archive",
+                  }}
                   onPress={() => setConfirmAction("ARCHIVE")}
-                  variant="secondary"
-                  style={styles.action}
                 />
               ) : null}
 
               {training.status === "DRAFT" ||
               training.status === "ARCHIVED" ? (
-                <AppButton
+                <LifecycleButton
                   title="Supprimer"
+                  icon={{
+                    ios: "trash.fill",
+                    android: "delete",
+                    web: "delete",
+                  }}
+                  tone="danger"
                   onPress={() => setConfirmAction("DELETE")}
-                  variant="secondary"
-                  style={styles.action}
                 />
               ) : null}
             </View>
-          </View>
+          </SurfaceCard>
 
-          <View
-            style={[
-              styles.contentCard,
-              {
-                backgroundColor: theme.colors.surface,
-                borderColor: theme.colors.border,
-                borderRadius: theme.shape.cardRadius,
-                borderWidth: theme.shape.borderWidth,
-              },
-            ]}
-          >
-            <View style={styles.contentCardText}>
-              <Text
-                style={[
-                  styles.contentCardTitle,
-                  { color: theme.colors.foreground },
-                ]}
-              >
-                Contenu pédagogique
-              </Text>
+          {/* CONTENU */}
+          <SectionHeading
+            icon={{
+              ios: "books.vertical.fill",
+              android: "menu_book",
+              web: "menu_book",
+            }}
+            title="Contenu pédagogique"
+            subtitle="Modules, leçons, ressources et quiz."
+          />
 
-              <Text
-                style={[
-                  styles.contentCardDescription,
-                  { color: theme.colors.foregroundMuted },
-                ]}
-              >
-                Gérez modules, leçons et ressources depuis le mobile.
-              </Text>
-            </View>
+          <SurfaceCard>
+            <ActionRow
+              icon={{
+                ios: "list.bullet.rectangle.fill",
+                android: "view_list",
+                web: "view_list",
+              }}
+              tone="violet"
+              title={
+                training.status === "DRAFT"
+                  ? "Gérer le contenu"
+                  : "Voir le contenu"
+              }
+              subtitle="Modules, leçons et ressources"
+              onPress={onManageContent}
+            />
 
-            <View style={styles.contentActions}>
-              <AppButton
-                title={
-                  training.status === "DRAFT"
-                    ? "Gérer le contenu"
-                    : "Voir le contenu"
-                }
-                onPress={onManageContent}
-                variant="secondary"
-                style={styles.contentButton}
-              />
+            <Divider />
 
-              <AppButton
-                title="Gérer les quiz"
-                onPress={() =>
-                  router.push(
-                    `/trainer/trainings/${trainingId}/quizzes` as Href,
-                  )
-                }
-                variant="secondary"
-                style={styles.contentButton}
-              />
+            <ActionRow
+              icon={{
+                ios: "questionmark.square.fill",
+                android: "quiz",
+                web: "quiz",
+              }}
+              tone="blue"
+              title="Gérer les quiz"
+              subtitle="Évaluations rattachées à la formation"
+              onPress={() =>
+                router.push(
+                  `/trainer/trainings/${trainingId}/quizzes` as Href,
+                )
+              }
+            />
 
-              <AppButton
-                title="Prévisualiser"
-                onPress={onPreview}
-                style={styles.contentButton}
-              />
-            </View>
-          </View>
+            <Divider />
 
-          <View style={styles.metricGrid}>
-            <View
-              style={[
-                styles.metric,
-                {
-                  backgroundColor: theme.colors.surface,
-                  borderColor: theme.colors.border,
-                  borderRadius: theme.shape.cardRadius,
-                  borderWidth: theme.shape.borderWidth,
-                  padding: theme.shape.cardPadding,
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.metricValue,
-                  { color: theme.colors.foreground },
-                ]}
-              >
-                {metrics.learners}
-              </Text>
-              <Text
-                style={[
-                  styles.metricLabel,
-                  { color: theme.colors.foregroundMuted },
-                ]}
-              >
-                Apprenants
-              </Text>
-            </View>
+            <ActionRow
+              icon={{
+                ios: "eye.fill",
+                android: "visibility",
+                web: "visibility",
+              }}
+              tone="green"
+              title="Prévisualiser"
+              subtitle="Voir le rendu côté apprenant"
+              onPress={onPreview}
+            />
+          </SurfaceCard>
 
-            <View
-              style={[
-                styles.metric,
-                {
-                  backgroundColor: theme.colors.surface,
-                  borderColor: theme.colors.border,
-                  borderRadius: theme.shape.cardRadius,
-                  borderWidth: theme.shape.borderWidth,
-                  padding: theme.shape.cardPadding,
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.metricValue,
-                  { color: theme.colors.foreground },
-                ]}
-              >
-                {metrics.averageProgress} %
-              </Text>
-              <Text
-                style={[
-                  styles.metricLabel,
-                  { color: theme.colors.foregroundMuted },
-                ]}
-              >
-                Progression moyenne
-              </Text>
-            </View>
-
-            <View
-              style={[
-                styles.metric,
-                {
-                  backgroundColor: theme.colors.surface,
-                  borderColor: theme.colors.border,
-                  borderRadius: theme.shape.cardRadius,
-                  borderWidth: theme.shape.borderWidth,
-                  padding: theme.shape.cardPadding,
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.metricValue,
-                  { color: theme.colors.foreground },
-                ]}
-              >
-                {typeof training.averageRating === "number"
-                  ? training.averageRating.toFixed(1)
-                  : "-"}
-              </Text>
-              <Text
-                style={[
-                  styles.metricLabel,
-                  { color: theme.colors.foregroundMuted },
-                ]}
-              >
-                Note moyenne
-              </Text>
-            </View>
-          </View>
-
-          <InfoSection
+          {/* PARAMÈTRES */}
+          <SectionHeading
+            icon={{
+              ios: "slider.horizontal.3",
+              android: "tune",
+              web: "tune",
+            }}
             title="Paramètres"
-            rows={[
-              ["Visibilité", visibilityLabel(training.visibility)],
-              ["Inscription", enrollmentLabel(training.enrollmentMode)],
-              [
-                "Durée",
+            subtitle="Configuration actuelle de la formation."
+          />
+
+          <SurfaceCard>
+            <InfoRow
+              icon={{
+                ios: "eye.fill",
+                android: "visibility",
+                web: "visibility",
+              }}
+              label="Visibilité"
+              value={visibilityLabel(training.visibility)}
+              tone="violet"
+            />
+
+            <Divider />
+
+            <InfoRow
+              icon={{
+                ios: "person.crop.circle.badge.plus",
+                android: "person_add",
+                web: "person_add",
+              }}
+              label="Inscription"
+              value={enrollmentLabel(training.enrollmentMode)}
+              tone="blue"
+            />
+
+            <Divider />
+
+            <InfoRow
+              icon={{
+                ios: "clock.fill",
+                android: "schedule",
+                web: "schedule",
+              }}
+              label="Durée"
+              value={
                 training.estimatedDurationHours
                   ? `${training.estimatedDurationHours} h`
-                  : "Non renseignée",
-              ],
-              [
-                "Créée le",
-                formatDate(training.createdAt),
-              ],
-            ]}
+                  : "Non renseignée"
+              }
+              tone="orange"
+            />
+
+            <Divider />
+
+            <InfoRow
+              icon={{
+                ios: "calendar",
+                android: "calendar_today",
+                web: "calendar_today",
+              }}
+              label="Créée le"
+              value={formatDate(training.createdAt)}
+              tone="green"
+            />
+          </SurfaceCard>
+
+          {/* INFORMATIONS PÉDAGOGIQUES */}
+          <SectionHeading
+            icon={{
+              ios: "doc.text.fill",
+              android: "description",
+              web: "description",
+            }}
+            title="Informations pédagogiques"
+            subtitle="Les informations renseignées pour cette formation."
           />
 
-          <InfoSection
-            title="Description"
-            text={
-              training.description ||
-              training.shortDescription ||
-              "Aucune description."
-            }
+          <SurfaceCard>
+            <TextBlock
+              icon={{
+                ios: "text.alignleft",
+                android: "notes",
+                web: "notes",
+              }}
+              title="Description"
+              text={
+                training.description ||
+                training.shortDescription ||
+                "Aucune description."
+              }
+            />
+
+            <Divider />
+
+            <TextBlock
+              icon={{
+                ios: "target",
+                android: "track_changes",
+                web: "track_changes",
+              }}
+              title="Objectifs pédagogiques"
+              text={training.objectives || "Aucun objectif renseigné."}
+            />
+
+            <Divider />
+
+            <TextBlock
+              icon={{
+                ios: "checklist",
+                android: "checklist",
+                web: "checklist",
+              }}
+              title="Prérequis"
+              text={training.prerequisites || "Aucun prérequis renseigné."}
+            />
+
+            <Divider />
+
+            <TextBlock
+              icon={{
+                ios: "person.3.fill",
+                android: "groups",
+                web: "groups",
+              }}
+              title="Public cible"
+              text={training.targetAudience || "Non renseigné."}
+            />
+          </SurfaceCard>
+
+          {/* SUIVI APPRENANT */}
+          <SectionHeading
+            icon={{
+              ios: "person.2.fill",
+              android: "groups",
+              web: "groups",
+            }}
+            title="Suivi apprenant"
+            subtitle="Inscriptions actuellement rattachées à cette formation."
           />
 
-          <InfoSection
-            title="Objectifs pédagogiques"
-            text={
-              training.objectives ||
-              "Aucun objectif renseigné."
-            }
-          />
+          <SurfaceCard>
+            <View className="flex-row items-center">
+              <View
+                className="h-12 w-12 items-center justify-center rounded-[15px]"
+                style={{ backgroundColor: TONES.violet.soft }}
+              >
+                <SymbolView
+                  name={{
+                    ios: "person.2.fill",
+                    android: "groups",
+                    web: "groups",
+                  }}
+                  tintColor={TONES.violet.icon}
+                  size={20}
+                  weight="bold"
+                />
+              </View>
 
-          <InfoSection
-            title="Prérequis"
-            text={
-              training.prerequisites ||
-              "Aucun prérequis renseigné."
-            }
-          />
+              <View className="ml-3 flex-1">
+                <Text
+                  className="text-[20px] font-black"
+                  style={{ color: theme.colors.foreground }}
+                >
+                  {enrollments.length}
+                </Text>
 
-          <InfoSection
-            title="Public cible"
-            text={
-              training.targetAudience ||
-              "Non renseigné."
-            }
-          />
-
-          <View
-            style={[
-              styles.enrollmentCard,
-              {
-                backgroundColor: theme.colors.surface,
-                borderColor: theme.colors.border,
-                borderRadius: theme.shape.cardRadius,
-                borderWidth: theme.shape.borderWidth,
-                padding: theme.shape.cardPadding,
-              },
-            ]}
-          >
-            <Text
-              style={[
-                styles.sectionTitle,
-                { color: theme.colors.foreground },
-              ]}
-            >
-              Suivi apprenant
-            </Text>
-
-            <Text
-              style={[
-                styles.sectionText,
-                { color: theme.colors.foregroundMuted },
-              ]}
-            >
-              {enrollments.length === 0
-                ? "Aucun apprenant inscrit."
-                : `${enrollments.length} inscription${
-                    enrollments.length > 1 ? "s" : ""
-                  } sur cette formation.`}
-            </Text>
-          </View>
+                <Text
+                  className="mt-0.5 text-[10px] leading-[14px]"
+                  style={{ color: theme.colors.foregroundMuted }}
+                >
+                  {enrollments.length === 0
+                    ? "Aucun apprenant inscrit."
+                    : `${enrollments.length} inscription${
+                        enrollments.length > 1 ? "s" : ""
+                      } sur cette formation.`}
+                </Text>
+              </View>
+            </View>
+          </SurfaceCard>
         </View>
       </ScrollView>
 
+      {/* CONFIRMATION CYCLE DE VIE */}
       {confirmAction ? (
         <View style={styles.overlay}>
           <Pressable
             style={StyleSheet.absoluteFill}
+            android_ripple={{ color: "transparent" }}
             onPress={() => {
               if (!transitioning) {
                 setConfirmAction(null);
@@ -770,35 +845,64 @@ export default function TrainerTrainingDetailScreen({
           />
 
           <View
-            style={[
-              styles.confirmCard,
-              {
-                backgroundColor: theme.colors.surfaceElevated,
-                borderColor: theme.colors.border,
-                borderRadius: theme.shape.cardRadius,
-                borderWidth: theme.shape.borderWidth,
-              },
-            ]}
+            className="w-full max-w-[520px] rounded-[24px] border bg-white p-5"
+            style={{
+              borderColor: "#E2DCE6",
+              shadowColor: "#0F172A",
+              shadowOffset: { width: 0, height: 8 },
+              shadowOpacity: 0.18,
+              shadowRadius: 18,
+              elevation: 10,
+            }}
           >
+            <View
+              className="h-11 w-11 items-center justify-center rounded-[14px]"
+              style={{
+                backgroundColor:
+                  confirmAction === "DELETE"
+                    ? TONES.red.soft
+                    : TONES.violet.soft,
+              }}
+            >
+              <SymbolView
+                name={
+                  confirmAction === "DELETE"
+                    ? {
+                        ios: "trash.fill",
+                        android: "delete",
+                        web: "delete",
+                      }
+                    : {
+                        ios: "arrow.triangle.2.circlepath",
+                        android: "sync",
+                        web: "sync",
+                      }
+                }
+                tintColor={
+                  confirmAction === "DELETE"
+                    ? TONES.red.icon
+                    : TONES.violet.icon
+                }
+                size={19}
+                weight="bold"
+              />
+            </View>
+
             <Text
-              style={[
-                styles.confirmTitle,
-                { color: theme.colors.foreground },
-              ]}
+              className="mt-4 text-[19px] font-black"
+              style={{ color: theme.colors.foreground }}
             >
               {actionTitle(confirmAction)}
             </Text>
 
             <Text
-              style={[
-                styles.confirmText,
-                { color: theme.colors.foregroundMuted },
-              ]}
+              className="mt-2 text-[11px] leading-[17px]"
+              style={{ color: theme.colors.foregroundMuted }}
             >
               {actionDescription(confirmAction)}
             </Text>
 
-            <View style={styles.confirmActions}>
+            <View className="mt-5 flex-row flex-wrap justify-end gap-2.5">
               <AppButton
                 title="Annuler"
                 variant="secondary"
@@ -826,276 +930,356 @@ export default function TrainerTrainingDetailScreen({
     </ScreenContainer>
   );
 
-  function InfoSection({
+  function SectionHeading({
+    icon,
     title,
-    text,
-    rows,
+    subtitle,
   }: {
+    icon: SymbolName;
     title: string;
-    text?: string;
-    rows?: [string, string][];
+    subtitle: string;
   }) {
     return (
+      <View className="mb-3 mt-5 flex-row items-center">
+        <View
+          className="h-[42px] w-[42px] items-center justify-center rounded-[14px]"
+          style={{ backgroundColor: theme.colors.surfaceSoft }}
+        >
+          <SymbolView
+            name={icon}
+            tintColor={theme.colors.accent}
+            size={18}
+            weight="bold"
+          />
+        </View>
+
+        <View className="ml-2.5 min-w-0 flex-1">
+          <Text
+            className="text-[18px] font-black leading-[22px]"
+            style={{ color: theme.colors.foreground }}
+          >
+            {title}
+          </Text>
+
+          <Text
+            className="mt-0.5 text-[10px] leading-[14px]"
+            style={{ color: theme.colors.foregroundMuted }}
+          >
+            {subtitle}
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  function SurfaceCard({ children }: { children: ReactNode }) {
+    return (
       <View
-        style={[
-          styles.section,
-          {
-            backgroundColor: theme.colors.surface,
-            borderColor: theme.colors.border,
-            borderRadius: theme.shape.cardRadius,
-            borderWidth: theme.shape.borderWidth,
-            padding: theme.shape.cardPadding,
-          },
-        ]}
+        className="rounded-[22px] border bg-white p-3.5"
+        style={{
+          borderColor: "#E2DCE6",
+          shadowColor: "#0F172A",
+          shadowOffset: { width: 0, height: 3 },
+          shadowOpacity: 0.06,
+          shadowRadius: 10,
+          elevation: 2,
+        }}
       >
+        {children}
+      </View>
+    );
+  }
+
+  function MetricCard({
+    icon,
+    value,
+    label,
+    tone,
+  }: {
+    icon: SymbolName;
+    value: string;
+    label: string;
+    tone: Tone;
+  }) {
+    const palette = TONES[tone];
+
+    return (
+      <View
+        className="min-w-0 flex-1 rounded-[18px] border bg-white p-3"
+        style={{
+          borderColor: "#E2DCE6",
+          shadowColor: "#0F172A",
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.05,
+          shadowRadius: 7,
+          elevation: 2,
+        }}
+      >
+        <View
+          className="h-8 w-8 items-center justify-center rounded-[10px]"
+          style={{ backgroundColor: palette.soft }}
+        >
+          <SymbolView
+            name={icon}
+            tintColor={palette.icon}
+            size={14}
+            weight="bold"
+          />
+        </View>
+
         <Text
-          style={[
-            styles.sectionTitle,
-            { color: theme.colors.foreground },
-          ]}
+          numberOfLines={1}
+          className="mt-2 text-[17px] font-black"
+          style={{ color: theme.colors.foreground }}
+        >
+          {value}
+        </Text>
+
+        <Text
+          numberOfLines={2}
+          className="mt-0.5 text-[8px] leading-[11px]"
+          style={{ color: theme.colors.foregroundMuted }}
+        >
+          {label}
+        </Text>
+      </View>
+    );
+  }
+
+  function LifecycleButton({
+    title,
+    icon,
+    onPress,
+    tone = "secondary",
+  }: {
+    title: string;
+    icon: SymbolName;
+    onPress: () => void;
+    tone?: "primary" | "secondary" | "danger";
+  }) {
+    const isPrimary = tone === "primary";
+    const isDanger = tone === "danger";
+
+    const backgroundColor = isPrimary
+      ? theme.colors.accent
+      : isDanger
+        ? "#FFF7F7"
+        : "#FFFFFF";
+
+    const borderColor = isPrimary
+      ? theme.colors.accent
+      : isDanger
+        ? "#F3C6CA"
+        : "#E2DCE6";
+
+    const foregroundColor = isPrimary
+      ? "#FFFFFF"
+      : isDanger
+        ? theme.colors.danger
+        : theme.colors.foreground;
+
+    return (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={title}
+        onPress={onPress}
+        android_ripple={{ color: "transparent" }}
+        className="min-h-[44px] flex-row items-center justify-center rounded-[14px] border px-3 py-2.5"
+        style={{
+          flexGrow: 1,
+          flexBasis: "47%",
+          minWidth: 0,
+          backgroundColor,
+          borderColor,
+        }}
+      >
+        <SymbolView
+          name={icon}
+          tintColor={foregroundColor}
+          size={14}
+          weight="bold"
+        />
+
+        <Text
+          numberOfLines={2}
+          className="ml-2 text-center text-[11px] font-black leading-[14px]"
+          style={{ color: foregroundColor }}
         >
           {title}
         </Text>
+      </Pressable>
+    );
+  }
 
-        {rows
-          ? rows.map(([label, value]) => (
-              <View
-                key={label}
-                style={styles.row}
-              >
-                <Text
-                  style={[
-                    styles.rowLabel,
-                    { color: theme.colors.foregroundSubtle },
-                  ]}
-                >
-                  {label}
-                </Text>
-                <Text
-                  style={[
-                    styles.rowValue,
-                    { color: theme.colors.foreground },
-                  ]}
-                >
-                  {value}
-                </Text>
-              </View>
-            ))
-          : null}
+  function ActionRow({
+    icon,
+    tone,
+    title,
+    subtitle,
+    onPress,
+  }: {
+    icon: SymbolName;
+    tone: Tone;
+    title: string;
+    subtitle: string;
+    onPress: () => void;
+  }) {
+    const palette = TONES[tone];
 
-        {text ? (
+    return (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={title}
+        onPress={onPress}
+        android_ripple={{ color: "transparent" }}
+        className="flex-row items-center py-1"
+      >
+        <View
+          className="h-10 w-10 items-center justify-center rounded-[13px]"
+          style={{ backgroundColor: palette.soft }}
+        >
+          <SymbolView
+            name={icon}
+            tintColor={palette.icon}
+            size={17}
+            weight="bold"
+          />
+        </View>
+
+        <View className="ml-3 min-w-0 flex-1">
           <Text
-            style={[
-              styles.sectionText,
-              { color: theme.colors.foregroundMuted },
-            ]}
+            className="text-[12px] font-black"
+            style={{ color: theme.colors.foreground }}
           >
-            {text}
+            {title}
           </Text>
-        ) : null}
+
+          <Text
+            className="mt-0.5 text-[9px] leading-[13px]"
+            style={{ color: theme.colors.foregroundMuted }}
+          >
+            {subtitle}
+          </Text>
+        </View>
+
+        <SymbolView
+          name={{
+            ios: "chevron.right",
+            android: "chevron_right",
+            web: "chevron_right",
+          }}
+          tintColor={theme.colors.foregroundSubtle}
+          size={16}
+          weight="bold"
+        />
+      </Pressable>
+    );
+  }
+
+  function InfoRow({
+    icon,
+    label,
+    value,
+    tone,
+  }: {
+    icon: SymbolName;
+    label: string;
+    value: string;
+    tone: Tone;
+  }) {
+    const palette = TONES[tone];
+
+    return (
+      <View className="flex-row items-center py-1">
+        <View
+          className="h-9 w-9 items-center justify-center rounded-xl"
+          style={{ backgroundColor: palette.soft }}
+        >
+          <SymbolView
+            name={icon}
+            tintColor={palette.icon}
+            size={15}
+            weight="bold"
+          />
+        </View>
+
+        <Text
+          className="ml-2.5 flex-1 text-[10px] font-bold"
+          style={{ color: theme.colors.foregroundMuted }}
+        >
+          {label}
+        </Text>
+
+        <Text
+          className="max-w-[55%] text-right text-[10px] font-black"
+          style={{ color: theme.colors.foreground }}
+        >
+          {value}
+        </Text>
       </View>
+    );
+  }
+
+  function TextBlock({
+    icon,
+    title,
+    text,
+  }: {
+    icon: SymbolName;
+    title: string;
+    text: string;
+  }) {
+    return (
+      <View className="py-1">
+        <View className="flex-row items-center">
+          <View
+            className="h-8 w-8 items-center justify-center rounded-[10px]"
+            style={{ backgroundColor: theme.colors.surfaceSoft }}
+          >
+            <SymbolView
+              name={icon}
+              tintColor={theme.colors.accent}
+              size={14}
+              weight="bold"
+            />
+          </View>
+
+          <Text
+            className="ml-2.5 text-[12px] font-black"
+            style={{ color: theme.colors.foreground }}
+          >
+            {title}
+          </Text>
+        </View>
+
+        <Text
+          className="mt-2 text-[10px] leading-[16px]"
+          style={{ color: theme.colors.foregroundMuted }}
+        >
+          {text}
+        </Text>
+      </View>
+    );
+  }
+
+  function Divider() {
+    return (
+      <View
+        className="my-3 h-px"
+        style={{ backgroundColor: "#EEE9F0" }}
+      />
     );
   }
 }
 
 const styles = StyleSheet.create({
-  scroll: {
-    flex: 1,
-    minHeight: 0,
-  },
-  content: {
-    flexGrow: 1,
-  },
-  page: {
-    width: "100%",
-    maxWidth: 980,
-    alignSelf: "center",
-  },
-  notice: {
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 14,
-  },
-  noticeText: {
-    fontSize: 13,
-    fontWeight: "800",
-  },
-  badges: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 16,
-  },
-  badge: {
-    borderRadius: 999,
-    paddingHorizontal: 11,
-    paddingVertical: 6,
-  },
-  badgeText: {
-    fontSize: 11,
-    fontWeight: "900",
-  },
-  lifecycleCard: {
-    padding: 18,
-    marginBottom: 16,
-  },
-  lifecycleHeader: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "center",
-    gap: 14,
-  },
-  lifecycleHeaderText: {
-    flex: 1,
-    minWidth: 220,
-  },
-  lifecycleTitle: {
-    fontSize: 18,
-    fontWeight: "900",
-  },
-  lifecycleText: {
-    fontSize: 12,
-    lineHeight: 18,
-    marginTop: 4,
-  },
-  currentStatus: {
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 13,
-    paddingVertical: 9,
-    minWidth: 120,
-  },
-  currentStatusLabel: {
-    fontSize: 9,
-    fontWeight: "900",
-    letterSpacing: 0.8,
-  },
-  currentStatusValue: {
-    fontSize: 13,
-    fontWeight: "900",
-    marginTop: 3,
-  },
-  lifecycleActions: {
-    width: "100%",
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-    marginTop: 16,
-  },
-  action: {
-    flexGrow: 1,
-    flexBasis: 140,
-    minWidth: 0,
-  },
-  contentCard: {
-    padding: 16,
-    marginBottom: 16,
-    alignItems: "stretch",
-    gap: 14,
-  },
-  contentCardText: {
-    width: "100%",
-  },
-  contentCardTitle: {
-    fontSize: 17,
-    fontWeight: "900",
-  },
-  contentCardDescription: {
-    fontSize: 12,
-    lineHeight: 18,
-    marginTop: 4,
-  },
-  contentActions: {
-    width: "100%",
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-  },
-  contentButton: {
-    flexGrow: 1,
-    flexBasis: 140,
-    minWidth: 0,
-  },
-  metricGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-    marginBottom: 18,
-  },
-  metric: {
-    flexGrow: 1,
-    flexBasis: 180,
-    minWidth: 0,
-  },
-  metricValue: {
-    fontSize: 25,
-    fontWeight: "900",
-  },
-  metricLabel: {
-    fontSize: 12,
-    lineHeight: 17,
-    marginTop: 4,
-  },
-  section: {
-    marginBottom: 14,
-  },
-  sectionTitle: {
-    fontSize: 17,
-    fontWeight: "900",
-    marginBottom: 9,
-  },
-  sectionText: {
-    fontSize: 14,
-    lineHeight: 22,
-  },
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 14,
-    paddingVertical: 7,
-  },
-  rowLabel: {
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  rowValue: {
-    flex: 1,
-    textAlign: "right",
-    fontSize: 12,
-    fontWeight: "800",
-  },
-  enrollmentCard: {
-    marginBottom: 14,
-  },
   overlay: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: "rgba(0,0,0,0.52)",
+    backgroundColor: "rgba(15, 23, 42, 0.52)",
     alignItems: "center",
     justifyContent: "center",
     padding: 18,
     zIndex: 100,
-  },
-  confirmCard: {
-    width: "100%",
-    maxWidth: 520,
-    padding: 20,
-  },
-  confirmTitle: {
-    fontSize: 20,
-    fontWeight: "900",
-  },
-  confirmText: {
-    fontSize: 14,
-    lineHeight: 21,
-    marginTop: 8,
-  },
-  confirmActions: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "flex-end",
-    gap: 10,
-    marginTop: 20,
   },
   confirmButton: {
     minWidth: 130,

@@ -4,17 +4,14 @@ import {
   useMemo,
   useState,
 } from "react";
+import { SymbolView } from "expo-symbols";
 import {
   Pressable,
-  StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
 
-import AppButton from "../../components/AppButton";
-import ErrorMessage from "../../components/ErrorMessage";
-import StatusBadge from "../../components/StatusBadge";
 import {
   getAdminGroups,
 } from "../../features/admin/adminGroupService";
@@ -418,286 +415,325 @@ export default function LearningPathAssignmentProgressPanel({
     }
   }
 
+
   return (
-    <View style={styles.wrapper}>
+    <View className="gap-4">
       <View
-        style={[
-          styles.sectionCard,
-          {
-            backgroundColor: theme.colors.surface,
-            borderColor: theme.colors.border,
-            borderRadius: theme.shape.cardRadius,
-          },
-        ]}
+        className="overflow-hidden rounded-[22px] border bg-white"
+        style={{ borderColor: "#E5DFE8" }}
       >
-        <View style={styles.headingRow}>
-          <View style={styles.headingCopy}>
-            <Text
-              style={[
-                styles.sectionTitle,
-                { color: theme.colors.foreground },
-              ]}
-            >
-              Affectations
-            </Text>
+        <View className="h-1 bg-[#7C3AED]" />
 
-            <Text
-              style={[
-                styles.helpText,
-                { color: theme.colors.foregroundMuted },
-              ]}
-            >
-              Affectez ce parcours par nom/e-mail ou via un groupe existant. Aucun identifiant apprenant manuel n’est demandé.
-            </Text>
-          </View>
+        <View className="p-3.5">
+          <View className="flex-row items-start">
+            <View className="h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-[#F1E9FF]">
+              <SymbolView
+                name={{
+                  ios: "person.2.fill",
+                  android: "group",
+                  web: "group",
+                }}
+                tintColor="#7C3AED"
+                size={15}
+                weight="bold"
+              />
+            </View>
 
-          <StatusBadge
-            label={enabled ? "Publié" : pathStatus === "ARCHIVED" ? "Archivé" : "Brouillon"}
-            variant={
-              enabled
-                ? "success"
-                : pathStatus === "ARCHIVED"
-                  ? "info"
-                  : "warning"
-            }
-          />
-        </View>
-
-        {pathStatus === "DRAFT" ? (
-          <View
-            style={[
-              styles.notice,
-              {
-                backgroundColor: theme.colors.surfaceSoft,
-                borderColor: theme.colors.border,
-              },
-            ]}
-          >
-            <Text
-              style={[
-                styles.noticeText,
-                { color: theme.colors.foregroundMuted },
-              ]}
-            >
-              Publiez le parcours avant de l’affecter. Les formations et le cycle de vie restent gérés par les règles P1/P2 existantes.
-            </Text>
-          </View>
-        ) : (
-          <>
-            {error ? <ErrorMessage message={error} /> : null}
-
-            {success ? (
-              <View
-                style={[
-                  styles.successBox,
-                  {
-                    backgroundColor: theme.colors.surfaceSoft,
-                    borderColor: theme.colors.success,
-                  },
-                ]}
+            <View className="ml-3 min-w-0 flex-1">
+              <Text
+                className="text-[18px] font-black"
+                style={{ color: theme.colors.foreground }}
               >
-                <Text
-                  style={[
-                    styles.successTitle,
-                    { color: theme.colors.success },
-                  ]}
+                Affectations
+              </Text>
+              <Text
+                className="mt-1 text-[11px] leading-[16px]"
+                style={{ color: theme.colors.foregroundMuted }}
+              >
+                Affectez le parcours à des apprenants ou à un groupe existant.
+              </Text>
+            </View>
+
+            <View
+              className="rounded-full px-2.5 py-1"
+              style={{
+                backgroundColor: enabled
+                  ? "#EAFBF3"
+                  : pathStatus === "ARCHIVED"
+                    ? "#F2F4F7"
+                    : "#FFF4E5",
+              }}
+            >
+              <Text
+                className="text-[9px] font-black"
+                style={{
+                  color: enabled
+                    ? "#16845A"
+                    : pathStatus === "ARCHIVED"
+                      ? "#667085"
+                      : "#B45309",
+                }}
+              >
+                {enabled
+                  ? "Publié"
+                  : pathStatus === "ARCHIVED"
+                    ? "Archivé"
+                    : "Brouillon"}
+              </Text>
+            </View>
+          </View>
+
+          {pathStatus === "DRAFT" ? (
+            <View className="mt-3 flex-row items-start rounded-[14px] bg-[#F7F3FC] px-3 py-3">
+              <SymbolView
+                name={{
+                  ios: "info.circle.fill",
+                  android: "info",
+                  web: "info",
+                }}
+                tintColor="#7C3AED"
+                size={13}
+              />
+              <Text
+                className="ml-2 min-w-0 flex-1 text-[9px] leading-[14px]"
+                style={{ color: theme.colors.foregroundMuted }}
+              >
+                Publiez le parcours avant de créer de nouvelles affectations.
+              </Text>
+            </View>
+          ) : (
+            <>
+              {error ? (
+                <View
+                  className="mt-3 flex-row items-start rounded-[16px] border px-3.5 py-3.5"
+                  style={{
+                    backgroundColor: "#FFF4F2",
+                    borderColor: "#F2C6C3",
+                  }}
                 >
-                  Affectation terminée
-                </Text>
-                <Text
-                  style={[
-                    styles.successText,
-                    { color: theme.colors.foregroundMuted },
-                  ]}
-                >
-                  {success}
-                </Text>
-              </View>
-            ) : null}
+                  <View className="h-9 w-9 shrink-0 items-center justify-center rounded-[11px] bg-white">
+                    <SymbolView
+                      name={{
+                        ios: "exclamationmark.triangle.fill",
+                        android: "error",
+                        web: "error",
+                      }}
+                      tintColor="#C2413D"
+                      size={14}
+                      weight="bold"
+                    />
+                  </View>
 
-            {enabled ? (
-              <>
-                <View style={styles.subSection}>
-                  <Text
-                    style={[
-                      styles.subTitle,
-                      { color: theme.colors.foreground },
-                    ]}
-                  >
-                    Apprenants
-                  </Text>
+                  <View className="ml-3 min-w-0 flex-1">
+                    <Text className="text-[11px] font-black text-[#C2413D]">
+                      Une action nécessite votre attention
+                    </Text>
+                    <Text
+                      className="mt-1 text-[10px] leading-[15px]"
+                      style={{ color: theme.colors.foregroundMuted }}
+                    >
+                      {error}
+                    </Text>
+                  </View>
+                </View>
+              ) : null}
 
-                  <TextInput
-                    value={learnerQuery}
-                    onChangeText={setLearnerQuery}
-                    placeholder="Nom ou e-mail"
-                    placeholderTextColor={
-                      theme.colors.foregroundSubtle
-                    }
-                    autoCapitalize="none"
-                    style={[
-                      styles.input,
-                      {
-                        color: theme.colors.foreground,
-                        backgroundColor:
-                          theme.colors.background,
-                        borderColor: theme.colors.border,
-                      },
-                    ]}
+              {success ? (
+                <View className="mt-3 flex-row items-start rounded-[14px] bg-[#EAFBF3] px-3 py-3">
+                  <SymbolView
+                    name={{
+                      ios: "checkmark.circle.fill",
+                      android: "check_circle",
+                      web: "check_circle",
+                    }}
+                    tintColor="#16845A"
+                    size={13}
+                    weight="bold"
                   />
+                  <View className="ml-2 min-w-0 flex-1">
+                    <Text className="text-[9px] font-black text-[#16845A]">
+                      Affectation terminée
+                    </Text>
+                    <Text
+                      className="mt-0.5 text-[8px] leading-[13px]"
+                      style={{ color: theme.colors.foregroundMuted }}
+                    >
+                      {success}
+                    </Text>
+                  </View>
+                </View>
+              ) : null}
 
-                  <AppButton
-                    title={
-                      searching
-                        ? "Recherche..."
-                        : "Rechercher"
-                    }
-                    loading={searching}
-                    onPress={() => void searchLearners()}
-                    variant="secondary"
-                    style={styles.searchButton}
-                  />
+              {enabled ? (
+                <>
+                  <View className="mt-4">
+                    <PanelHeading
+                      icon={{
+                        ios: "person.fill.badge.plus",
+                        android: "person_add",
+                        web: "person_add",
+                      }}
+                      title="Apprenants"
+                      subtitle="Recherche par nom ou e-mail"
+                    />
 
-                  {searchResults.length ? (
-                    <View style={styles.choiceList}>
-                      {searchResults.map((learner) => {
-                        const selected =
-                          selectedLearnerIds.includes(
+                    <View
+                      className="mt-2 flex-row items-center rounded-[14px] border bg-[#FCFBFD] px-3"
+                      style={{ borderColor: "#E5DFE8" }}
+                    >
+                      <SymbolView
+                        name={{
+                          ios: "magnifyingglass",
+                          android: "search",
+                          web: "search",
+                        }}
+                        tintColor={theme.colors.foregroundSubtle}
+                        size={13}
+                      />
+                      <TextInput
+                        value={learnerQuery}
+                        onChangeText={setLearnerQuery}
+                        placeholder="Nom ou e-mail"
+                        placeholderTextColor={theme.colors.foregroundSubtle}
+                        autoCapitalize="none"
+                        className="ml-2 h-[50px] min-w-0 flex-1 text-[13px]"
+                        style={{ color: theme.colors.foreground }}
+                        returnKeyType="search"
+                        onSubmitEditing={() => void searchLearners()}
+                      />
+                      <Pressable
+                        accessibilityRole="button"
+                        disabled={searching}
+                        onPress={() => void searchLearners()}
+                        className="h-9 flex-row items-center justify-center rounded-[10px] bg-[#F3EEFF] px-3"
+                        style={{ opacity: searching ? 0.55 : 1 }}
+                      >
+                        <Text className="text-[10px] font-black text-[#7C3AED]">
+                          {searching ? "..." : "Rechercher"}
+                        </Text>
+                      </Pressable>
+                    </View>
+
+                    {searchResults.length ? (
+                      <View className="mt-2 gap-1.5">
+                        {searchResults.map((learner) => {
+                          const selected = selectedLearnerIds.includes(
                             learner.id,
                           );
 
-                        return (
-                          <Pressable
-                            key={learner.id}
-                            accessibilityRole="button"
-                            accessibilityState={{ selected }}
-                            onPress={() =>
-                              toggleLearner(learner)
-                            }
-                            style={[
-                              styles.choiceCard,
-                              {
+                          return (
+                            <Pressable
+                              key={learner.id}
+                              accessibilityRole="button"
+                              accessibilityState={{ selected }}
+                              onPress={() => toggleLearner(learner)}
+                              className="flex-row items-center rounded-[14px] border px-3 py-3"
+                              style={{
                                 backgroundColor: selected
-                                  ? theme.colors.surfaceElevated
-                                  : theme.colors.background,
+                                  ? "#F7F2FF"
+                                  : "#FCFBFD",
                                 borderColor: selected
-                                  ? theme.colors.accent
-                                  : theme.colors.border,
-                              },
-                            ]}
-                          >
-                            <View style={styles.choiceCopy}>
-                              <Text
-                                style={[
-                                  styles.choiceTitle,
-                                  {
-                                    color:
-                                      theme.colors.foreground,
-                                  },
-                                ]}
-                              >
-                                {learnerDisplayName(learner)}
-                              </Text>
-                              <Text
-                                style={[
-                                  styles.choiceMeta,
-                                  {
-                                    color:
-                                      theme.colors.foregroundMuted,
-                                  },
-                                ]}
-                              >
-                                {learner.email || "E-mail indisponible"}
-                              </Text>
-                            </View>
-
-                            <Text
-                              style={[
-                                styles.selectedLabel,
-                                {
-                                  color: selected
-                                    ? theme.colors.accent
-                                    : theme.colors.foregroundSubtle,
-                                },
-                              ]}
+                                  ? "#7C3AED"
+                                  : "#E5DFE8",
+                              }}
                             >
-                              {selected
-                                ? "Sélectionné"
-                                : "Sélectionner"}
-                            </Text>
-                          </Pressable>
-                        );
-                      })}
-                    </View>
-                  ) : null}
+                              <View
+                                className="h-7 w-7 items-center justify-center rounded-full"
+                                style={{
+                                  backgroundColor: selected
+                                    ? "#7C3AED"
+                                    : "#F1E9FF",
+                                }}
+                              >
+                                <SymbolView
+                                  name={{
+                                    ios: selected
+                                      ? "checkmark"
+                                      : "person.fill",
+                                    android: selected
+                                      ? "check"
+                                      : "person",
+                                    web: selected
+                                      ? "check"
+                                      : "person",
+                                  }}
+                                  tintColor={selected ? "#FFFFFF" : "#7C3AED"}
+                                  size={10}
+                                  weight="bold"
+                                />
+                              </View>
 
-                  <TextInput
-                    value={learnerDueAt}
-                    onChangeText={setLearnerDueAt}
-                    placeholder="Échéance optionnelle : AAAA-MM-JJTHH:mm"
-                    placeholderTextColor={
-                      theme.colors.foregroundSubtle
-                    }
-                    autoCapitalize="none"
-                    style={[
-                      styles.input,
-                      {
-                        color: theme.colors.foreground,
-                        backgroundColor:
-                          theme.colors.background,
-                        borderColor: theme.colors.border,
-                      },
-                    ]}
+                              <View className="ml-2.5 min-w-0 flex-1">
+                                <Text
+                                  numberOfLines={1}
+                                  className="text-[11px] font-black"
+                                  style={{ color: theme.colors.foreground }}
+                                >
+                                  {learnerDisplayName(learner)}
+                                </Text>
+                                <Text
+                                  numberOfLines={1}
+                                  className="mt-0.5 text-[9px]"
+                                  style={{ color: theme.colors.foregroundMuted }}
+                                >
+                                  {learner.email || "E-mail indisponible"}
+                                </Text>
+                              </View>
+                            </Pressable>
+                          );
+                        })}
+                      </View>
+                    ) : null}
+
+                    <CompactInput
+                      value={learnerDueAt}
+                      onChangeText={setLearnerDueAt}
+                      placeholder="Échéance optionnelle · AAAA-MM-JJTHH:mm"
+                    />
+
+                    <PrimaryButton
+                      label={
+                        selectedLearnerIds.length > 0
+                          ? `Affecter ${selectedLearnerIds.length} apprenant${selectedLearnerIds.length > 1 ? "s" : ""}`
+                          : "Sélectionnez un apprenant"
+                      }
+                      disabled={
+                        assigningLearners ||
+                        selectedLearnerIds.length === 0
+                      }
+                      loading={assigningLearners}
+                      icon={{
+                        ios: "person.badge.plus",
+                        android: "person_add",
+                        web: "person_add",
+                      }}
+                      onPress={() => void assignLearners()}
+                    />
+                  </View>
+
+                  <View className="my-4 h-px bg-[#EEE9F0]" />
+
+                  <PanelHeading
+                    icon={{
+                      ios: "person.3.fill",
+                      android: "groups",
+                      web: "groups",
+                    }}
+                    title="Groupe / cohorte"
+                    subtitle={`${groups.length} groupe${groups.length > 1 ? "s" : ""} disponible${groups.length > 1 ? "s" : ""}`}
                   />
-
-                  <Text
-                    style={[
-                      styles.miniHelp,
-                      { color: theme.colors.foregroundSubtle },
-                    ]}
-                  >
-                    Exemple : 2026-09-15T18:00. L’échéance est transmise aux inscriptions Formation créées par P3.
-                  </Text>
-
-                  <AppButton
-                    title={`Affecter ${selectedLearnerIds.length || ""} apprenant${selectedLearnerIds.length > 1 ? "s" : ""}`.trim()}
-                    loading={assigningLearners}
-                    disabled={
-                      selectedLearnerIds.length === 0
-                    }
-                    onPress={() => void assignLearners()}
-                  />
-                </View>
-
-                <View style={styles.divider} />
-
-                <View style={styles.subSection}>
-                  <Text
-                    style={[
-                      styles.subTitle,
-                      { color: theme.colors.foreground },
-                    ]}
-                  >
-                    Groupe / cohorte
-                  </Text>
 
                   {groups.length === 0 ? (
                     <Text
-                      style={[
-                        styles.emptyText,
-                        {
-                          color:
-                            theme.colors.foregroundMuted,
-                        },
-                      ]}
+                      className="mt-2 rounded-[13px] bg-[#FAF8FB] px-3 py-3 text-center text-[9px]"
+                      style={{ color: theme.colors.foregroundMuted }}
                     >
                       Aucun groupe disponible.
                     </Text>
                   ) : (
-                    <View style={styles.choiceList}>
+                    <View className="mt-2 gap-1.5">
                       {groups.map((group) => {
-                        const selected =
-                          selectedGroupId === group.id;
+                        const selected = selectedGroupId === group.id;
 
                         return (
                           <Pressable
@@ -705,831 +741,600 @@ export default function LearningPathAssignmentProgressPanel({
                             accessibilityRole="button"
                             accessibilityState={{ selected }}
                             onPress={() =>
-                              setSelectedGroupId(
-                                selected
-                                  ? null
-                                  : group.id,
-                              )
+                              setSelectedGroupId(selected ? null : group.id)
                             }
-                            style={[
-                              styles.choiceCard,
-                              {
-                                backgroundColor: selected
-                                  ? theme.colors.surfaceElevated
-                                  : theme.colors.background,
-                                borderColor: selected
-                                  ? theme.colors.accent
-                                  : theme.colors.border,
-                              },
-                            ]}
+                            className="flex-row items-center rounded-[15px] border px-3.5 py-3.5"
+                            style={{
+                              backgroundColor: selected
+                                ? "#F7F2FF"
+                                : "#FCFBFD",
+                              borderColor: selected
+                                ? "#7C3AED"
+                                : "#E5DFE8",
+                            }}
                           >
-                            <View style={styles.choiceCopy}>
+                            <View className="min-w-0 flex-1">
                               <Text
-                                style={[
-                                  styles.choiceTitle,
-                                  {
-                                    color:
-                                      theme.colors.foreground,
-                                  },
-                                ]}
+                                numberOfLines={1}
+                                className="text-[12px] font-black"
+                                style={{ color: theme.colors.foreground }}
                               >
                                 {group.name}
                               </Text>
                               <Text
-                                style={[
-                                  styles.choiceMeta,
-                                  {
-                                    color:
-                                      theme.colors.foregroundMuted,
-                                  },
-                                ]}
+                                className="mt-1 text-[9px]"
+                                style={{ color: theme.colors.foregroundMuted }}
                               >
                                 {group.memberCount} membre(s)
                               </Text>
                             </View>
 
-                            <Text
-                              style={[
-                                styles.selectedLabel,
-                                {
-                                  color: selected
-                                    ? theme.colors.accent
-                                    : theme.colors.foregroundSubtle,
-                                },
-                              ]}
+                            <View
+                              className="h-8 w-8 items-center justify-center rounded-full border"
+                              style={{
+                                backgroundColor: selected
+                                  ? "#7C3AED"
+                                  : "#FFFFFF",
+                                borderColor: selected
+                                  ? "#7C3AED"
+                                  : "#D7D0DB",
+                              }}
                             >
-                              {selected
-                                ? "Sélectionné"
-                                : "Sélectionner"}
-                            </Text>
+                              {selected ? (
+                                <SymbolView
+                                  name={{
+                                    ios: "checkmark",
+                                    android: "check",
+                                    web: "check",
+                                  }}
+                                  tintColor="#FFFFFF"
+                                  size={10}
+                                  weight="bold"
+                                />
+                              ) : null}
+                            </View>
                           </Pressable>
                         );
                       })}
                     </View>
                   )}
 
-                  <TextInput
+                  <CompactInput
                     value={groupDueAt}
                     onChangeText={setGroupDueAt}
-                    placeholder="Échéance optionnelle : AAAA-MM-JJTHH:mm"
-                    placeholderTextColor={
-                      theme.colors.foregroundSubtle
-                    }
-                    autoCapitalize="none"
-                    style={[
-                      styles.input,
-                      {
-                        color: theme.colors.foreground,
-                        backgroundColor:
-                          theme.colors.background,
-                        borderColor: theme.colors.border,
-                      },
-                    ]}
+                    placeholder="Échéance optionnelle · AAAA-MM-JJTHH:mm"
                   />
 
-                  <AppButton
-                    title="Affecter au groupe"
+                  <PrimaryButton
+                    label={
+                      selectedGroupId
+                        ? "Affecter au groupe"
+                        : "Sélectionnez un groupe"
+                    }
+                    disabled={assigningGroup || !selectedGroupId}
                     loading={assigningGroup}
-                    disabled={!selectedGroupId}
+                    icon={{
+                      ios: "person.3.fill",
+                      android: "groups",
+                      web: "groups",
+                    }}
                     onPress={() => void assignGroup()}
                   />
+                </>
+              ) : (
+                <View className="mt-3 rounded-[14px] bg-[#F2F4F7] px-3 py-3">
+                  <Text
+                    className="text-[9px] leading-[14px]"
+                    style={{ color: theme.colors.foregroundMuted }}
+                  >
+                    Le parcours est archivé : les affectations existantes restent
+                    consultables, mais aucune nouvelle affectation n’est proposée.
+                  </Text>
                 </View>
-              </>
-            ) : (
-              <View
-                style={[
-                  styles.notice,
-                  {
-                    backgroundColor:
-                      theme.colors.surfaceSoft,
-                    borderColor: theme.colors.border,
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.noticeText,
-                    {
-                      color:
-                        theme.colors.foregroundMuted,
-                    },
-                  ]}
-                >
-                  Le parcours est archivé : les affectations existantes et la progression restent consultables, mais aucune nouvelle affectation n’est proposée.
-                </Text>
-              </View>
-            )}
+              )}
 
-            <View style={styles.divider} />
+              <View className="my-4 h-px bg-[#EEE9F0]" />
 
-            <View style={styles.subSection}>
-              <View style={styles.subHeadingRow}>
-                <Text
-                  style={[
-                    styles.subTitle,
-                    { color: theme.colors.foreground },
-                  ]}
-                >
-                  Affectations existantes
-                </Text>
+              <View className="flex-row items-center">
+                <View className="min-w-0 flex-1">
+                  <Text
+                    className="text-[15px] font-black"
+                    style={{ color: theme.colors.foreground }}
+                  >
+                    Affectations existantes
+                  </Text>
+                  <Text
+                    className="mt-1 text-[9px]"
+                    style={{ color: theme.colors.foregroundMuted }}
+                  >
+                    {learnerAssignments.length + groupAssignments.length} élément(s)
+                  </Text>
+                </View>
 
-                <AppButton
-                  title="Actualiser"
-                  variant="secondary"
-                  loading={loadingOverview}
+                <Pressable
+                  accessibilityRole="button"
+                  disabled={loadingOverview}
                   onPress={() => void loadOverview()}
-                  style={styles.refreshButton}
-                />
+                  className="h-9 flex-row items-center rounded-[11px] border bg-white px-3"
+                  style={{
+                    borderColor: "#E5DFE8",
+                    opacity: loadingOverview ? 0.55 : 1,
+                  }}
+                >
+                  <SymbolView
+                    name={{
+                      ios: "arrow.clockwise",
+                      android: "refresh",
+                      web: "refresh",
+                    }}
+                    tintColor="#7C3AED"
+                    size={10}
+                    weight="bold"
+                  />
+                  <Text className="ml-1.5 text-[9px] font-black text-[#7C3AED]">
+                    Actualiser
+                  </Text>
+                </Pressable>
               </View>
 
               {learnerAssignments.length === 0 &&
               groupAssignments.length === 0 ? (
                 <Text
-                  style={[
-                    styles.emptyText,
-                    { color: theme.colors.foregroundMuted },
-                  ]}
+                  className="mt-2 rounded-[13px] bg-[#FAF8FB] px-3 py-3 text-center text-[9px]"
+                  style={{ color: theme.colors.foregroundMuted }}
                 >
                   Aucune affectation enregistrée.
                 </Text>
               ) : (
-                <View style={styles.assignmentList}>
+                <View className="mt-2 gap-1.5">
                   {learnerAssignments.map((assignment) => {
-                    const learner =
-                      identityById.get(
-                        assignment.learnerId,
-                      );
+                    const learner = identityById.get(assignment.learnerId);
                     const group = assignment.groupId
                       ? groupById.get(assignment.groupId)
                       : undefined;
 
                     return (
-                      <View
+                      <AssignmentRow
                         key={`learner-${assignment.id}`}
-                        style={[
-                          styles.assignmentCard,
-                          {
-                            backgroundColor:
-                              theme.colors.surfaceSoft,
-                            borderColor:
-                              theme.colors.border,
-                          },
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.assignmentTitle,
-                            {
-                              color:
-                                theme.colors.foreground,
-                            },
-                          ]}
-                        >
-                          {learnerDisplayName(learner)}
-                        </Text>
-                        <Text
-                          style={[
-                            styles.assignmentMeta,
-                            {
-                              color:
-                                theme.colors.foregroundMuted,
-                            },
-                          ]}
-                        >
-                          {sourceLabel(assignment.source)}
-                          {group
-                            ? ` · ${group.name}`
-                            : ""}
-                        </Text>
-                        <Text
-                          style={[
-                            styles.assignmentMeta,
-                            {
-                              color:
-                                theme.colors.foregroundSubtle,
-                            },
-                          ]}
-                        >
-                          Affecté : {formatDate(
-                            assignment.assignedAt,
-                          )} · Échéance : {formatDate(
-                            assignment.dueAt,
-                          )}
-                        </Text>
-                      </View>
+                        title={learnerDisplayName(learner)}
+                        subtitle={`${sourceLabel(assignment.source)}${
+                          group ? ` · ${group.name}` : ""
+                        }`}
+                        meta={`Affecté : ${formatDate(
+                          assignment.assignedAt,
+                        )} · Échéance : ${formatDate(assignment.dueAt)}`}
+                        icon={{
+                          ios: "person.fill",
+                          android: "person",
+                          web: "person",
+                        }}
+                      />
                     );
                   })}
 
                   {groupAssignments.map((assignment) => {
-                    const group =
-                      groupById.get(
-                        assignment.groupId,
-                      );
+                    const group = groupById.get(assignment.groupId);
 
                     return (
-                      <View
+                      <AssignmentRow
                         key={`group-${assignment.id}`}
-                        style={[
-                          styles.assignmentCard,
-                          {
-                            backgroundColor:
-                              theme.colors.surfaceSoft,
-                            borderColor:
-                              theme.colors.border,
-                          },
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.assignmentTitle,
-                            {
-                              color:
-                                theme.colors.foreground,
-                            },
-                          ]}
-                        >
-                          Groupe : {group?.name ||
-                            `#${assignment.groupId}`}
-                        </Text>
-                        <Text
-                          style={[
-                            styles.assignmentMeta,
-                            {
-                              color:
-                                theme.colors.foregroundMuted,
-                            },
-                          ]}
-                        >
-                          {group
+                        title={`Groupe : ${
+                          group?.name || `#${assignment.groupId}`
+                        }`}
+                        subtitle={
+                          group
                             ? `${group.memberCount} membre(s)`
-                            : "Groupe existant"}
-                        </Text>
-                        <Text
-                          style={[
-                            styles.assignmentMeta,
-                            {
-                              color:
-                                theme.colors.foregroundSubtle,
-                            },
-                          ]}
-                        >
-                          Affecté : {formatDate(
-                            assignment.assignedAt,
-                          )} · Échéance : {formatDate(
-                            assignment.dueAt,
-                          )}
-                        </Text>
-                      </View>
+                            : "Groupe existant"
+                        }
+                        meta={`Affecté : ${formatDate(
+                          assignment.assignedAt,
+                        )} · Échéance : ${formatDate(assignment.dueAt)}`}
+                        icon={{
+                          ios: "person.3.fill",
+                          android: "groups",
+                          web: "groups",
+                        }}
+                      />
                     );
                   })}
                 </View>
               )}
-            </View>
-          </>
-        )}
+            </>
+          )}
+        </View>
       </View>
 
       {pathStatus !== "DRAFT" ? (
         <View
-          style={[
-            styles.sectionCard,
-            {
-              backgroundColor: theme.colors.surface,
-              borderColor: theme.colors.border,
-              borderRadius: theme.shape.cardRadius,
-            },
-          ]}
+          className="overflow-hidden rounded-[22px] border bg-white"
+          style={{ borderColor: "#E5DFE8" }}
         >
-          <View style={styles.subHeadingRow}>
-            <View style={styles.headingCopy}>
-              <Text
-                style={[
-                  styles.sectionTitle,
-                  { color: theme.colors.foreground },
-                ]}
-              >
-                Progression des apprenants
-              </Text>
+          <View className="h-1 bg-[#7C3AED]" />
 
-              <Text
-                style={[
-                  styles.helpText,
-                  { color: theme.colors.foregroundMuted },
-                ]}
-              >
-                Calcul P4 à partir des inscriptions Formation existantes : aucun second moteur de progression.
-              </Text>
+          <View className="p-3.5">
+            <View className="flex-row items-start">
+              <View className="h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-[#F1E9FF]">
+                <SymbolView
+                  name={{
+                    ios: "chart.bar.fill",
+                    android: "bar_chart",
+                    web: "bar_chart",
+                  }}
+                  tintColor="#7C3AED"
+                  size={15}
+                  weight="bold"
+                />
+              </View>
+
+              <View className="ml-3 min-w-0 flex-1">
+                <Text
+                  className="text-[18px] font-black"
+                  style={{ color: theme.colors.foreground }}
+                >
+                  Progression des apprenants
+                </Text>
+                <Text
+                  className="mt-1 text-[10px] leading-[15px]"
+                  style={{ color: theme.colors.foregroundMuted }}
+                >
+                  Suivi calculé à partir des inscriptions Formation existantes.
+                </Text>
+              </View>
+
+              <View className="rounded-full bg-[#EFF6FF] px-2.5 py-1">
+                <Text className="text-[9px] font-black text-[#2563EB]">
+                  {progressItems.length} apprenant(s)
+                </Text>
+              </View>
             </View>
 
-            <StatusBadge
-              label={`${progressItems.length} apprenant(s)`}
-              variant="info"
-            />
-          </View>
+            {loadingOverview && progressItems.length === 0 ? (
+              <Text
+                className="mt-3 text-center text-[9px]"
+                style={{ color: theme.colors.foregroundMuted }}
+              >
+                Chargement de la progression...
+              </Text>
+            ) : progressItems.length === 0 ? (
+              <Text
+                className="mt-3 rounded-[13px] bg-[#FAF8FB] px-3 py-3 text-center text-[9px]"
+                style={{ color: theme.colors.foregroundMuted }}
+              >
+                Aucune progression à afficher.
+              </Text>
+            ) : (
+              <View className="mt-3 gap-2">
+                {progressItems.map((progress) => {
+                  const learner = identityById.get(progress.learnerId);
+                  const overall = clampPercentage(
+                    progress.overallProgressPercentage,
+                  );
+                  const completion = clampPercentage(
+                    progress.completionProgressPercentage,
+                  );
 
-          {loadingOverview && progressItems.length === 0 ? (
-            <Text
-              style={[
-                styles.emptyText,
-                { color: theme.colors.foregroundMuted },
-              ]}
-            >
-              Chargement de la progression...
-            </Text>
-          ) : progressItems.length === 0 ? (
-            <Text
-              style={[
-                styles.emptyText,
-                { color: theme.colors.foregroundMuted },
-              ]}
-            >
-              Aucune progression à afficher tant que le parcours n’est pas affecté.
-            </Text>
-          ) : (
-            <View style={styles.progressList}>
-              {progressItems.map((progress) => {
-                const learner =
-                  identityById.get(progress.learnerId);
-                const overall = clampPercentage(
-                  progress.overallProgressPercentage,
-                );
-                const completion = clampPercentage(
-                  progress.completionProgressPercentage,
-                );
+                  return (
+                    <View
+                      key={progress.learnerId}
+                      className="rounded-[19px] border bg-[#FBF9FF] p-3.5"
+                      style={{ borderColor: "#E5DDF0" }}
+                    >
+                      <View className="flex-row items-start">
+                        <View className="min-w-0 flex-1">
+                          <Text
+                            numberOfLines={1}
+                            className="text-[14px] font-black"
+                            style={{ color: theme.colors.foreground }}
+                          >
+                            {learnerDisplayName(learner)}
+                          </Text>
+                          <Text
+                            numberOfLines={1}
+                            className="mt-1 text-[9px]"
+                            style={{ color: theme.colors.foregroundMuted }}
+                          >
+                            {sourceLabel(progress.assignmentSource)} · Échéance :{" "}
+                            {formatDate(progress.pathDueAt)}
+                          </Text>
+                        </View>
 
-                return (
-                  <View
-                    key={progress.learnerId}
-                    style={[
-                      styles.progressCard,
-                      {
-                        backgroundColor:
-                          theme.colors.surfaceSoft,
-                        borderColor:
-                          theme.colors.border,
-                      },
-                    ]}
-                  >
-                    <View style={styles.progressHeading}>
-                      <View style={styles.headingCopy}>
-                        <Text
-                          style={[
-                            styles.progressName,
-                            {
-                              color:
-                                theme.colors.foreground,
-                            },
-                          ]}
+                        <View
+                          className="ml-2 rounded-full px-2.5 py-1"
+                          style={{
+                            backgroundColor: progress.completed
+                              ? "#EAFBF3"
+                              : "#EFF6FF",
+                          }}
                         >
-                          {learnerDisplayName(learner)}
-                        </Text>
-
-                        <Text
-                          style={[
-                            styles.progressMeta,
-                            {
-                              color:
-                                theme.colors.foregroundMuted,
-                            },
-                          ]}
-                        >
-                          {sourceLabel(
-                            progress.assignmentSource,
-                          )} · Échéance :{" "}
-                          {formatDate(progress.pathDueAt)}
-                        </Text>
+                          <Text
+                            className="text-[11px] font-black"
+                            style={{
+                              color: progress.completed
+                                ? "#16845A"
+                                : "#2563EB",
+                            }}
+                          >
+                            {progress.completed ? "Terminé" : `${overall}%`}
+                          </Text>
+                        </View>
                       </View>
 
-                      <StatusBadge
-                        label={
-                          progress.completed
-                            ? "Terminé"
-                            : `${overall} %`
-                        }
-                        variant={
-                          progress.completed
-                            ? "success"
-                            : overall > 0
-                              ? "info"
-                              : "warning"
-                        }
-                      />
-                    </View>
+                      <View className="mt-2.5 flex-row gap-1.5">
+                        <MiniMetric label="Global" value={`${overall}%`} />
+                        <MiniMetric
+                          label="Obligatoire"
+                          value={`${completion}%`}
+                        />
+                        <MiniMetric
+                          label="Terminées"
+                          value={`${progress.completedSteps}/${progress.totalSteps}`}
+                        />
+                        <MiniMetric
+                          label="Requises"
+                          value={`${progress.completedRequiredSteps}/${progress.requiredSteps}`}
+                        />
+                      </View>
 
-                    <View style={styles.progressMetrics}>
-                      <Metric
-                        label="Progression globale"
-                        value={`${overall} %`}
-                      />
-                      <Metric
-                        label="Completion obligatoire"
-                        value={`${completion} %`}
-                      />
-                      <Metric
-                        label="Formations terminées"
-                        value={`${progress.completedSteps} / ${progress.totalSteps}`}
-                      />
-                      <Metric
-                        label="Obligatoires terminées"
-                        value={`${progress.completedRequiredSteps} / ${progress.requiredSteps}`}
-                      />
-                    </View>
-
-                    <View
-                      style={[
-                        styles.progressTrack,
-                        {
-                          backgroundColor:
-                            theme.colors.border,
-                        },
-                      ]}
-                    >
-                      <View
-                        style={[
-                          styles.progressFill,
-                          {
+                      <View className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-[#E7E1EA]">
+                        <View
+                          className="h-full rounded-full"
+                          style={{
                             width: `${overall}%`,
-                            backgroundColor:
-                              progress.completed
-                                ? theme.colors.success
-                                : theme.colors.accent,
-                          },
-                        ]}
-                      />
-                    </View>
+                            backgroundColor: progress.completed
+                              ? "#16845A"
+                              : "#7C3AED",
+                          }}
+                        />
+                      </View>
 
-                    {progress.nextTrainingId ? (
-                      <Text
-                        style={[
-                          styles.nextText,
-                          {
-                            color:
-                              theme.colors.foregroundMuted,
-                          },
-                        ]}
-                      >
-                        Prochaine formation : position{" "}
-                        {progress.nextPosition ?? "-"}
-                      </Text>
-                    ) : null}
+                      {progress.nextTrainingId ? (
+                        <Text
+                          className="mt-2 text-[8px] font-bold"
+                          style={{ color: theme.colors.foregroundMuted }}
+                        >
+                          Prochaine formation · position{" "}
+                          {progress.nextPosition ?? "-"}
+                        </Text>
+                      ) : null}
 
-                    <View style={styles.trainingProgressList}>
-                      {progress.trainings.map((training) => {
-                        const percentage =
-                          clampPercentage(
+                      <View className="mt-2 gap-1.5">
+                        {progress.trainings.map((training) => {
+                          const percentage = clampPercentage(
                             training.progressPercentage,
                           );
 
-                        return (
-                          <View
-                            key={training.stepId}
-                            style={[
-                              styles.trainingProgressCard,
-                              {
-                                backgroundColor:
-                                  theme.colors.background,
-                                borderColor:
-                                  theme.colors.border,
-                              },
-                            ]}
-                          >
-                            <View style={styles.trainingProgressHeading}>
-                              <Text
-                                style={[
-                                  styles.trainingProgressTitle,
-                                  {
-                                    color:
-                                      theme.colors.foreground,
-                                  },
-                                ]}
-                              >
-                                {training.position}.{" "}
-                                {training.trainingMissing
-                                  ? "Formation indisponible"
-                                  : training.trainingTitle ||
-                                    `Formation #${training.trainingId}`}
-                              </Text>
+                          return (
+                            <View
+                              key={training.stepId}
+                              className="flex-row items-start rounded-[14px] border bg-white px-3 py-2.5"
+                              style={{ borderColor: "#E8E2EA" }}
+                            >
+                              <View className="min-w-0 flex-1">
+                                <Text
+                                  numberOfLines={2}
+                                  className="text-[10px] font-black leading-[14px]"
+                                  style={{ color: theme.colors.foreground }}
+                                >
+                                  {training.position}.{" "}
+                                  {training.trainingMissing
+                                    ? "Formation indisponible"
+                                    : training.trainingTitle ||
+                                      `Formation #${training.trainingId}`}
+                                </Text>
+                                <Text
+                                  numberOfLines={1}
+                                  className="mt-1 text-[8px]"
+                                  style={{
+                                    color: theme.colors.foregroundMuted,
+                                  }}
+                                >
+                                  {training.required
+                                    ? "Obligatoire"
+                                    : "Facultative"}{" "}
+                                  ·{" "}
+                                  {training.enrolled
+                                    ? training.enrollmentStatus || "Inscrit"
+                                    : "Non inscrit"}{" "}
+                                  · {formatDate(training.dueAt)}
+                                </Text>
+                              </View>
 
                               <Text
-                                style={[
-                                  styles.trainingPercentage,
-                                  {
-                                    color:
-                                      percentage >= 100
-                                        ? theme.colors.success
-                                        : theme.colors.accent,
-                                  },
-                                ]}
+                                className="ml-2 text-[11px] font-black"
+                                style={{
+                                  color:
+                                    percentage >= 100
+                                      ? "#16845A"
+                                      : "#7C3AED",
+                                }}
                               >
-                                {percentage} %
+                                {percentage}%
                               </Text>
                             </View>
-
-                            <Text
-                              style={[
-                                styles.trainingProgressMeta,
-                                {
-                                  color:
-                                    theme.colors.foregroundMuted,
-                                },
-                              ]}
-                            >
-                              {training.required
-                                ? "Obligatoire"
-                                : "Facultative"}{" "}
-                              ·{" "}
-                              {training.enrolled
-                                ? training.enrollmentStatus ||
-                                  "Inscrit"
-                                : "Non inscrit"}{" "}
-                              · Échéance :{" "}
-                              {formatDate(training.dueAt)}
-                            </Text>
-                          </View>
-                        );
-                      })}
-                    </View>
-                  </View>
-                );
-
-                function Metric({
-                  label,
-                  value,
-                }: {
-                  label: string;
-                  value: string;
-                }) {
-                  return (
-                    <View
-                      style={[
-                        styles.metric,
-                        {
-                          backgroundColor:
-                            theme.colors.background,
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.metricLabel,
-                          {
-                            color:
-                              theme.colors.foregroundSubtle,
-                          },
-                        ]}
-                      >
-                        {label}
-                      </Text>
-                      <Text
-                        style={[
-                          styles.metricValue,
-                          {
-                            color:
-                              theme.colors.foreground,
-                          },
-                        ]}
-                      >
-                        {value}
-                      </Text>
+                          );
+                        })}
+                      </View>
                     </View>
                   );
-                }
-              })}
-            </View>
-          )}
+                })}
+              </View>
+            )}
+          </View>
         </View>
       ) : null}
     </View>
   );
-}
 
-const styles = StyleSheet.create({
-  wrapper: {
-    gap: 14,
-  },
-  sectionCard: {
-    borderWidth: 1,
-    padding: 16,
-  },
-  headingRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 10,
-  },
-  headingCopy: {
-    flex: 1,
-    minWidth: 0,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "900",
-  },
-  helpText: {
-    fontSize: 12,
-    lineHeight: 18,
-    marginTop: 5,
-  },
-  notice: {
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-    marginTop: 14,
-  },
-  noticeText: {
-    fontSize: 12,
-    lineHeight: 18,
-  },
-  successBox: {
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-    marginTop: 14,
-  },
-  successTitle: {
-    fontSize: 13,
-    fontWeight: "900",
-  },
-  successText: {
-    fontSize: 12,
-    lineHeight: 18,
-    marginTop: 4,
-  },
-  subSection: {
-    marginTop: 16,
-    gap: 10,
-  },
-  subTitle: {
-    fontSize: 15,
-    fontWeight: "900",
-  },
-  input: {
-    minHeight: 48,
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 13,
-    paddingVertical: 10,
-    fontSize: 14,
-  },
-  searchButton: {
-    alignSelf: "flex-start",
-  },
-  choiceList: {
-    gap: 8,
-  },
-  choiceCard: {
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 11,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  choiceCopy: {
-    flex: 1,
-    minWidth: 0,
-  },
-  choiceTitle: {
-    fontSize: 14,
-    fontWeight: "900",
-  },
-  choiceMeta: {
-    fontSize: 11,
-    lineHeight: 16,
-    marginTop: 3,
-  },
-  selectedLabel: {
-    fontSize: 11,
-    fontWeight: "900",
-  },
-  miniHelp: {
-    fontSize: 10,
-    lineHeight: 15,
-  },
-  divider: {
-    height: 1,
-    marginTop: 18,
-    backgroundColor: "rgba(127,127,127,0.22)",
-  },
-  subHeadingRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: 10,
-  },
-  refreshButton: {
-    minWidth: 104,
-  },
-  emptyText: {
-    fontSize: 13,
-    lineHeight: 19,
-  },
-  assignmentList: {
-    gap: 8,
-  },
-  assignmentCard: {
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 11,
-  },
-  assignmentTitle: {
-    fontSize: 14,
-    fontWeight: "900",
-  },
-  assignmentMeta: {
-    fontSize: 11,
-    lineHeight: 16,
-    marginTop: 3,
-  },
-  progressList: {
-    gap: 12,
-    marginTop: 14,
-  },
-  progressCard: {
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-  },
-  progressHeading: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 10,
-  },
-  progressName: {
-    fontSize: 16,
-    fontWeight: "900",
-  },
-  progressMeta: {
-    fontSize: 11,
-    lineHeight: 16,
-    marginTop: 3,
-  },
-  progressMetrics: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginTop: 12,
-  },
-  metric: {
-    flexGrow: 1,
-    flexBasis: 135,
-    minWidth: 0,
-    borderRadius: 10,
-    padding: 9,
-  },
-  metricLabel: {
-    fontSize: 9,
-    lineHeight: 13,
-    fontWeight: "800",
-  },
-  metricValue: {
-    fontSize: 13,
-    lineHeight: 18,
-    fontWeight: "900",
-    marginTop: 2,
-  },
-  progressTrack: {
-    height: 8,
-    borderRadius: 999,
-    overflow: "hidden",
-    marginTop: 12,
-  },
-  progressFill: {
-    height: "100%",
-    borderRadius: 999,
-  },
-  nextText: {
-    fontSize: 11,
-    lineHeight: 16,
-    marginTop: 9,
-  },
-  trainingProgressList: {
-    gap: 7,
-    marginTop: 12,
-  },
-  trainingProgressCard: {
-    borderWidth: 1,
-    borderRadius: 10,
-    padding: 9,
-  },
-  trainingProgressHeading: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 8,
-  },
-  trainingProgressTitle: {
-    flex: 1,
-    minWidth: 0,
-    fontSize: 12,
-    lineHeight: 17,
-    fontWeight: "800",
-  },
-  trainingPercentage: {
-    fontSize: 12,
-    fontWeight: "900",
-  },
-  trainingProgressMeta: {
-    fontSize: 10,
-    lineHeight: 15,
-    marginTop: 4,
-  },
-});
+  function PanelHeading({
+    icon,
+    title,
+    subtitle,
+  }: {
+    icon: React.ComponentProps<typeof SymbolView>["name"];
+    title: string;
+    subtitle: string;
+  }) {
+    return (
+      <View className="flex-row items-center">
+        <View className="h-9 w-9 items-center justify-center rounded-[11px] bg-[#F1E9FF]">
+          <SymbolView
+            name={icon}
+            tintColor="#7C3AED"
+            size={13}
+            weight="bold"
+          />
+        </View>
+        <View className="ml-2.5 min-w-0 flex-1">
+          <Text
+            className="text-[13px] font-black"
+            style={{ color: theme.colors.foreground }}
+          >
+            {title}
+          </Text>
+          <Text
+            className="mt-1 text-[9px]"
+            style={{ color: theme.colors.foregroundMuted }}
+          >
+            {subtitle}
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  function CompactInput({
+    value,
+    onChangeText,
+    placeholder,
+  }: {
+    value: string;
+    onChangeText: (value: string) => void;
+    placeholder: string;
+  }) {
+    return (
+      <TextInput
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        placeholderTextColor={theme.colors.foregroundSubtle}
+        autoCapitalize="none"
+        className="mt-2.5 h-[48px] rounded-[14px] border bg-[#FCFBFD] px-3.5 text-[11px]"
+        style={{
+          borderColor: "#E5DFE8",
+          color: theme.colors.foreground,
+        }}
+      />
+    );
+  }
+
+  function PrimaryButton({
+    label,
+    disabled,
+    loading,
+    icon,
+    onPress,
+  }: {
+    label: string;
+    disabled: boolean;
+    loading: boolean;
+    icon: React.ComponentProps<typeof SymbolView>["name"];
+    onPress: () => void;
+  }) {
+    return (
+      <Pressable
+        accessibilityRole="button"
+        disabled={disabled}
+        onPress={onPress}
+        className="mt-3 h-[48px] flex-row items-center justify-center rounded-[14px] bg-[#7C3AED]"
+        style={{ opacity: disabled ? 0.42 : 1 }}
+      >
+        <SymbolView
+          name={icon}
+          tintColor="#FFFFFF"
+          size={12}
+          weight="bold"
+        />
+        <Text className="ml-2 text-[11px] font-black text-white">
+          {loading ? "Traitement..." : label}
+        </Text>
+      </Pressable>
+    );
+  }
+
+  function AssignmentRow({
+    title,
+    subtitle,
+    meta,
+    icon,
+  }: {
+    title: string;
+    subtitle: string;
+    meta: string;
+    icon: React.ComponentProps<typeof SymbolView>["name"];
+  }) {
+    return (
+      <View className="flex-row items-start rounded-[15px] border bg-[#FCFBFD] px-3 py-3"
+        style={{ borderColor: "#E5DFE8" }}
+      >
+        <View className="h-8 w-8 items-center justify-center rounded-[10px] bg-[#F1E9FF]">
+          <SymbolView
+            name={icon}
+            tintColor="#7C3AED"
+            size={10}
+            weight="bold"
+          />
+        </View>
+
+        <View className="ml-2.5 min-w-0 flex-1">
+          <Text
+            numberOfLines={1}
+            className="text-[12px] font-black"
+            style={{ color: theme.colors.foreground }}
+          >
+            {title}
+          </Text>
+          <Text
+            numberOfLines={1}
+            className="mt-1 text-[9px]"
+            style={{ color: theme.colors.foregroundMuted }}
+          >
+            {subtitle}
+          </Text>
+          <Text
+            numberOfLines={1}
+            className="mt-1 text-[8px]"
+            style={{ color: theme.colors.foregroundSubtle }}
+          >
+            {meta}
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  function MiniMetric({
+    label,
+    value,
+  }: {
+    label: string;
+    value: string;
+  }) {
+    return (
+      <View className="min-w-0 flex-1 rounded-[12px] bg-white px-2.5 py-2.5">
+        <Text
+          numberOfLines={1}
+          className="text-[8px] font-bold"
+          style={{ color: theme.colors.foregroundSubtle }}
+        >
+          {label}
+        </Text>
+        <Text
+          className="mt-1 text-[12px] font-black"
+          style={{ color: theme.colors.foreground }}
+        >
+          {value}
+        </Text>
+      </View>
+    );
+  }
+}

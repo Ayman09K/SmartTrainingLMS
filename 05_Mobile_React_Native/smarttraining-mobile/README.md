@@ -1,81 +1,56 @@
-# SmartTraining Mobile
+# Welcome to your Expo app 👋
 
-Application Mobile React Native / Expo de SmartTraining AI.
+This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 
-## Stack
+## Get started
 
-- Expo 56 ;
-- React Native 0.85 ;
-- React 19 ;
-- TypeScript ;
-- Expo Router ;
-- NativeWind ;
-- Axios ;
-- Expo Secure Store ;
-- React Native WebView.
+1. Install dependencies
 
-## Version applicative
+   ```bash
+   npm install
+   ```
 
-Baseline actuelle :
-- application : `1.0.7` ;
-- Android package : `com.smarttraininglms.app` ;
-- Android `versionCode` : `8`.
+2. Start the app
 
-Une version Android AAB est utilisée en test fermé Google Play.
+   ```bash
+   npx expo start
+   ```
 
-## Installation
+In the output, you'll find options to open the app in a
 
-```powershell
-npm ci
+- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
+- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
+- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
+- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+
+You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+
+## Get a fresh project
+
+When you're ready, run:
+
+```bash
+npm run reset-project
 ```
 
-## Démarrage
+This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
 
-Le `package.json` historique demande le port 8083 pour Expo, mais ce port est également celui de `evaluation-service`.
+### Other setup steps
 
-Pour exécuter l'ensemble du système local sans conflit :
+- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
+- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
+- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
 
-```powershell
-npx expo start --port 8086
-```
+## Learn more
 
-Puis ouvrir la cible souhaitée depuis Expo.
+To learn more about developing your project with Expo, look at the following resources:
 
-## API
+- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
+- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
 
-La production utilise :
+## Join the community
 
-`EXPO_PUBLIC_API_URL=https://api.smarttraininglms.com/api`
+Join our community of developers creating universal apps.
 
-Les builds destinés aux tests ou à la production ne doivent pas pointer vers localhost, une IP privée ou une IP VPS codée en dur.
-
-## Fonctionnalités
-
-L'application propose selon le rôle :
-- formations et parcours ;
-- ressources ;
-- quiz ;
-- progression ;
-- SCORM via WebView ;
-- notifications ;
-- certificats ;
-- fonctions formateur / administration adaptées au mobile ;
-- assistant IA.
-
-## SCORM Mobile
-
-Le lecteur SCORM utilise une WebView et gère les contraintes d'orientation / affichage mobile. Les contenus importés restent servis par le backend ; ils ne sont pas intégrés au bundle Mobile.
-
-## Android
-
-EAS est utilisé pour la génération des builds Android.
-
-Le fichier AAB est un artefact de release et n'est pas versionné dans Git.
-
-## iOS
-
-Le code React Native / Expo est multiplateforme et le projet contient une cible iOS de développement.
-
-Cependant, à la date de cette baseline PFE, la configuration de distribution iOS n'est pas présentée comme une release livrée : le `bundleIdentifier` et le `buildNumber` seront traités séparément avant toute validation de build iOS / App Store.
-
-Cette distinction évite de revendiquer une publication iOS qui n'a pas encore été réalisée.
+- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
+- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.

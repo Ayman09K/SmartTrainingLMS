@@ -1,21 +1,26 @@
+import { SymbolView } from "expo-symbols";
+import { type ComponentProps } from "react";
 import {
-  StyleSheet,
+  Pressable,
   Text,
   View,
 } from "react-native";
 
-import AppButton from "../AppButton";
 import { TrainingCover } from "../ux/RichPrimitives";
+import {
+  buildLearnerMediaUrl,
+} from "../../features/trainings/learnerTrainingService";
 import {
   useSmartTrainingTheme,
 } from "../../theme/provider/SmartTrainingThemeProvider";
-import { buildLearnerMediaUrl } from "../../features/trainings/learnerTrainingService";
 import { LearnerMyTraining } from "../../types/learnerTraining";
 
 type Props = {
   training: LearnerMyTraining;
   onOpen: () => void;
 };
+
+type SymbolName = ComponentProps<typeof SymbolView>["name"];
 
 function clampProgress(value?: number | null): number {
   if (typeof value !== "number" || Number.isNaN(value)) {
@@ -25,102 +30,121 @@ function clampProgress(value?: number | null): number {
   return Math.max(0, Math.min(100, Math.round(value)));
 }
 
-function statusLabel(status?: string | null): string {
-  if (status === "COMPLETED") {
-    return "Termin\u00E9e";
+function formatDuration(value?: number | null): string {
+  if (
+    typeof value !== "number" ||
+    Number.isNaN(value)
+  ) {
+    return "Non indiquée";
   }
 
-  if (status === "ACTIVE") {
-    return "En cours";
+  if (Number.isInteger(value)) {
+    return `${value} h`;
   }
 
-  return "Disponible";
+  const wholeHours = Math.floor(value);
+  const minutes = Math.round((value - wholeHours) * 60);
+
+  if (!wholeHours) {
+    return `${minutes} min`;
+  }
+
+  return `${wholeHours}h ${String(minutes).padStart(2, "0")}`;
 }
 
-type DeadlinePresentation = {
-  label: string;
-  detail: string;
-  tone: "info" | "warning" | "danger";
-};
+function formatDate(value?: string | null): string | null {
+  if (!value) {
+    return null;
+  }
 
-function formatDeadline(value: string): string {
   const date = new Date(value);
 
   if (Number.isNaN(date.getTime())) {
     return value;
   }
 
-  return date.toLocaleString("fr-FR", {
+  return date.toLocaleDateString("fr-FR", {
     day: "2-digit",
-    month: "2-digit",
+    month: "short",
     year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
   });
 }
 
-function deadlinePresentation(
-  dueAt?: string | null,
-  completed = false,
-): DeadlinePresentation | null {
-  if (!dueAt) {
-    return null;
-  }
+function levelLabel(level?: string | null): string {
+  if (level === "DEBUTANT") return "Débutant";
+  if (level === "INTERMEDIAIRE") return "Intermédiaire";
+  if (level === "AVANCE") return "Avancé";
 
-  const due = new Date(dueAt);
+  return level || "Non indiqué";
+}
 
-  if (Number.isNaN(due.getTime())) {
-    return null;
-  }
+function statusPresentation(
+  training: LearnerMyTraining,
+): {
+  label: string;
+  color: string;
+  soft: string;
+} {
+  const progress = clampProgress(training.progressPercentage);
 
-  const detail = formatDeadline(dueAt);
-
-  if (completed) {
+  if (
+    training.enrollmentStatus === "COMPLETED" ||
+    progress >= 100
+  ) {
     return {
-      label: "\u00c9ch\u00e9ance",
-      detail,
-      tone: "info",
+      label: "Terminée",
+      color: "#16A36A",
+      soft: "#ECFDF3",
     };
   }
 
-  const remainingMs = due.getTime() - Date.now();
-
-  if (remainingMs < 0) {
+  if (progress > 0) {
     return {
-      label: "\u00c9ch\u00e9ance d\u00e9pass\u00e9e",
-      detail,
-      tone: "danger",
-    };
-  }
-
-  const remainingDays = Math.ceil(
-    remainingMs / (24 * 60 * 60 * 1000),
-  );
-
-  if (remainingDays <= 3) {
-    return {
-      label:
-        remainingDays <= 1
-          ? "\u00c9ch\u00e9ance dans moins de 24 h"
-          : `\u00c9ch\u00e9ance dans ${remainingDays} jours`,
-      detail,
-      tone: "warning",
+      label: "En cours",
+      color: "#2563EB",
+      soft: "#EFF6FF",
     };
   }
 
   return {
-    label: "\u00c0 terminer avant",
-    detail,
-    tone: "info",
+    label: "À commencer",
+    color: "#7C3AED",
+    soft: "#F3EEFF",
   };
 }
 
-function levelLabel(level?: string | null): string {
-  if (level === "DEBUTANT") return "D\u00E9butant";
-  if (level === "INTERMEDIAIRE") return "Interm\u00E9diaire";
-  if (level === "AVANCE") return "Avanc\u00E9";
+function InfoPill({
+  icon,
+  value,
+  tint,
+  background,
+}: {
+  icon: SymbolName;
+  value: string;
+  tint: string;
+  background: string;
+}) {
+  return (
+    <View className="min-h-[29px] rounded-[10px] border border-[#EEE9F0] bg-[#FBFAFC] px-[6px] flex-row items-center">
+      <View
+        className="w-[22px] h-[22px] rounded-[7px] mr-[5px] items-center justify-center" style={{ backgroundColor: background }}
+      >
+        <SymbolView
+          name={icon}
+          tintColor={tint}
+          size={11}
+          weight="bold"
+        />
+      </View>
 
-  return level || "Niveau non indiqu\u00E9";
+      <Text
+        numberOfLines={1}
+        className="text-[#475467] text-[9px] font-extrabold"
+      >
+        {value}
+      </Text>
+    </View>
+  );
 }
 
 export default function LearnerMyTrainingCard({
@@ -129,397 +153,225 @@ export default function LearnerMyTrainingCard({
 }: Props) {
   const { theme } = useSmartTrainingTheme();
 
-  const progress = clampProgress(training.progressPercentage);
-  const completed =
-    training.enrollmentStatus === "COMPLETED" || progress >= 100;
-
-  const statusColor = completed
-    ? theme.colors.success
-    : progress > 0
-      ? theme.colors.info
-      : theme.colors.accent;
-
-  const deadline = deadlinePresentation(
-    training.dueAt,
-    completed,
+  const progress = clampProgress(
+    training.progressPercentage,
   );
 
-  const deadlineColor = deadline
-    ? deadline.tone === "danger"
-      ? theme.colors.danger
-      : deadline.tone === "warning"
-        ? theme.colors.warning
-        : theme.colors.info
-    : theme.colors.info;
+  const completed =
+    training.enrollmentStatus === "COMPLETED" ||
+    progress >= 100;
+
+  const status = statusPresentation(training);
+  const dueAt = formatDate(training.dueAt);
+
 
   return (
-    <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: theme.colors.surface,
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`Ouvrir ${training.title}`}
+      onPress={onOpen}
+      android_ripple={{ color: "transparent" }}
+      className="overflow-hidden rounded-[20px] border bg-[#FFFFFF]" style={[{ shadowOpacity: 0.03, shadowRadius: 7, shadowOffset: {
+      width: 0,
+      height: 3,
+    }, elevation: 1 }, {
           borderColor: theme.colors.border,
-          borderRadius: theme.shape.cardRadius,
-          borderWidth: theme.shape.borderWidth,
-          padding: theme.shape.cardPadding,
-          shadowColor: theme.colors.foreground,
-          shadowOpacity: theme.shape.shadowOpacity,
-        },
-      ]}
+          shadowColor: theme.colors.shadow,
+        }]}
     >
-      <View
-        style={[
-          styles.coverFrame,
-          { borderRadius: theme.shape.controlRadius },
-        ]}
-      >
+      <View className="h-[94px] overflow-hidden bg-[#F4F1F6]">
         <TrainingCover
           title={training.title}
-          coverUrl={buildLearnerMediaUrl(training.coverImageUrl)}
+          coverUrl={buildLearnerMediaUrl(
+            training.coverImageUrl,
+          )}
         />
-      </View>
 
-      <View style={styles.topRow}>
         <View
-          style={[
-            styles.statusBadge,
-            {
-              backgroundColor: theme.colors.surfaceSoft,
-              borderColor: statusColor,
-              borderWidth: Math.max(
-                1,
-                theme.shape.borderWidth,
-              ),
-            },
-          ]}
+          className="absolute top-[8px] left-[8px] min-h-[26px] px-[8px] rounded-full flex-row items-center" style={{ backgroundColor: status.soft }}
         >
+          <View
+            className="w-[6px] h-[6px] rounded-[3px] mr-[5px]" style={{ backgroundColor: status.color }}
+          />
           <Text
-            style={[
-              styles.statusText,
-              {
-                color: statusColor,
-              },
-            ]}
+            className="text-[10px] font-black" style={{ color: status.color }}
           >
-            {statusLabel(training.enrollmentStatus)}
+            {status.label}
           </Text>
         </View>
 
-        {training.category ? (
-          <Text
-            style={[
-              styles.category,
-              {
-                color: theme.colors.foregroundSubtle,
-              },
-            ]}
-          >
-            {training.category}
-          </Text>
-        ) : null}
-      </View>
-
-      <Text
-        style={[
-          styles.title,
-          {
-            color: theme.colors.foreground,
-          },
-        ]}
-      >
-        {training.title}
-      </Text>
-
-      {training.shortDescription ? (
-        <Text
-          numberOfLines={2}
-          style={[
-            styles.description,
-            {
-              color: theme.colors.foregroundMuted,
-            },
-          ]}
-        >
-          {training.shortDescription}
-        </Text>
-      ) : null}
-
-      <View style={styles.metaRow}>
-        <View
-          style={[
-            styles.metaPill,
-            {
-              backgroundColor: theme.colors.surfaceSoft,
-            },
-          ]}
-        >
-          <Text
-            style={[
-              styles.meta,
-              {
-                color: theme.colors.foregroundMuted,
-              },
-            ]}
-          >
-            {levelLabel(training.level)}
-          </Text>
-        </View>
-
-        <View
-          style={[
-            styles.metaPill,
-            {
-              backgroundColor: theme.colors.surfaceSoft,
-            },
-          ]}
-        >
-          <Text
-            style={[
-              styles.meta,
-              {
-                color: theme.colors.foregroundMuted,
-              },
-            ]}
-          >
-            {training.estimatedDurationHours
-              ? `${training.estimatedDurationHours} h`
-              : "Dur\u00E9e non indiqu\u00E9e"}
+        <View className="absolute top-[8px] right-[8px] min-w-[44px] min-h-[27px] px-[8px] rounded-full bg-[rgba(15,23,42,0.84)] items-center justify-center">
+          <Text className="text-[#FFFFFF] text-[10px] font-black">
+            {progress}%
           </Text>
         </View>
       </View>
 
-      {deadline ? (
-        <View
-          style={[
-            styles.deadlinePanel,
-            {
-              backgroundColor: theme.colors.surfaceSoft,
-              borderColor: deadlineColor,
-              borderWidth: Math.max(1, theme.shape.borderWidth),
-              borderRadius: theme.shape.controlRadius,
-            },
-          ]}
-        >
-          <Text
-            style={[
-              styles.deadlineLabel,
-              { color: deadlineColor },
-            ]}
-          >
-            {deadline.label}
-          </Text>
-          <Text
-            style={[
-              styles.deadlineDetail,
-              { color: theme.colors.foreground },
-            ]}
-          >
-            {deadline.detail}
-          </Text>
-        </View>
-      ) : null}
-
-      <View
-        style={[
-          styles.progressPanel,
-          {
-            backgroundColor: theme.colors.surfaceSoft,
-            borderRadius: theme.shape.controlRadius,
-            padding: 10,
-          },
-        ]}
-      >
-        <View style={styles.progressHeader}>
-          <View>
+      <View className="p-[10px]">
+        <View className="flex-row items-start gap-[8px]">
+          <View className="flex-1 min-w-[0px]">
             <Text
-              style={[
-                styles.progressEyebrow,
-                {
-                  color: theme.colors.foregroundSubtle,
-                },
-              ]}
+              numberOfLines={2}
+              className="text-[15px] leading-[19px] font-black tracking-[-0.15px]" style={{ color: theme.colors.foreground }}
             >
-              PROGRESSION
+              {training.title}
             </Text>
-            <Text
-              style={[
-                styles.progressLabel,
-                {
-                  color: theme.colors.foreground,
-                },
-              ]}
-            >
-              {completed
-                ? "Parcours termin\u00E9"
-                : progress > 0
-                  ? "Parcours en cours"
-                  : "Parcours \u00E0 commencer"}
-            </Text>
+
+            {training.shortDescription ? (
+              <Text
+                numberOfLines={1}
+                className="mt-[2px] text-[11px] leading-[15px]" style={{
+                    color:
+                      theme.colors.foregroundMuted,
+                  }}
+              >
+                {training.shortDescription}
+              </Text>
+            ) : null}
+          </View>
+
+          {training.category ? (
+            <View className="max-w-[125px] min-h-[28px] px-[8px] rounded-full bg-[#F3EEFF] justify-center">
+              <Text
+                numberOfLines={1}
+                className="text-[#7C3AED] text-[9px] font-black"
+              >
+                {training.category}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+
+        <View className="mt-[8px] flex-row flex-wrap gap-[6px]">
+          <InfoPill
+            icon={{
+              ios: "chart.bar.fill",
+              android: "bar_chart",
+              web: "bar_chart",
+            }}
+            value={levelLabel(training.level)}
+            tint="#7C3AED"
+            background="#F3EEFF"
+          />
+
+          <InfoPill
+            icon={{
+              ios: "clock.fill",
+              android: "schedule",
+              web: "schedule",
+            }}
+            value={formatDuration(
+              training.estimatedDurationHours,
+            )}
+            tint="#2563EB"
+            background="#EFF6FF"
+          />
+
+          {dueAt ? (
+            <InfoPill
+              icon={{
+                ios: "calendar",
+                android: "event",
+                web: "event",
+              }}
+              value={dueAt}
+              tint="#D97706"
+              background="#FFF7ED"
+            />
+          ) : null}
+        </View>
+
+        <View className="mt-[8px] min-h-[22px] flex-row items-center">
+          <Text className="w-[70px] text-[#667085] text-[10px] font-extrabold">
+            Progression
+          </Text>
+
+          <View className="flex-1 h-[6px] overflow-hidden rounded-full bg-[#E9E4EC]">
+            <View
+              className="h-full rounded-full" style={{
+                  width: `${progress}%`,
+                  backgroundColor: status.color,
+                }}
+            />
           </View>
 
           <Text
-            style={[
-              styles.progressValue,
-              {
-                color: statusColor,
-              },
-            ]}
+            className="w-[42px] ml-[8px] text-right text-[10px] font-black" style={{ color: status.color }}
           >
-            {progress} %
+            {progress}%
           </Text>
         </View>
 
         <View
-          style={[
-            styles.progressTrack,
-            {
-              backgroundColor: theme.colors.border,
-            },
-          ]}
+          className={`mt-[9px] min-h-[52px] rounded-[15px] border px-[7px] flex-row items-center ${(completed ? "border-[#5B21B6] bg-[#5B21B6]" : (progress > 0 ? "border-[#7C3AED] bg-[#7C3AED]" : "border-[#6D28D9] bg-[#6D28D9]"))}`}
         >
           <View
-            style={[
-              styles.progressFill,
-              {
-                width: `${progress}%`,
-                backgroundColor: statusColor,
-              },
-            ]}
-          />
+            className={`w-[36px] h-[36px] rounded-[12px] mr-[9px] items-center justify-center ${(completed ? "bg-[rgba(255,255,255,0.16)]" : (progress > 0 ? "bg-[rgba(255,255,255,0.16)]" : "bg-[rgba(255,255,255,0.16)]"))}`}
+          >
+            <SymbolView
+              name={{
+                ios: completed
+                  ? "eye.fill"
+                  : progress > 0
+                    ? "play.fill"
+                    : "arrow.right.circle.fill",
+                android: completed
+                  ? "visibility"
+                  : progress > 0
+                    ? "play_arrow"
+                    : "arrow_circle_right",
+                web: completed
+                  ? "visibility"
+                  : progress > 0
+                    ? "play_arrow"
+                    : "arrow_circle_right",
+              }}
+              tintColor="#FFFFFF"
+              size={13}
+              weight="bold"
+            />
+          </View>
+
+          <View className="flex-1 min-w-[0px]">
+            <Text
+              numberOfLines={1}
+              className="text-[8px] leading-[10px] font-black tracking-[0.45px] text-[rgba(255,255,255,0.78)]"
+            >
+              {completed
+                ? "FORMATION TERMINÉE"
+                : progress > 0
+                  ? "REPRENDRE"
+                  : "DÉMARRER"}
+            </Text>
+
+            <Text
+              numberOfLines={1}
+              className="mt-[2px] text-[11px] leading-[14px] font-black text-[#FFFFFF]"
+            >
+              {completed
+                ? "Consulter la formation"
+                : progress > 0
+                  ? "Continuer la formation"
+                  : "Commencer la formation"}
+            </Text>
+          </View>
+
+          <View
+            className={`w-[30px] h-[30px] rounded-[15px] items-center justify-center ${(completed || progress > 0 ? "bg-[rgba(255,255,255,0.16)]" : "bg-[rgba(255,255,255,0.16)]")}`}
+          >
+            <SymbolView
+              name={{
+                ios: "chevron.right",
+                android: "chevron_right",
+                web: "chevron_right",
+              }}
+              tintColor="#FFFFFF"
+              size={11}
+              weight="bold"
+            />
+          </View>
         </View>
       </View>
-
-      <AppButton
-        title={
-          completed
-            ? "Voir la formation"
-            : progress > 0
-              ? "Reprendre"
-              : "Commencer"
-        }
-        onPress={onOpen}
-        variant={completed ? "secondary" : "primary"}
-        style={styles.action}
-      />
-    </View>
+    </Pressable>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    width: "100%",
-    marginBottom: 12,
-    shadowRadius: 10,
-    shadowOffset: {
-      width: 0,
-      height: 3,
-    },
-    elevation: 2,
-  },
-  coverFrame: {
-    height: 112,
-    overflow: "hidden",
-    marginBottom: 10,
-  },
-  topRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 8,
-    marginBottom: 8,
-  },
-  statusBadge: {
-    borderRadius: 999,
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-  },
-  statusText: {
-    fontSize: 10,
-    fontWeight: "900",
-  },
-  category: {
-    fontSize: 11,
-    fontWeight: "700",
-    flexShrink: 1,
-  },
-  title: {
-    fontSize: 18,
-    lineHeight: 24,
-    fontWeight: "900",
-    marginBottom: 5,
-  },
-  description: {
-    fontSize: 13,
-    lineHeight: 18,
-    marginBottom: 9,
-  },
-  metaRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
-    marginBottom: 10,
-  },
-  metaPill: {
-    borderRadius: 999,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  meta: {
-    fontSize: 11,
-    fontWeight: "700",
-  },
-  deadlinePanel: {
-    marginBottom: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-  },
-  deadlineLabel: {
-    fontSize: 11,
-    fontWeight: "900",
-    marginBottom: 2,
-  },
-  deadlineDetail: {
-    fontSize: 12,
-    fontWeight: "800",
-  },
-  progressPanel: {
-    marginBottom: 10,
-  },
-  progressHeader: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
-    gap: 8,
-    marginBottom: 7,
-  },
-  progressEyebrow: {
-    fontSize: 9,
-    fontWeight: "900",
-    letterSpacing: 0.7,
-    marginBottom: 2,
-  },
-  progressLabel: {
-    fontSize: 13,
-    fontWeight: "800",
-  },
-  progressValue: {
-    fontSize: 16,
-    fontWeight: "900",
-  },
-  progressTrack: {
-    width: "100%",
-    height: 7,
-    borderRadius: 999,
-    overflow: "hidden",
-  },
-  progressFill: {
-    height: "100%",
-    borderRadius: 999,
-  },
-  action: {
-    alignSelf: "flex-start",
-    minWidth: 145,
-  },
-});

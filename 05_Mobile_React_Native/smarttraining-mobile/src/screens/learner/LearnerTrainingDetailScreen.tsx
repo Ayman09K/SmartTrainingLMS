@@ -1,27 +1,32 @@
+/* eslint-disable react-hooks/set-state-in-effect */
+import type { ComponentProps } from "react";
 import { useEffect, useState } from "react";
+import { SymbolView } from "expo-symbols";
 import {
+  ActivityIndicator,
   Alert,
+  Pressable,
   ScrollView,
-  StyleSheet,
-  Text,
   View,
 } from "react-native";
 
-import AppButton from "../../components/AppButton";
 import ErrorMessage from "../../components/ErrorMessage";
 import LoadingState from "../../components/LoadingState";
 import ScreenContainer from "../../components/ScreenContainer";
-import {
-  getMyLearnerTrainingContent,
-} from "../../features/trainings/learnerTrainingService";
+import { Text } from "../../components/nativewindui/Text";
 import {
   getPublishedQuizzesByTraining,
 } from "../../features/evaluation/evaluationService";
 import { selfUnenroll } from "../../features/trainings/catalogService";
 import {
+  getMyLearnerTrainingContent,
+} from "../../features/trainings/learnerTrainingService";
+import {
   useSmartTrainingTheme,
 } from "../../theme/provider/SmartTrainingThemeProvider";
-import { LearnerTrainingContent } from "../../types/learnerTraining";
+import type {
+  LearnerTrainingContent,
+} from "../../types/learnerTraining";
 
 type Props = {
   trainingId: number;
@@ -35,6 +40,9 @@ type DeadlinePresentation = {
   detail: string;
   tone: "info" | "warning" | "danger";
 };
+
+type SymbolName =
+  ComponentProps<typeof SymbolView>["name"];
 
 function formatDeadline(value: string): string {
   const date = new Date(value);
@@ -70,7 +78,7 @@ function deadlinePresentation(
 
   if (completed) {
     return {
-      label: "\u00c9ch\u00e9ance",
+      label: "Échéance",
       detail,
       tone: "info",
     };
@@ -80,7 +88,7 @@ function deadlinePresentation(
 
   if (remainingMs < 0) {
     return {
-      label: "\u00c9ch\u00e9ance d\u00e9pass\u00e9e",
+      label: "Échéance dépassée",
       detail,
       tone: "danger",
     };
@@ -94,34 +102,159 @@ function deadlinePresentation(
     return {
       label:
         remainingDays <= 1
-          ? "\u00c9ch\u00e9ance dans moins de 24 h"
-          : `\u00c9ch\u00e9ance dans ${remainingDays} jours`,
+          ? "Échéance dans moins de 24 h"
+          : `Échéance dans ${remainingDays} jours`,
       detail,
       tone: "warning",
     };
   }
 
   return {
-    label: "\u00c0 terminer avant",
+    label: "À terminer avant",
     detail,
     tone: "info",
   };
 }
 
 function levelLabel(level?: string | null): string {
-  if (level === "DEBUTANT") return "D\u00E9butant";
-  if (level === "INTERMEDIAIRE") return "Interm\u00E9diaire";
-  if (level === "AVANCE") return "Avanc\u00E9";
+  if (level === "DEBUTANT") return "Débutant";
+  if (level === "INTERMEDIAIRE") return "Intermédiaire";
+  if (level === "AVANCE") return "Avancé";
 
-  return level || "Niveau non indiqu\u00E9";
+  return level || "Niveau non indiqué";
 }
 
 function clampProgress(value?: number | null): number {
-  if (typeof value !== "number" || Number.isNaN(value)) {
+  if (
+    typeof value !== "number" ||
+    Number.isNaN(value)
+  ) {
     return 0;
   }
 
-  return Math.max(0, Math.min(100, Math.round(value)));
+  return Math.max(
+    0,
+    Math.min(100, Math.round(value)),
+  );
+}
+
+function MetricCard({
+  label,
+  value,
+  icon,
+  tint,
+  background,
+}: {
+  label: string;
+  value: string | number;
+  icon: SymbolName;
+  tint: string;
+  background: string;
+}) {
+  const { theme } = useSmartTrainingTheme();
+
+  return (
+    <View
+      className="w-[31.7%] rounded-[18px] border bg-white px-[10px] py-[10px]"
+      style={{
+        minHeight: 102,
+        borderColor: theme.colors.border,
+        shadowColor: theme.colors.shadow,
+        shadowOpacity: 0.03,
+        shadowRadius: 6,
+        shadowOffset: {
+          width: 0,
+          height: 3,
+        },
+        elevation: 1,
+      }}
+    >
+      <View className="flex-row items-center justify-between">
+        <View
+          className="h-[36px] w-[36px] items-center justify-center rounded-[12px]"
+          style={{ backgroundColor: background }}
+        >
+          <SymbolView
+            name={icon}
+            tintColor={tint}
+            size={16}
+            weight="bold"
+          />
+        </View>
+
+        <Text
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.8}
+          className="ml-[4px] text-[19px] font-black leading-[23px]"
+          style={{ color: theme.colors.foreground }}
+        >
+          {value}
+        </Text>
+      </View>
+
+      <Text
+        numberOfLines={2}
+        className="mt-[13px] text-[10px] font-extrabold leading-[13px]"
+        style={{ color: theme.colors.foregroundMuted }}
+      >
+        {label}
+      </Text>
+    </View>
+  );
+}
+
+function InfoPanel({
+  title,
+  text,
+  icon,
+  tint,
+  background,
+}: {
+  title: string;
+  text: string;
+  icon: SymbolName;
+  tint: string;
+  background: string;
+}) {
+  const { theme } = useSmartTrainingTheme();
+
+  return (
+    <View
+      className="rounded-[20px] border bg-white p-[13px]"
+      style={{
+        borderColor: theme.colors.border,
+      }}
+    >
+      <View className="flex-row items-center">
+        <View
+          className="h-[38px] w-[38px] items-center justify-center rounded-[13px]"
+          style={{ backgroundColor: background }}
+        >
+          <SymbolView
+            name={icon}
+            tintColor={tint}
+            size={15}
+            weight="bold"
+          />
+        </View>
+
+        <Text
+          className="ml-[10px] text-[14px] font-black"
+          style={{ color: theme.colors.foreground }}
+        >
+          {title}
+        </Text>
+      </View>
+
+      <Text
+        className="mt-[9px] text-[12px] leading-[19px]"
+        style={{ color: theme.colors.foregroundMuted }}
+      >
+        {text}
+      </Text>
+    </View>
+  );
 }
 
 export default function LearnerTrainingDetailScreen({
@@ -136,9 +269,10 @@ export default function LearnerTrainingDetailScreen({
     useState<LearnerTrainingContent | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  // MOBILE_HIDE_EMPTY_QUIZ_ACTION_SAFE_V2
-  const [hasPublishedQuiz, setHasPublishedQuiz] = useState(false);
-  const [unenrollBusy, setUnenrollBusy] = useState(false);
+  const [hasPublishedQuiz, setHasPublishedQuiz] =
+    useState(false);
+  const [unenrollBusy, setUnenrollBusy] =
+    useState(false);
 
   useEffect(() => {
     let active = true;
@@ -153,7 +287,7 @@ export default function LearnerTrainingDetailScreen({
       .catch(() => {
         if (active) {
           setError(
-            "Cette formation ne peut pas \u00EAtre charg\u00E9e depuis ton espace apprenant.",
+            "Cette formation ne peut pas être chargée depuis ton espace apprenant.",
           );
         }
       })
@@ -169,7 +303,12 @@ export default function LearnerTrainingDetailScreen({
   }, [trainingId]);
 
   async function performSelfUnenroll() {
-    if (!training?.canSelfUnenroll || unenrollBusy) return;
+    if (
+      !training?.canSelfUnenroll ||
+      unenrollBusy
+    ) {
+      return;
+    }
 
     setUnenrollBusy(true);
     setError("");
@@ -179,7 +318,7 @@ export default function LearnerTrainingDetailScreen({
       onBack();
     } catch {
       setError(
-        "La d\u00E9sinscription n'a pas pu etre effectuee. Reessaie dans quelques instants.",
+        "La désinscription n'a pas pu etre effectuee. Reessaie dans quelques instants.",
       );
     } finally {
       setUnenrollBusy(false);
@@ -187,30 +326,44 @@ export default function LearnerTrainingDetailScreen({
   }
 
   function confirmSelfUnenroll() {
-    if (!training?.canSelfUnenroll || unenrollBusy) return;
+    if (
+      !training?.canSelfUnenroll ||
+      unenrollBusy
+    ) {
+      return;
+    }
 
     Alert.alert(
-      "Se d\u00E9sinscrire ?",
+      "Se désinscrire ?",
       "Tu perdras l'acces a la formation, mais ta progression, tes resultats et tes certificats resteront conserves. Tu pourras te reinscrire plus tard.",
       [
-        { text: "Annuler", style: "cancel" },
         {
-          text: "Se d\u00E9sinscrire",
+          text: "Annuler",
+          style: "cancel",
+        },
+        {
+          text: "Se désinscrire",
           style: "destructive",
-          onPress: () => void performSelfUnenroll(),
+          onPress: () =>
+            void performSelfUnenroll(),
         },
       ],
     );
   }
+
   useEffect(() => {
     let active = true;
 
     setHasPublishedQuiz(false);
 
-    void getPublishedQuizzesByTraining(trainingId)
+    void getPublishedQuizzesByTraining(
+      trainingId,
+    )
       .then((items) => {
         if (active) {
-          setHasPublishedQuiz(items.length > 0);
+          setHasPublishedQuiz(
+            items.length > 0,
+          );
         }
       })
       .catch(() => {
@@ -225,36 +378,82 @@ export default function LearnerTrainingDetailScreen({
   }, [trainingId]);
 
   if (loading) {
-    return <LoadingState message="Chargement de la formation..." />;
+    return (
+      <LoadingState message="Chargement de la formation..." />
+    );
   }
 
   if (!training) {
     return (
-      <ScreenContainer>
-        <View style={styles.page}>
-          <ErrorMessage
-            message={error || "Formation indisponible."}
-          />
-          <AppButton
-            title="Retour"
-            onPress={onBack}
-            variant="secondary"
-            style={styles.backButton}
-          />
+      <ScreenContainer style={{ padding: 0 }}>
+        <View className="flex-1 px-[14px] pt-[12px]">
+          <View
+            className="rounded-[20px] border bg-white p-[14px]"
+            style={{
+              borderColor: theme.colors.border,
+            }}
+          >
+            <ErrorMessage
+              message={
+                error ||
+                "Formation indisponible."
+              }
+            />
+
+            <Pressable
+              accessibilityRole="button"
+              onPress={onBack}
+              android_ripple={{
+                color: "transparent",
+              }}
+              className="mt-[12px] min-h-[46px] flex-row items-center justify-center rounded-[13px] border bg-white px-[12px]"
+              style={{
+                borderColor:
+                  theme.colors.border,
+              }}
+            >
+              <SymbolView
+                name={{
+                  ios: "chevron.left",
+                  android: "arrow_back",
+                  web: "arrow_back",
+                }}
+                tintColor={
+                  theme.colors.accent
+                }
+                size={13}
+                weight="bold"
+              />
+
+              <Text
+                className="ml-[7px] text-[11px] font-black"
+                style={{
+                  color:
+                    theme.colors.foreground,
+                }}
+              >
+                Retour
+              </Text>
+            </Pressable>
+          </View>
         </View>
       </ScreenContainer>
     );
   }
 
-  const progress = clampProgress(training.progressPercentage);
+  const progress = clampProgress(
+    training.progressPercentage,
+  );
 
   const completed =
-    training.enrollmentStatus === "COMPLETED" || progress >= 100;
+    training.enrollmentStatus ===
+      "COMPLETED" || progress >= 100;
 
-  const deadline = deadlinePresentation(
-    training.dueAt,
-    completed,
-  );
+  const deadline =
+    deadlinePresentation(
+      training.dueAt,
+      completed,
+    );
 
   const deadlineColor = deadline
     ? deadline.tone === "danger"
@@ -264,785 +463,997 @@ export default function LearnerTrainingDetailScreen({
         : theme.colors.info
     : theme.colors.info;
 
-  const lessonCount = training.modules.reduce(
-    (total, module) => total + module.lessons.length,
-    0,
-  );
+  const lessonCount =
+    training.modules.reduce(
+      (total, module) =>
+        total + module.lessons.length,
+      0,
+    );
 
-  const resourceCount = training.modules.reduce(
-    (total, module) =>
-      total +
-      module.lessons.reduce(
-        (lessonTotal, lesson) =>
-          lessonTotal + lesson.resources.length,
-        0,
-      ),
-    0,
-  );
-
-  const moduleLabel =
-    training.modules.length > 1 ? "modules" : "module";
-  const lessonLabel = lessonCount > 1 ? "le\u00E7ons" : "le\u00E7on";
-  const resourceLabel =
-    resourceCount > 1 ? "ressources" : "ressource";
+  const resourceCount =
+    training.modules.reduce(
+      (total, module) =>
+        total +
+        module.lessons.reduce(
+          (lessonTotal, lesson) =>
+            lessonTotal +
+            lesson.resources.length,
+          0,
+        ),
+      0,
+    );
 
   return (
-    <ScreenContainer>
+    <ScreenContainer style={{ padding: 0 }}>
       <ScrollView
-        style={styles.scrollArea}
-        contentContainerStyle={[
-          styles.content,
-          {
-            paddingBottom: theme.shape.cardPadding * 2,
-          },
-        ]}
+        className="flex-1"
+        contentContainerClassName="grow px-[14px] pt-[10px]"
+        contentContainerStyle={{
+          paddingBottom: Math.max(
+            24,
+            theme.shape.cardPadding * 1.5,
+          ),
+        }}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.page}>
-          <AppButton
-            title={"Retour \u00E0 mes formations"}
-            onPress={onBack}
-            variant="secondary"
-            style={styles.backButton}
-          />
+        <View className="w-full max-w-[760px] self-center">
+          {error ? (
+            <View className="mb-[10px]">
+              <ErrorMessage message={error} />
+            </View>
+          ) : null}
 
-          {error ? <ErrorMessage message={error} /> : null}
-
+          {/* HERO */}
           <View
-            style={[
-              styles.hero,
-              {
-                backgroundColor: theme.colors.surfaceElevated,
-                borderColor: theme.colors.border,
-                borderRadius: theme.shape.cardRadius,
-                borderWidth: theme.shape.borderWidth,
-                padding: theme.shape.cardPadding,
+            className="relative overflow-hidden rounded-[26px] border bg-white p-[15px]"
+            style={{
+              borderColor:
+                theme.colors.border,
+              shadowColor:
+                theme.colors.shadow,
+              shadowOpacity: 0.05,
+              shadowRadius: 11,
+              shadowOffset: {
+                width: 0,
+                height: 4,
               },
-            ]}
+              elevation: 2,
+            }}
           >
-            <Text
-              style={[
-                styles.eyebrow,
-                { color: theme.colors.accent },
-              ]}
-            >
-              FORMATION
-            </Text>
+            <View className="absolute -right-[58px] -top-[70px] h-[170px] w-[170px] rounded-full bg-[#F3EEFF]" />
+            <View className="absolute right-[12px] top-[-44px] h-[86px] w-[86px] rounded-full bg-[#E5D8FF]/70" />
+
+            <View className="flex-row items-center">
+              <View className="h-[48px] w-[48px] items-center justify-center rounded-[15px] bg-[#F3EEFF]">
+                <SymbolView
+                  name={{
+                    ios: "book.pages.fill",
+                    android: "menu_book",
+                    web: "menu_book",
+                  }}
+                  tintColor="#7C3AED"
+                  size={20}
+                  weight="bold"
+                />
+              </View>
+
+              <View className="ml-[10px] rounded-full bg-[#F3EEFF] px-[11px] py-[6px]">
+                <Text className="text-[9px] font-black uppercase tracking-[0.65px] text-[#7C3AED]">
+                  Formation
+                </Text>
+              </View>
+            </View>
 
             <Text
-              style={[
-                styles.title,
-                { color: theme.colors.foreground },
-              ]}
+              className="mt-[14px] max-w-[94%] text-[25px] font-black leading-[31px] tracking-[-0.5px]"
+              style={{
+                color:
+                  theme.colors.foreground,
+              }}
             >
               {training.title}
             </Text>
 
             {training.shortDescription ? (
               <Text
-                style={[
-                  styles.summary,
-                  { color: theme.colors.foregroundMuted },
-                ]}
+                className="mt-[6px] max-w-[94%] text-[13px] leading-[20px]"
+                style={{
+                  color:
+                    theme.colors.foregroundMuted,
+                }}
               >
                 {training.shortDescription}
               </Text>
             ) : null}
 
-            <View style={styles.metaRow}>
+            <View className="mt-[13px] flex-row flex-wrap gap-[7px]">
               <View
-                style={[
-                  styles.metaPill,
-                  {
-                    backgroundColor: theme.colors.surfaceSoft,
-                    borderRadius: 999,
-                  },
-                ]}
+                className="min-h-[38px] flex-row items-center rounded-[12px] border bg-white px-[9px]"
+                style={{
+                  borderColor:
+                    theme.colors.border,
+                }}
               >
+                <View className="h-[25px] w-[25px] items-center justify-center rounded-[8px] bg-[#EFF6FF]">
+                  <SymbolView
+                    name={{
+                      ios: "chart.bar.fill",
+                      android:
+                        "signal_cellular_alt",
+                      web:
+                        "signal_cellular_alt",
+                    }}
+                    tintColor="#2563EB"
+                    size={11}
+                    weight="bold"
+                  />
+                </View>
+
                 <Text
-                  style={[
-                    styles.meta,
-                    { color: theme.colors.foregroundMuted },
-                  ]}
+                  className="ml-[6px] text-[10px] font-black"
+                  style={{
+                    color:
+                      theme.colors.foregroundMuted,
+                  }}
                 >
                   {levelLabel(training.level)}
                 </Text>
               </View>
 
               <View
-                style={[
-                  styles.metaPill,
-                  {
-                    backgroundColor: theme.colors.surfaceSoft,
-                    borderRadius: 999,
-                  },
-                ]}
+                className="min-h-[38px] flex-row items-center rounded-[12px] border bg-white px-[9px]"
+                style={{
+                  borderColor:
+                    theme.colors.border,
+                }}
               >
+                <View className="h-[25px] w-[25px] items-center justify-center rounded-[8px] bg-[#FFF7ED]">
+                  <SymbolView
+                    name={{
+                      ios: "clock.fill",
+                      android: "schedule",
+                      web: "schedule",
+                    }}
+                    tintColor="#D97706"
+                    size={11}
+                    weight="bold"
+                  />
+                </View>
+
                 <Text
-                  style={[
-                    styles.meta,
-                    { color: theme.colors.foregroundMuted },
-                  ]}
+                  className="ml-[6px] text-[10px] font-black"
+                  style={{
+                    color:
+                      theme.colors.foregroundMuted,
+                  }}
                 >
                   {training.estimatedDurationHours
                     ? `${training.estimatedDurationHours} h`
-                    : "Dur\u00E9e non indiqu\u00E9e"}
+                    : "Durée non indiquée"}
+                </Text>
+              </View>
+            </View>
+
+            <View className="mt-[16px]">
+              <Text
+                className="text-[18px] font-black"
+                style={{
+                  color:
+                    theme.colors.foreground,
+                }}
+              >
+                Indicateurs clés
+              </Text>
+
+              <Text
+                className="mt-[2px] text-[11px] leading-[16px]"
+                style={{
+                  color:
+                    theme.colors.foregroundMuted,
+                }}
+              >
+                Une vue rapide du contenu réel de la formation.
+              </Text>
+
+              <View className="mt-[10px] flex-row justify-between">
+                <MetricCard
+                  label="Modules"
+                  value={training.modules.length}
+                  icon={{
+                    ios: "square.grid.2x2.fill",
+                    android: "view_module",
+                    web: "view_module",
+                  }}
+                  tint="#7C3AED"
+                  background="#F3EEFF"
+                />
+
+                <MetricCard
+                  label="Leçons"
+                  value={lessonCount}
+                  icon={{
+                    ios: "book.pages.fill",
+                    android: "menu_book",
+                    web: "menu_book",
+                  }}
+                  tint="#2563EB"
+                  background="#EFF6FF"
+                />
+
+                <MetricCard
+                  label="Ressources"
+                  value={resourceCount}
+                  icon={{
+                    ios: "folder.fill",
+                    android: "folder",
+                    web: "folder",
+                  }}
+                  tint="#16A36A"
+                  background="#ECFDF3"
+                />
+              </View>
+            </View>
+          </View>
+
+          {/* PROGRESSION */}
+          <View
+            className="mt-[11px] rounded-[23px] border p-[13px]"
+            style={{
+              backgroundColor: "#F7F1FF",
+              borderColor: "#E2D4F7",
+            }}
+          >
+            <View className="flex-row items-center">
+              <View className="h-[44px] w-[44px] items-center justify-center rounded-[14px] bg-white">
+                <SymbolView
+                  name={{
+                    ios: completed
+                      ? "checkmark.seal.fill"
+                      : "chart.line.uptrend.xyaxis",
+                    android: completed
+                      ? "verified"
+                      : "insights",
+                    web: completed
+                      ? "verified"
+                      : "insights",
+                  }}
+                  tintColor={
+                    completed
+                      ? "#16A36A"
+                      : "#7C3AED"
+                  }
+                  size={17}
+                  weight="bold"
+                />
+              </View>
+
+              <View className="ml-[10px] min-w-0 flex-1">
+                <Text className="text-[9px] font-black uppercase tracking-[0.6px] text-[#7C3AED]">
+                  Progression
+                </Text>
+
+                <Text
+                  className="mt-[1px] text-[17px] font-black"
+                  style={{
+                    color:
+                      theme.colors.foreground,
+                  }}
+                >
+                  {completed
+                    ? "Formation terminée"
+                    : progress > 0
+                      ? "Formation en cours"
+                      : "Formation à commencer"}
                 </Text>
               </View>
 
-              <View
-                style={[
-                  styles.metaPill,
-                  {
-                    backgroundColor: theme.colors.surfaceSoft,
-                    borderRadius: 999,
-                  },
-                ]}
+              <Text
+                className="ml-[8px] text-[27px] font-black tracking-[-0.5px]"
+                style={{
+                  color: completed
+                    ? theme.colors.success
+                    : theme.colors.accent,
+                }}
               >
-                <Text
-                  style={[
-                    styles.meta,
-                    { color: theme.colors.foregroundMuted },
-                  ]}
-                >
-                  {training.modules.length} {moduleLabel}
-                </Text>
-              </View>
+                {progress}%
+              </Text>
+            </View>
 
+            <View
+              accessibilityRole="progressbar"
+              accessibilityValue={{
+                min: 0,
+                max: 100,
+                now: progress,
+              }}
+              className="mt-[11px] h-[8px] w-full overflow-hidden rounded-full bg-[#E9DDF8]"
+            >
               <View
-                style={[
-                  styles.metaPill,
-                  {
-                    backgroundColor: theme.colors.surfaceSoft,
-                    borderRadius: 999,
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.meta,
-                    { color: theme.colors.foregroundMuted },
-                  ]}
-                >
-                  {lessonCount} {lessonLabel}
-                </Text>
-              </View>
-
-              <View
-                style={[
-                  styles.metaPill,
-                  {
-                    backgroundColor: theme.colors.surfaceSoft,
-                    borderRadius: 999,
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.meta,
-                    { color: theme.colors.foregroundMuted },
-                  ]}
-                >
-                  {resourceCount} {resourceLabel}
-                </Text>
-              </View>
+                className="h-full rounded-full"
+                style={{
+                  width: `${progress}%`,
+                  backgroundColor: completed
+                    ? theme.colors.success
+                    : theme.colors.accent,
+                }}
+              />
             </View>
 
             {deadline ? (
               <View
-                style={[
-                  styles.deadlinePanel,
-                  {
-                    backgroundColor: theme.colors.surfaceSoft,
-                    borderColor: deadlineColor,
-                    borderWidth: Math.max(
-                      1,
-                      theme.shape.borderWidth,
-                    ),
-                    borderRadius: theme.shape.controlRadius,
-                  },
-                ]}
+                className="mt-[10px] flex-row items-center rounded-[13px] border bg-white px-[10px] py-[9px]"
+                style={{
+                  borderColor:
+                    deadlineColor,
+                }}
               >
-                <Text
-                  style={[
-                    styles.deadlineLabel,
-                    { color: deadlineColor },
-                  ]}
+                <View
+                  className="h-[32px] w-[32px] items-center justify-center rounded-[10px]"
+                  style={{
+                    backgroundColor:
+                      theme.colors.surfaceSoft,
+                  }}
                 >
-                  {deadline.label}
-                </Text>
-                <Text
-                  style={[
-                    styles.deadlineDetail,
-                    { color: theme.colors.foreground },
-                  ]}
-                >
-                  {deadline.detail}
-                </Text>
+                  <SymbolView
+                    name={{
+                      ios: "calendar.badge.clock",
+                      android: "event",
+                      web: "event",
+                    }}
+                    tintColor={deadlineColor}
+                    size={12}
+                    weight="bold"
+                  />
+                </View>
+
+                <View className="ml-[8px] min-w-0 flex-1">
+                  <Text
+                    className="text-[9px] font-black uppercase tracking-[0.45px]"
+                    style={{
+                      color:
+                        deadlineColor,
+                    }}
+                  >
+                    {deadline.label}
+                  </Text>
+
+                  <Text
+                    className="mt-[1px] text-[11px] font-extrabold"
+                    style={{
+                      color:
+                        theme.colors.foreground,
+                    }}
+                  >
+                    {deadline.detail}
+                  </Text>
+                </View>
               </View>
             ) : null}
 
-            <View
-              style={[
-                styles.progressPanel,
-                {
-                  backgroundColor: theme.colors.surfaceSoft,
-                  borderRadius: theme.shape.controlRadius,
-                  padding: Math.max(
-                    14,
-                    theme.shape.cardPadding - 6,
-                  ),
-                },
-              ]}
+            <Pressable
+              accessibilityRole="button"
+              onPress={() =>
+                onOpenCourse(progress >= 100)
+              }
+              android_ripple={{
+                color: "transparent",
+              }}
+              className="mt-[11px] min-h-[56px] flex-row items-center rounded-[16px] bg-[#7C3AED] px-[9px]"
             >
-              <View style={styles.progressHeader}>
-                <View>
-                  <Text
-                    style={[
-                      styles.progressEyebrow,
-                      { color: theme.colors.foregroundSubtle },
-                    ]}
-                  >
-                    PROGRESSION
-                  </Text>
-                  <Text
-                    style={[
-                      styles.progressLabel,
-                      { color: theme.colors.foreground },
-                    ]}
-                  >
-                    {progress >= 100
-                      ? "Parcours termin\u00E9"
-                      : progress > 0
-                        ? "Parcours en cours"
-                        : "Parcours \u00E0 commencer"}
-                  </Text>
-                </View>
+              <View className="h-[40px] w-[40px] items-center justify-center rounded-[13px] bg-white/15">
+                <SymbolView
+                  name={{
+                    ios:
+                      progress >= 100
+                        ? "arrow.counterclockwise"
+                        : "play.fill",
+                    android:
+                      progress >= 100
+                        ? "replay"
+                        : "play_arrow",
+                    web:
+                      progress >= 100
+                        ? "replay"
+                        : "play_arrow",
+                  }}
+                  tintColor="#FFFFFF"
+                  size={15}
+                  weight="bold"
+                />
+              </View>
+
+              <View className="ml-[10px] min-w-0 flex-1">
+                <Text
+                  className="text-[9px] font-black uppercase tracking-[0.55px]"
+                  style={{
+                    color:
+                      "rgba(255,255,255,0.74)",
+                  }}
+                >
+                  {progress >= 100
+                    ? "FORMATION TERMINÉE"
+                    : progress > 0
+                      ? "EN COURS"
+                      : "PRÊT À DÉMARRER"}
+                </Text>
 
                 <Text
-                  style={[
-                    styles.progressValue,
-                    {
-                      color:
-                        progress >= 100
-                          ? theme.colors.success
-                          : theme.colors.accent,
-                    },
-                  ]}
+                  className="mt-[1px] text-[13px] font-black"
+                  style={{
+                    color: "#FFFFFF",
+                  }}
                 >
-                  {progress} %
+                  {progress >= 100
+                    ? "Revoir la formation"
+                    : progress > 0
+                      ? "Reprendre la formation"
+                      : "Commencer la formation"}
                 </Text>
               </View>
 
-              <View
-                style={[
-                  styles.progressTrack,
-                  { backgroundColor: theme.colors.border },
-                ]}
-              >
-                <View
-                  style={[
-                    styles.progressFill,
-                    {
-                      width: `${progress}%`,
-                      backgroundColor:
-                        progress >= 100
-                          ? theme.colors.success
-                          : theme.colors.accent,
-                    },
-                  ]}
+              <View className="h-[34px] w-[34px] items-center justify-center rounded-full bg-white/15">
+                <SymbolView
+                  name={{
+                    ios: "chevron.right",
+                    android: "chevron_right",
+                    web: "chevron_right",
+                  }}
+                  tintColor="#FFFFFF"
+                  size={11}
+                  weight="bold"
                 />
               </View>
-            </View>
+            </Pressable>
+          </View>
 
-            <View style={styles.heroActions}>
-              <AppButton
-                title={
-                  progress >= 100
-                    ? "Revoir le parcours"
-                    : progress > 0
-                      ? "Reprendre le parcours"
-                      : "Commencer le parcours"
-                }
-                onPress={() => onOpenCourse(progress >= 100)}
-                style={styles.primaryAction}
-              />
+          {/* QUIZ */}
+          {hasPublishedQuiz ? (
+            <View
+              className="relative mt-[11px] overflow-hidden rounded-[22px] border p-[13px]"
+              style={{
+                backgroundColor: "#FBF9FF",
+                borderColor: "#E4D8F4",
+              }}
+            >
+              <View className="absolute -right-[34px] -top-[34px] h-[100px] w-[100px] rounded-full bg-[#F3EEFF]" />
 
-              {hasPublishedQuiz ? (
-<View
-                style={[
-                  styles.quizActionCard,
-                  {
-                    backgroundColor: theme.colors.surfaceSoft,
-                    borderRadius: theme.shape.controlRadius,
-                    borderColor: theme.colors.border,
-                    borderWidth: theme.shape.borderWidth,
-                    padding: Math.max(
-                      14,
-                      theme.shape.cardPadding - 6,
-                    ),
-                  },
-                ]}
-              >
-                <View style={styles.quizActionText}>
-                  <Text
-                    style={[
-                      styles.quizActionEyebrow,
-                      { color: theme.colors.accent },
-                    ]}
-                  >
-                    {"\u00C9VALUATIONS"}
+              <View className="flex-row items-start">
+                <View className="h-[46px] w-[46px] shrink-0 items-center justify-center rounded-[15px] bg-[#7C3AED]">
+                  <SymbolView
+                    name={{
+                      ios: "checklist.checked",
+                      android: "quiz",
+                      web: "quiz",
+                    }}
+                    tintColor="#FFFFFF"
+                    size={17}
+                    weight="bold"
+                  />
+                </View>
+
+                <View className="ml-[11px] min-w-0 flex-1 pr-[4px]">
+                  <Text className="text-[9px] font-black uppercase tracking-[0.65px] text-[#7C3AED]">
+                    Évaluations
                   </Text>
+
                   <Text
-                    style={[
-                      styles.quizActionTitle,
-                      { color: theme.colors.foreground },
-                    ]}
+                    className="mt-[2px] text-[16px] font-black leading-[21px]"
+                    style={{
+                      color: theme.colors.foreground,
+                    }}
                   >
                     Quiz de la formation
                   </Text>
+
                   <Text
-                    style={[
-                      styles.quizActionDescription,
-                      {
-                        color: theme.colors.foregroundMuted,
-                      },
-                    ]}
+                    className="mt-[4px] text-[11px] leading-[17px]"
+                    style={{
+                      color: theme.colors.foregroundMuted,
+                    }}
                   >
-                    Consulte les quiz disponibles, tes tentatives et tes
-                    {" r\u00E9sultats."}
+                    Consulte les quiz disponibles, tes tentatives et tes résultats.
+                  </Text>
+                </View>
+              </View>
+
+              <Pressable
+                accessibilityRole="button"
+                onPress={onOpenQuizzes}
+                android_ripple={{
+                  color: "transparent",
+                }}
+                className="mt-[12px] min-h-[52px] flex-row items-center rounded-[15px] bg-[#7C3AED] px-[9px]"
+              >
+                <View className="h-[36px] w-[36px] items-center justify-center rounded-[12px] bg-white/15">
+                  <SymbolView
+                    name={{
+                      ios: "checklist.checked",
+                      android: "quiz",
+                      web: "quiz",
+                    }}
+                    tintColor="#FFFFFF"
+                    size={14}
+                    weight="bold"
+                  />
+                </View>
+
+                <View className="ml-[9px] min-w-0 flex-1">
+                  <Text
+                    className="text-[8px] font-black uppercase tracking-[0.55px]"
+                    style={{
+                      color: "rgba(255,255,255,0.72)",
+                    }}
+                  >
+                    Évaluations disponibles
+                  </Text>
+
+                  <Text
+                    className="mt-[1px] text-[12px] font-black"
+                    style={{ color: "#FFFFFF" }}
+                  >
+                    Accéder aux quiz
                   </Text>
                 </View>
 
-                <AppButton
-                  title="Voir les quiz"
-                  onPress={onOpenQuizzes}
-                  variant="secondary"
-                  style={styles.quizActionButton}
-                />
-              </View>
-) : null}
-
-              {training.canSelfUnenroll ? (
-                <AppButton
-                  title={
-                    unenrollBusy
-                      ? "D\u00E9sinscription..."
-                      : "Se d\u00E9sinscrire"
-                  }
-                  onPress={confirmSelfUnenroll}
-                  variant="secondary"
-                />
-              ) : null}
+                <View className="h-[32px] w-[32px] items-center justify-center rounded-full bg-white/15">
+                  <SymbolView
+                    name={{
+                      ios: "chevron.right",
+                      android: "chevron_right",
+                      web: "chevron_right",
+                    }}
+                    tintColor="#FFFFFF"
+                    size={11}
+                    weight="bold"
+                  />
+                </View>
+              </Pressable>
             </View>
-          </View>
+          ) : null}
 
-          <View style={styles.infoGrid}>
-            {training.description ? (
-              <InfoPanel
-                title={"\u00C0 propos"}
-                text={training.description}
-              />
-            ) : null}
-
-            {training.objectives ? (
-              <InfoPanel
-                title="Objectifs"
-                text={training.objectives}
-              />
-            ) : null}
-
-            {training.prerequisites ? (
-              <InfoPanel
-                title={"\u00A0Pr\u00E9requis".trim()}
-                text={training.prerequisites}
-              />
-            ) : null}
-
-            {training.targetAudience ? (
-              <InfoPanel
-                title={"Public concern\u00E9"}
-                text={training.targetAudience}
-              />
-            ) : null}
-          </View>
-
-          <View style={styles.programHeader}>
-            <Text
-              style={[
-                styles.programEyebrow,
-                { color: theme.colors.accent },
-              ]}
-            >
-              PROGRAMME
-            </Text>
-            <Text
-              style={[
-                styles.sectionTitle,
-                { color: theme.colors.foreground },
-              ]}
-            >
-              Ton parcours
-            </Text>
-            <Text
-              style={[
-                styles.sectionSubtitle,
-                { color: theme.colors.foregroundMuted },
-              ]}
-            >
-              Parcours les modules dans {"l\u2019ordre"} propos{"\u00E9"} pour
-              avancer de fa{"\u00E7"}on structur{"\u00E9"}e.
-            </Text>
-          </View>
-
-          {training.modules.map((module, moduleIndex) => (
+          {/* DESINSCRIPTION */}
+          {training.canSelfUnenroll ? (
             <View
-              key={module.id}
-              style={[
-                styles.moduleCard,
-                {
-                  backgroundColor: theme.colors.surface,
-                  borderColor: theme.colors.border,
-                  borderRadius: theme.shape.cardRadius,
-                  borderWidth: theme.shape.borderWidth,
-                  padding: theme.shape.cardPadding,
-                },
-              ]}
+              className="mt-[10px] flex-row items-center rounded-[16px] border bg-white px-[10px] py-[9px]"
+              style={{
+                borderColor: theme.colors.border,
+              }}
             >
-              <View style={styles.moduleTopRow}>
-                <View
-                  style={[
-                    styles.moduleNumber,
-                    {
-                      backgroundColor: theme.colors.surfaceSoft,
-                      borderRadius: theme.shape.controlRadius,
-                    },
-                  ]}
+              <View className="h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[11px] bg-[#FEF2F2]">
+                <SymbolView
+                  name={{
+                    ios: "rectangle.portrait.and.arrow.right",
+                    android: "logout",
+                    web: "logout",
+                  }}
+                  tintColor={theme.colors.danger}
+                  size={13}
+                  weight="bold"
+                />
+              </View>
+
+              <View className="ml-[9px] min-w-0 flex-1">
+                <Text
+                  className="text-[11px] font-black"
+                  style={{
+                    color: theme.colors.foreground,
+                  }}
                 >
+                  Ne plus suivre cette formation
+                </Text>
+
+                <Text
+                  className="mt-[1px] text-[9px] leading-[14px]"
+                  style={{
+                    color: theme.colors.foregroundMuted,
+                  }}
+                  numberOfLines={2}
+                >
+                  Ta progression et tes résultats restent conservés.
+                </Text>
+              </View>
+
+              <Pressable
+                accessibilityRole="button"
+                accessibilityState={{
+                  disabled: unenrollBusy,
+                }}
+                disabled={unenrollBusy}
+                onPress={confirmSelfUnenroll}
+                android_ripple={{
+                  color: "transparent",
+                }}
+                className="ml-[8px] min-h-[36px] shrink-0 items-center justify-center rounded-[10px] px-[9px]"
+                style={{
+                  backgroundColor: "#FFF7F7",
+                  opacity: unenrollBusy ? 0.65 : 1,
+                }}
+              >
+                {unenrollBusy ? (
+                  <ActivityIndicator
+                    size="small"
+                    color={theme.colors.danger}
+                  />
+                ) : (
                   <Text
-                    style={[
-                      styles.moduleNumberText,
-                      { color: theme.colors.accent },
-                    ]}
+                    className="text-[9px] font-black"
+                    style={{
+                      color: theme.colors.danger,
+                    }}
                   >
-                    {String(moduleIndex + 1).padStart(2, "0")}
+                    Se désinscrire
                   </Text>
+                )}
+              </Pressable>
+            </View>
+          ) : null}
+
+          {/* INFORMATIONS */}
+          {(training.description ||
+            training.objectives ||
+            training.prerequisites ||
+            training.targetAudience) ? (
+            <View className="mt-[16px]">
+              <View className="mb-[9px] flex-row items-center">
+                <View className="h-[40px] w-[40px] items-center justify-center rounded-[13px] bg-[#EFF6FF]">
+                  <SymbolView
+                    name={{
+                      ios: "doc.text.fill",
+                      android: "description",
+                      web: "description",
+                    }}
+                    tintColor="#2563EB"
+                    size={16}
+                    weight="bold"
+                  />
                 </View>
 
-                <View style={styles.moduleText}>
+                <View className="ml-[10px] min-w-0 flex-1">
                   <Text
-                    style={[
-                      styles.moduleIndex,
-                      { color: theme.colors.foregroundSubtle },
-                    ]}
+                    className="text-[17px] font-black"
+                    style={{
+                      color: theme.colors.foreground,
+                    }}
                   >
-                    MODULE {moduleIndex + 1}
+                    À propos de la formation
                   </Text>
+
                   <Text
-                    style={[
-                      styles.moduleTitle,
-                      { color: theme.colors.foreground },
-                    ]}
+                    className="mt-[1px] text-[10px]"
+                    style={{
+                      color: theme.colors.foregroundMuted,
+                    }}
                   >
-                    {module.title}
+                    Informations pédagogiques
                   </Text>
                 </View>
               </View>
 
-              {module.description ? (
-                <Text
-                  style={[
-                    styles.moduleDescription,
-                    { color: theme.colors.foregroundMuted },
-                  ]}
-                >
-                  {module.description}
-                </Text>
-              ) : null}
+              <View
+                className="mt-[4px] overflow-hidden rounded-[21px] border bg-white"
+                style={{
+                  borderColor: theme.colors.border,
+                }}
+              >
+                {training.description ? (
+                  <View className="p-[12px]">
+                    <View className="flex-row items-center">
+                      <View className="h-[32px] w-[32px] items-center justify-center rounded-[10px] bg-[#EFF6FF]">
+                        <SymbolView
+                          name={{
+                            ios: "doc.text.fill",
+                            android: "description",
+                            web: "description",
+                          }}
+                          tintColor="#2563EB"
+                          size={13}
+                          weight="bold"
+                        />
+                      </View>
 
-              <View style={styles.moduleMetaRow}>
-                <Text
-                  style={[
-                    styles.moduleMeta,
-                    { color: theme.colors.foregroundMuted },
-                  ]}
-                >
-                  {module.lessons.length}{" "}
-                  {module.lessons.length > 1 ? "le\u00E7ons" : "le\u00E7on"}
-                </Text>
+                      <Text
+                        className="ml-[9px] text-[12px] font-black"
+                        style={{
+                          color: theme.colors.foreground,
+                        }}
+                      >
+                        À propos
+                      </Text>
+                    </View>
 
-                {module.estimatedDurationMinutes ? (
-                  <Text
-                    style={[
-                      styles.moduleMeta,
-                      { color: theme.colors.foregroundMuted },
-                    ]}
+                    <Text
+                      className="mt-[7px] text-[11px] leading-[17px]"
+                      style={{
+                        color: theme.colors.foregroundMuted,
+                      }}
+                    >
+                      {training.description}
+                    </Text>
+                  </View>
+                ) : null}
+
+                {training.objectives ? (
+                  <View
+                    className="border-t p-[12px]"
+                    style={{
+                      borderColor: theme.colors.border,
+                    }}
                   >
-                    {module.estimatedDurationMinutes} min
-                  </Text>
+                    <View className="flex-row items-center">
+                      <View className="h-[32px] w-[32px] items-center justify-center rounded-[10px] bg-[#ECFDF3]">
+                        <SymbolView
+                          name={{
+                            ios: "target",
+                            android: "track_changes",
+                            web: "track_changes",
+                          }}
+                          tintColor="#16A36A"
+                          size={13}
+                          weight="bold"
+                        />
+                      </View>
+
+                      <Text
+                        className="ml-[9px] text-[12px] font-black"
+                        style={{
+                          color: theme.colors.foreground,
+                        }}
+                      >
+                        Objectifs
+                      </Text>
+                    </View>
+
+                    <Text
+                      className="mt-[7px] text-[11px] leading-[17px]"
+                      style={{
+                        color: theme.colors.foregroundMuted,
+                      }}
+                    >
+                      {training.objectives}
+                    </Text>
+                  </View>
+                ) : null}
+
+                {training.prerequisites ? (
+                  <View
+                    className="border-t p-[12px]"
+                    style={{
+                      borderColor: theme.colors.border,
+                    }}
+                  >
+                    <View className="flex-row items-center">
+                      <View className="h-[32px] w-[32px] items-center justify-center rounded-[10px] bg-[#FFF7ED]">
+                        <SymbolView
+                          name={{
+                            ios: "checkmark.shield.fill",
+                            android: "verified_user",
+                            web: "verified_user",
+                          }}
+                          tintColor="#D97706"
+                          size={13}
+                          weight="bold"
+                        />
+                      </View>
+
+                      <Text
+                        className="ml-[9px] text-[12px] font-black"
+                        style={{
+                          color: theme.colors.foreground,
+                        }}
+                      >
+                        Prérequis
+                      </Text>
+                    </View>
+
+                    <Text
+                      className="mt-[7px] text-[11px] leading-[17px]"
+                      style={{
+                        color: theme.colors.foregroundMuted,
+                      }}
+                    >
+                      {training.prerequisites}
+                    </Text>
+                  </View>
+                ) : null}
+
+                {training.targetAudience ? (
+                  <View
+                    className="border-t p-[12px]"
+                    style={{
+                      borderColor: theme.colors.border,
+                    }}
+                  >
+                    <View className="flex-row items-center">
+                      <View className="h-[32px] w-[32px] items-center justify-center rounded-[10px] bg-[#F3EEFF]">
+                        <SymbolView
+                          name={{
+                            ios: "person.2.fill",
+                            android: "groups",
+                            web: "groups",
+                          }}
+                          tintColor="#7C3AED"
+                          size={13}
+                          weight="bold"
+                        />
+                      </View>
+
+                      <Text
+                        className="ml-[9px] text-[12px] font-black"
+                        style={{
+                          color: theme.colors.foreground,
+                        }}
+                      >
+                        Public concerné
+                      </Text>
+                    </View>
+
+                    <Text
+                      className="mt-[7px] text-[11px] leading-[17px]"
+                      style={{
+                        color: theme.colors.foregroundMuted,
+                      }}
+                    >
+                      {training.targetAudience}
+                    </Text>
+                  </View>
                 ) : null}
               </View>
             </View>
-          ))}
+          ) : null}
+
+          {/* PROGRAMME */}
+          <View className="mt-[18px]">
+            <View
+              className="overflow-hidden rounded-[23px] border bg-white p-[13px]"
+              style={{
+                borderColor: theme.colors.border,
+              }}
+            >
+              <View className="flex-row items-center">
+                <View className="h-[44px] w-[44px] items-center justify-center rounded-[14px] bg-[#F3EEFF]">
+                  <SymbolView
+                    name={{
+                      ios: "list.number",
+                      android: "format_list_numbered",
+                      web: "format_list_numbered",
+                    }}
+                    tintColor="#7C3AED"
+                    size={17}
+                    weight="bold"
+                  />
+                </View>
+
+                <View className="ml-[10px] min-w-0 flex-1">
+                  <Text className="text-[9px] font-black uppercase tracking-[0.65px] text-[#7C3AED]">
+                    Programme
+                  </Text>
+
+                  <Text
+                    className="mt-[1px] text-[18px] font-black"
+                    style={{
+                      color: theme.colors.foreground,
+                    }}
+                  >
+                    Contenu de la formation
+                  </Text>
+
+                  <Text
+                    className="mt-[2px] text-[11px] leading-[16px]"
+                    style={{
+                      color: theme.colors.foregroundMuted,
+                    }}
+                  >
+                    {training.modules.length} module
+                    {training.modules.length > 1 ? "s" : ""} · {lessonCount} leçon
+                    {lessonCount > 1 ? "s" : ""}
+                  </Text>
+                </View>
+              </View>
+
+              <View className="mt-[12px] gap-[9px]">
+                {training.modules.map(
+                  (module, moduleIndex) => (
+                    <View
+                      key={module.id}
+                      className="relative overflow-hidden rounded-[18px] border p-[12px]"
+                      style={{
+                        backgroundColor: "#FCFBFD",
+                        borderColor: theme.colors.border,
+                      }}
+                    >
+                      <View className="absolute bottom-0 left-0 top-0 w-[4px] bg-[#7C3AED]" />
+
+                      <View className="flex-row items-start pl-[4px]">
+                        <View className="h-[44px] w-[44px] shrink-0 items-center justify-center rounded-[14px] bg-[#F3EEFF]">
+                          <Text className="text-[14px] font-black text-[#7C3AED]">
+                            {String(moduleIndex + 1).padStart(2, "0")}
+                          </Text>
+                        </View>
+
+                        <View className="ml-[10px] min-w-0 flex-1">
+                          <Text
+                            className="text-[9px] font-black uppercase tracking-[0.5px]"
+                            style={{
+                              color: theme.colors.foregroundSubtle,
+                            }}
+                          >
+                            Module {moduleIndex + 1}
+                          </Text>
+
+                          <Text
+                            className="mt-[2px] text-[15px] font-black leading-[20px]"
+                            style={{
+                              color: theme.colors.foreground,
+                            }}
+                          >
+                            {module.title}
+                          </Text>
+
+                          {module.description ? (
+                            <Text
+                              className="mt-[5px] text-[11px] leading-[17px]"
+                              style={{
+                                color: theme.colors.foregroundMuted,
+                              }}
+                              numberOfLines={3}
+                            >
+                              {module.description}
+                            </Text>
+                          ) : null}
+
+                          <View className="mt-[8px] flex-row flex-wrap gap-[6px]">
+                            <View className="flex-row items-center rounded-full bg-white px-[9px] py-[5px]">
+                              <SymbolView
+                                name={{
+                                  ios: "book.pages.fill",
+                                  android: "menu_book",
+                                  web: "menu_book",
+                                }}
+                                tintColor="#7C3AED"
+                                size={9}
+                                weight="bold"
+                              />
+
+                              <Text
+                                className="ml-[4px] text-[9px] font-bold"
+                                style={{
+                                  color: theme.colors.foregroundMuted,
+                                }}
+                              >
+                                {module.lessons.length}{" "}
+                                {module.lessons.length > 1 ? "leçons" : "leçon"}
+                              </Text>
+                            </View>
+
+                            {module.estimatedDurationMinutes ? (
+                              <View className="flex-row items-center rounded-full bg-[#FFF7ED] px-[9px] py-[5px]">
+                                <SymbolView
+                                  name={{
+                                    ios: "clock.fill",
+                                    android: "schedule",
+                                    web: "schedule",
+                                  }}
+                                  tintColor="#D97706"
+                                  size={9}
+                                  weight="bold"
+                                />
+
+                                <Text className="ml-[4px] text-[9px] font-bold text-[#B45309]">
+                                  {module.estimatedDurationMinutes} min
+                                </Text>
+                              </View>
+                            ) : null}
+                          </View>
+                        </View>
+                      </View>
+                    </View>
+                  ),
+                )}
+              </View>
+            </View>
+          </View>
         </View>
       </ScrollView>
     </ScreenContainer>
   );
-
-  function InfoPanel({
-    title,
-    text,
-  }: {
-    title: string;
-    text: string;
-  }) {
-    return (
-      <View
-        style={[
-          styles.infoCard,
-          {
-            backgroundColor: theme.colors.surface,
-            borderColor: theme.colors.border,
-            borderRadius: theme.shape.cardRadius,
-            borderWidth: theme.shape.borderWidth,
-            padding: theme.shape.cardPadding,
-          },
-        ]}
-      >
-        <Text
-          style={[
-            styles.infoTitle,
-            { color: theme.colors.foreground },
-          ]}
-        >
-          {title}
-        </Text>
-        <Text
-          style={[
-            styles.infoText,
-            { color: theme.colors.foregroundMuted },
-          ]}
-        >
-          {text}
-        </Text>
-      </View>
-    );
-  }
 }
-
-const styles = StyleSheet.create({
-  scrollArea: {
-    flex: 1,
-    minHeight: 0,
-  },
-  content: {
-    flexGrow: 1,
-  },
-  page: {
-    width: "100%",
-    maxWidth: 1040,
-    alignSelf: "center",
-  },
-  backButton: {
-    alignSelf: "flex-start",
-    marginBottom: 14,
-  },
-  hero: {
-    marginBottom: 20,
-  },
-  eyebrow: {
-    fontSize: 11,
-    fontWeight: "900",
-    letterSpacing: 1.2,
-    marginBottom: 8,
-  },
-  title: {
-    fontSize: 28,
-    lineHeight: 36,
-    fontWeight: "900",
-  },
-  summary: {
-    fontSize: 15,
-    lineHeight: 22,
-    marginTop: 8,
-  },
-  metaRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginTop: 18,
-    marginBottom: 18,
-  },
-  metaPill: {
-    paddingHorizontal: 11,
-    paddingVertical: 6,
-  },
-  meta: {
-    fontSize: 12,
-    fontWeight: "800",
-  },
-  deadlinePanel: {
-    marginBottom: 18,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  deadlineLabel: {
-    fontSize: 12,
-    fontWeight: "900",
-    marginBottom: 3,
-  },
-  deadlineDetail: {
-    fontSize: 13,
-    fontWeight: "800",
-  },
-  progressPanel: {
-    marginBottom: 18,
-  },
-  progressHeader: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
-    gap: 10,
-    marginBottom: 12,
-  },
-  progressEyebrow: {
-    fontSize: 10,
-    fontWeight: "900",
-    letterSpacing: 0.8,
-    marginBottom: 4,
-  },
-  progressLabel: {
-    fontSize: 14,
-    fontWeight: "800",
-  },
-  progressValue: {
-    fontSize: 19,
-    fontWeight: "900",
-  },
-  progressTrack: {
-    width: "100%",
-    height: 9,
-    borderRadius: 999,
-    overflow: "hidden",
-  },
-  progressFill: {
-    height: "100%",
-    borderRadius: 999,
-  },
-  heroActions: {
-    width: "100%",
-  },
-  primaryAction: {
-    alignSelf: "flex-start",
-    minWidth: 210,
-  },
-  quizActionCard: {
-    marginTop: 14,
-  },
-  quizActionText: {
-    marginBottom: 14,
-  },
-  quizActionEyebrow: {
-    fontSize: 10,
-    fontWeight: "900",
-    letterSpacing: 0.8,
-    marginBottom: 5,
-  },
-  quizActionTitle: {
-    fontSize: 17,
-    fontWeight: "900",
-  },
-  quizActionDescription: {
-    fontSize: 14,
-    lineHeight: 20,
-    marginTop: 5,
-  },
-  quizActionButton: {
-    alignSelf: "flex-start",
-    minWidth: 150,
-  },
-  infoGrid: {
-    width: "100%",
-  },
-  infoCard: {
-    marginBottom: 14,
-  },
-  infoTitle: {
-    fontSize: 16,
-    fontWeight: "900",
-    marginBottom: 8,
-  },
-  infoText: {
-    fontSize: 14,
-    lineHeight: 21,
-  },
-  programHeader: {
-    marginTop: 10,
-    marginBottom: 14,
-  },
-  programEyebrow: {
-    fontSize: 10,
-    fontWeight: "900",
-    letterSpacing: 0.9,
-    marginBottom: 5,
-  },
-  sectionTitle: {
-    fontSize: 22,
-    fontWeight: "900",
-  },
-  sectionSubtitle: {
-    fontSize: 14,
-    lineHeight: 21,
-    marginTop: 6,
-    maxWidth: 720,
-  },
-  moduleCard: {
-    marginBottom: 14,
-  },
-  moduleTopRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 14,
-  },
-  moduleNumber: {
-    minWidth: 44,
-    minHeight: 44,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 10,
-  },
-  moduleNumberText: {
-    fontSize: 15,
-    fontWeight: "900",
-  },
-  moduleText: {
-    flex: 1,
-  },
-  moduleIndex: {
-    fontSize: 12,
-    fontWeight: "900",
-    letterSpacing: 0.7,
-    marginBottom: 4,
-  },
-  moduleTitle: {
-    fontSize: 17,
-    lineHeight: 23,
-    fontWeight: "900",
-  },
-  moduleDescription: {
-    fontSize: 14,
-    lineHeight: 20,
-    marginTop: 12,
-  },
-  moduleMetaRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 14,
-    marginTop: 12,
-  },
-  moduleMeta: {
-    fontSize: 12,
-    fontWeight: "700",
-  },
-});

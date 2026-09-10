@@ -1,32 +1,31 @@
 import { isAxiosError } from "axios";
 import * as ImagePicker from "expo-image-picker";
+import { SymbolView } from "expo-symbols";
+import type { ComponentProps } from "react";
 import { useEffect, useState } from "react";
 import {
   Image,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
 
-import AppButton from "../../components/AppButton";
 import AccountDeletionRequestCard from "../../components/account/AccountDeletionRequestCard";
 import AccountSessionCard from "../../components/account/AccountSessionCard";
 import ErrorMessage from "../../components/ErrorMessage";
 import LoadingState from "../../components/LoadingState";
 import ScreenContainer from "../../components/ScreenContainer";
-import SectionHeader from "../../components/SectionHeader";
 import {
   changeMyPassword,
   getMyProfile,
   updateMyProfile,
 } from "../../features/auth/learnerProfileService";
-import {
-  useSmartTrainingTheme,
-} from "../../theme/provider/SmartTrainingThemeProvider";
+import { useSmartTrainingTheme } from "../../theme/provider/SmartTrainingThemeProvider";
 import type {
   LearnerCivilite,
   LearnerProfile,
@@ -36,6 +35,20 @@ type Props = {
   onBackHome: () => void;
   onOpenAppearance: () => void;
   onOpenPrivacy: () => void;
+};
+
+type SymbolName = ComponentProps<typeof SymbolView>["name"];
+
+type FieldProps = {
+  label: string;
+  value: string;
+  onChangeText: (value: string) => void;
+  autoCapitalize?: "none" | "words";
+  keyboardType?: "email-address";
+  secureTextEntry?: boolean;
+  maxLength?: number;
+  accessibilityLabel: string;
+  placeholder?: string;
 };
 
 const civilites: {
@@ -62,20 +75,14 @@ function normalizeEmail(value: string): string {
   return value.trim().toLowerCase();
 }
 
-function initials(
-  firstName: string,
-  lastName: string,
-): string {
+function initials(firstName: string, lastName: string): string {
   const first = firstName.trim().charAt(0);
   const last = lastName.trim().charAt(0);
 
   return `${first}${last}`.toUpperCase() || "?";
 }
 
-function messageFromError(
-  error: unknown,
-  fallback: string,
-): string {
+function messageFromError(error: unknown, fallback: string): string {
   if (!isAxiosError(error)) {
     return fallback;
   }
@@ -99,6 +106,50 @@ function messageFromError(
   return fallback;
 }
 
+function ProfileField({
+  label,
+  value,
+  onChangeText,
+  autoCapitalize = "none",
+  keyboardType,
+  secureTextEntry = false,
+  maxLength = 150,
+  accessibilityLabel,
+  placeholder,
+}: FieldProps) {
+  const { theme } = useSmartTrainingTheme();
+
+  return (
+    <View className="mb-3">
+      <Text
+        className="mb-1.5 text-[12px] font-black"
+        style={{ color: theme.colors.foreground }}
+      >
+        {label}
+      </Text>
+
+      <TextInput
+        value={value}
+        onChangeText={onChangeText}
+        autoCapitalize={autoCapitalize}
+        autoCorrect={false}
+        keyboardType={keyboardType}
+        secureTextEntry={secureTextEntry}
+        maxLength={maxLength}
+        placeholder={placeholder}
+        placeholderTextColor={theme.colors.foregroundSubtle}
+        accessibilityLabel={accessibilityLabel}
+        className="h-[50px] rounded-[14px] border px-3.5 text-[14px]"
+        style={{
+          backgroundColor: "#FCFBFD",
+          borderColor: "#E5DFE8",
+          color: theme.colors.foreground,
+        }}
+      />
+    </View>
+  );
+}
+
 export default function TrainerProfileScreen({
   onBackHome,
   onOpenAppearance,
@@ -106,18 +157,15 @@ export default function TrainerProfileScreen({
 }: Props) {
   const { theme } = useSmartTrainingTheme();
 
-  const [profile, setProfile] =
-    useState<LearnerProfile | null>(null);
+  const [profile, setProfile] = useState<LearnerProfile | null>(null);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [initialEmail, setInitialEmail] = useState("");
   const [civilite, setCivilite] =
     useState<LearnerCivilite>("NON_RENSEIGNEE");
-  const [avatarDataUrl, setAvatarDataUrl] =
-    useState<string | null>(null);
-  const [currentEmailPassword, setCurrentEmailPassword] =
-    useState("");
+  const [avatarDataUrl, setAvatarDataUrl] = useState<string | null>(null);
+  const [currentEmailPassword, setCurrentEmailPassword] = useState("");
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -138,9 +186,7 @@ export default function TrainerProfileScreen({
 
   function applyProfile(next: LearnerProfile) {
     if (next.role !== "FORMATEUR") {
-      throw new Error(
-        "Le profil connecté n’est pas un profil formateur.",
-      );
+      throw new Error("Le profil connecté n’est pas un profil formateur.");
     }
 
     setProfile(next);
@@ -148,9 +194,7 @@ export default function TrainerProfileScreen({
     setLastName(next.lastName ?? "");
     setEmail(next.email ?? "");
     setInitialEmail(next.email ?? "");
-    setCivilite(
-      next.civilite ?? "NON_RENSEIGNEE",
-    );
+    setCivilite(next.civilite ?? "NON_RENSEIGNEE");
     setAvatarDataUrl(next.avatarDataUrl ?? null);
   }
 
@@ -227,14 +271,13 @@ export default function TrainerProfileScreen({
     setProfileSuccess("");
 
     try {
-      const result =
-        await ImagePicker.launchImageLibraryAsync({
-          mediaTypes: ["images"],
-          allowsEditing: true,
-          aspect: [1, 1],
-          quality: 0.72,
-          base64: true,
-        });
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.72,
+        base64: true,
+      });
 
       if (result.canceled) {
         return;
@@ -243,14 +286,11 @@ export default function TrainerProfileScreen({
       const asset = result.assets[0];
 
       if (!asset?.base64) {
-        setProfileError(
-          "La photo sélectionnée ne peut pas être préparée.",
-        );
+        setProfileError("La photo sélectionnée ne peut pas être préparée.");
         return;
       }
 
-      const dataUrl =
-        `data:image/jpeg;base64,${asset.base64}`;
+      const dataUrl = `data:image/jpeg;base64,${asset.base64}`;
 
       if (dataUrl.length > MAX_AVATAR_DATA_URL_LENGTH) {
         setProfileError(
@@ -261,9 +301,7 @@ export default function TrainerProfileScreen({
 
       setAvatarDataUrl(dataUrl);
     } catch {
-      setProfileError(
-        "Impossible d’ouvrir la galerie de photos.",
-      );
+      setProfileError("Impossible d’ouvrir la galerie de photos.");
     } finally {
       setSelectingPhoto(false);
     }
@@ -278,16 +316,12 @@ export default function TrainerProfileScreen({
     setProfileSuccess("");
 
     if (!nextFirstName || !nextLastName) {
-      setProfileError(
-        "Le prénom et le nom sont obligatoires.",
-      );
+      setProfileError("Le prénom et le nom sont obligatoires.");
       return;
     }
 
     if (!nextEmail || !nextEmail.includes("@")) {
-      setProfileError(
-        "Renseignez une adresse e-mail valide.",
-      );
+      setProfileError("Renseignez une adresse e-mail valide.");
       return;
     }
 
@@ -315,9 +349,7 @@ export default function TrainerProfileScreen({
       const fresh = await getMyProfile();
       applyProfile(fresh);
       setCurrentEmailPassword("");
-      setProfileSuccess(
-        "Votre profil formateur a été enregistré.",
-      );
+      setProfileSuccess("Votre profil formateur a été enregistré.");
     } catch (error) {
       setProfileError(
         messageFromError(
@@ -335,9 +367,7 @@ export default function TrainerProfileScreen({
     setPasswordSuccess("");
 
     if (!currentPassword) {
-      setPasswordError(
-        "Renseignez votre mot de passe actuel.",
-      );
+      setPasswordError("Renseignez votre mot de passe actuel.");
       return;
     }
 
@@ -349,9 +379,7 @@ export default function TrainerProfileScreen({
     }
 
     if (newPassword.length > 100) {
-      setPasswordError(
-        "Le nouveau mot de passe est trop long.",
-      );
+      setPasswordError("Le nouveau mot de passe est trop long.");
       return;
     }
 
@@ -380,9 +408,7 @@ export default function TrainerProfileScreen({
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-      setPasswordSuccess(
-        "Votre mot de passe a été modifié.",
-      );
+      setPasswordSuccess("Votre mot de passe a été modifié.");
     } catch (error) {
       setPasswordError(
         messageFromError(
@@ -396,720 +422,631 @@ export default function TrainerProfileScreen({
   }
 
   if (loading) {
-    return (
-      <LoadingState message="Chargement de votre compte..." />
-    );
+    return <LoadingState message="Chargement de votre compte..." />;
   }
 
-  const inputStyle = {
-    backgroundColor: theme.colors.surface,
-    borderColor: theme.colors.border,
-    borderRadius: theme.shape.controlRadius,
-    borderWidth: theme.shape.borderWidth,
-    color: theme.colors.foreground,
-    minHeight: theme.shape.minTouchTarget,
-  };
+  const displayName =
+    [firstName, lastName].filter(Boolean).join(" ").trim() || email;
 
   return (
-    <ScreenContainer>
-      <ScrollView
-        style={styles.scrollArea}
-        contentContainerStyle={[
-          styles.content,
-          {
-            paddingBottom: theme.shape.cardPadding * 2,
-          },
-        ]}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={() => void refresh()}
-            tintColor={theme.colors.accent}
-          />
-        }
-        showsVerticalScrollIndicator={false}
+    <ScreenContainer
+      edges={["left", "right", "bottom"]}
+      style={{ padding: 0, backgroundColor: "#F8F6F3" }}
+    >
+      <KeyboardAvoidingView
+        className="flex-1"
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <View style={styles.page}>
-          <View style={styles.topActions}>
-            <AppButton
-              title="Retour à l’espace formateur"
-              onPress={onBackHome}
-              variant="secondary"
-              style={styles.backButton}
+        <ScrollView
+          className="flex-1"
+          contentContainerStyle={{ paddingBottom: 24 }}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => void refresh()}
+              tintColor={theme.colors.accent}
+              colors={[theme.colors.accent]}
             />
-          </View>
-
-          <SectionHeader
-            title="Mon compte"
-            subtitle="Gérez votre identité, votre photo, votre sécurité et l’apparence de votre espace."
-          />
-
-          {profileError ? (
-            <ErrorMessage
-              message={profileError}
-              onRetry={() => void refresh()}
-            />
-          ) : null}
-
-          {profileSuccess ? (
+          }
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+          showsVerticalScrollIndicator={false}
+        >
+          <View className="mx-auto w-full max-w-[760px] px-4">
             <View
-              style={[
-                styles.success,
-                {
-                  backgroundColor: theme.colors.surfaceSoft,
-                  borderRadius: theme.shape.cardRadius,
-                },
-              ]}
+              className="mt-4 overflow-hidden rounded-[24px] border bg-white"
+              style={{
+                borderColor: "#E5DFE8",
+                shadowColor: "#0F172A",
+                shadowOffset: { width: 0, height: 3 },
+                shadowOpacity: 0.05,
+                shadowRadius: 9,
+                elevation: 2,
+              }}
             >
-              <Text
-                style={[
-                  styles.successText,
-                  { color: theme.colors.foreground },
-                ]}
-              >
-                {profileSuccess}
-              </Text>
-            </View>
-          ) : null}
+              <View className="h-1.5 bg-[#7C3AED]" />
 
-          <View
-            style={[
-              styles.card,
-              {
-                backgroundColor: theme.colors.surface,
-                borderColor: theme.colors.border,
-                borderRadius: theme.shape.cardRadius,
-                borderWidth: theme.shape.borderWidth,
-                padding: theme.shape.cardPadding,
-              },
-            ]}
-          >
-            <View style={styles.identityRow}>
-              {avatarDataUrl ? (
-                <Image
-                  source={{ uri: avatarDataUrl }}
-                  style={styles.avatar}
-                  accessibilityLabel="Photo du profil formateur"
-                />
-              ) : (
-                <View
-                  style={[
-                    styles.avatarFallback,
-                    {
-                      backgroundColor:
-                        theme.colors.surfaceSoft,
-                      borderColor: theme.colors.border,
-                      borderWidth: theme.shape.borderWidth,
-                    },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.avatarText,
-                      { color: theme.colors.accent },
-                    ]}
-                  >
-                    {initials(firstName, lastName)}
-                  </Text>
+              <View className="p-4">
+                <View className="flex-row items-center">
+                  {avatarDataUrl ? (
+                    <Image
+                      source={{ uri: avatarDataUrl }}
+                      className="h-[70px] w-[70px] rounded-full"
+                      accessibilityLabel="Photo du profil formateur"
+                    />
+                  ) : (
+                    <View className="h-[70px] w-[70px] items-center justify-center rounded-full bg-[#F1E9FF]">
+                      <Text className="text-[22px] font-black text-[#7C3AED]">
+                        {initials(firstName, lastName)}
+                      </Text>
+                    </View>
+                  )}
+
+                  <View className="ml-4 min-w-0 flex-1">
+                    <View className="self-start rounded-full bg-[#F3EEFF] px-2.5 py-1">
+                      <Text className="text-[10px] font-black uppercase tracking-[0.6px] text-[#7C3AED]">
+                        Formateur
+                      </Text>
+                    </View>
+
+                    <Text
+                      numberOfLines={1}
+                      className="mt-2 text-[21px] font-black"
+                      style={{ color: theme.colors.foreground }}
+                    >
+                      {displayName}
+                    </Text>
+
+                    <Text
+                      numberOfLines={1}
+                      className="mt-0.5 text-[12px]"
+                      style={{ color: theme.colors.foregroundMuted }}
+                    >
+                      {email}
+                    </Text>
+                  </View>
                 </View>
-              )}
 
-              <View style={styles.identityCopy}>
-                <Text
-                  style={[
-                    styles.eyebrow,
-                    { color: theme.colors.foregroundSubtle },
-                  ]}
-                >
-                  PROFIL CONNECTÉ
-                </Text>
-                <Text
-                  style={[
-                    styles.identityName,
-                    { color: theme.colors.foreground },
-                  ]}
-                >
-                  {[firstName, lastName]
-                    .filter(Boolean)
-                    .join(" ")
-                    .trim() || email}
-                </Text>
-                <Text
-                  style={[
-                    styles.identityEmail,
-                    { color: theme.colors.foregroundMuted },
-                  ]}
-                >
-                  {email}
-                </Text>
-                <Text
-                  style={[
-                    styles.role,
-                    { color: theme.colors.accent },
-                  ]}
-                >
-                  Rôle : Formateur
-                </Text>
+                <View className="mt-4 flex-row gap-2">
+                  <SmallAction
+                    icon={{
+                      ios: "photo.fill",
+                      android: "photo_library",
+                      web: "photo_library",
+                    }}
+                    label={selectingPhoto ? "Ouverture..." : "Photo"}
+                    onPress={() => void choosePhoto()}
+                    disabled={selectingPhoto}
+                  />
+
+                  {avatarDataUrl ? (
+                    <SmallAction
+                      icon={{
+                        ios: "trash.fill",
+                        android: "delete",
+                        web: "delete",
+                      }}
+                      label="Retirer"
+                      onPress={() => setAvatarDataUrl(null)}
+                    />
+                  ) : null}
+
+                  <SmallAction
+                    icon={{
+                      ios: "house.fill",
+                      android: "home",
+                      web: "home",
+                    }}
+                    label="Espace"
+                    onPress={onBackHome}
+                  />
+                </View>
               </View>
             </View>
 
-            <View style={styles.photoActions}>
-              <AppButton
-                title={
-                  selectingPhoto
-                    ? "Ouverture..."
-                    : "Choisir une photo"
-                }
-                onPress={() => void choosePhoto()}
-                disabled={selectingPhoto}
-                variant="secondary"
-              />
-              {avatarDataUrl ? (
-                <AppButton
-                  title="Retirer la photo"
-                  onPress={() => setAvatarDataUrl(null)}
-                  variant="secondary"
+            {profileError ? (
+              <View className="mt-3">
+                <ErrorMessage
+                  message={profileError}
+                  onRetry={() => void refresh()}
                 />
-              ) : null}
-            </View>
-          </View>
+              </View>
+            ) : null}
 
-          <View
-            style={[
-              styles.card,
-              {
-                backgroundColor: theme.colors.surface,
-                borderColor: theme.colors.border,
-                borderRadius: theme.shape.cardRadius,
-                borderWidth: theme.shape.borderWidth,
-                padding: theme.shape.cardPadding,
-              },
-            ]}
-          >
-            <Text
-              style={[
-                styles.cardTitle,
-                { color: theme.colors.foreground },
-              ]}
+            {profileSuccess ? (
+              <SuccessBanner message={profileSuccess} />
+            ) : null}
+
+            <SectionTitle
+              eyebrow="Identité"
+              title="Informations personnelles"
+              icon={{
+                ios: "person.text.rectangle.fill",
+                android: "badge",
+                web: "badge",
+              }}
+            />
+
+            <View
+              className="rounded-[20px] border bg-white p-3.5"
+              style={{ borderColor: "#E5DFE8" }}
             >
-              Informations personnelles
-            </Text>
+              <Text
+                className="mb-2 text-[12px] font-black"
+                style={{ color: theme.colors.foreground }}
+              >
+                Civilité
+              </Text>
 
-            <Text
-              style={[
-                styles.label,
-                { color: theme.colors.foreground },
-              ]}
-            >
-              Civilité
-            </Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ gap: 8, paddingRight: 4 }}
+              >
+                {civilites.map((item) => {
+                  const selected = civilite === item.value;
 
-            <View style={styles.choiceRow}>
-              {civilites.map((item) => {
-                const selected = civilite === item.value;
-
-                return (
-                  <Pressable
-                    key={item.value}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Civilité ${item.label}`}
-                    accessibilityState={{ selected }}
-                    onPress={() => setCivilite(item.value)}
-                    style={[
-                      styles.choice,
-                      {
+                  return (
+                    <Pressable
+                      key={item.value}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Civilité ${item.label}`}
+                      accessibilityState={{ selected }}
+                      onPress={() => setCivilite(item.value)}
+                      android_ripple={{ color: "transparent" }}
+                      className="h-[40px] items-center justify-center rounded-[12px] border px-3"
+                      style={{
                         backgroundColor: selected
                           ? theme.colors.accent
-                          : theme.colors.surfaceSoft,
+                          : theme.colors.surface,
                         borderColor: selected
                           ? theme.colors.accent
                           : theme.colors.border,
-                        borderWidth:
-                          theme.shape.borderWidth,
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.choiceText,
-                        {
-                          color: selected
-                            ? theme.colors.background
-                            : theme.colors.foreground,
-                        },
-                      ]}
+                      }}
                     >
-                      {item.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
+                      <Text
+                        className="text-[14px] font-black"
+                        style={{
+                          color: selected ? "#FFFFFF" : theme.colors.foregroundMuted,
+                        }}
+                      >
+                        {item.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+
+              <View className="mt-4">
+                <ProfileField
+                  label="Prénom"
+                  value={firstName}
+                  onChangeText={setFirstName}
+                  autoCapitalize="words"
+                  accessibilityLabel="Prénom"
+                />
+
+                <ProfileField
+                  label="Nom"
+                  value={lastName}
+                  onChangeText={setLastName}
+                  autoCapitalize="words"
+                  accessibilityLabel="Nom"
+                />
+
+                <ProfileField
+                  label="Adresse e-mail"
+                  value={email}
+                  onChangeText={setEmail}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  accessibilityLabel="Adresse e-mail"
+                />
+
+                {emailChanged ? (
+                  <View
+                    className="mb-3 rounded-[15px] border px-3 py-3"
+                    style={{
+                      backgroundColor: "#FFF9EE",
+                      borderColor: "#F1D6A8",
+                    }}
+                  >
+                    <View className="mb-2 flex-row items-start">
+                      <SymbolView
+                        name={{
+                          ios: "lock.shield.fill",
+                          android: "verified_user",
+                          web: "verified_user",
+                        }}
+                        tintColor="#B76B00"
+                        size={13}
+                        weight="bold"
+                      />
+                      <Text className="ml-2 flex-1 text-[11px] leading-[17px] text-[#80521A]">
+                        Pour protéger votre compte, le mot de passe actuel est requis uniquement lorsque l’adresse e-mail change.
+                      </Text>
+                    </View>
+
+                    <ProfileField
+                      label="Mot de passe actuel"
+                      value={currentEmailPassword}
+                      onChangeText={setCurrentEmailPassword}
+                      autoCapitalize="none"
+                      secureTextEntry
+                      maxLength={100}
+                      accessibilityLabel="Mot de passe actuel pour confirmer le changement d’e-mail"
+                      placeholder="Confirmer le changement d’e-mail"
+                    />
+                  </View>
+                ) : null}
+
+                <PrimaryButton
+                  icon={{
+                    ios: "checkmark.circle.fill",
+                    android: "save",
+                    web: "save",
+                  }}
+                  label={
+                    savingProfile
+                      ? "Enregistrement..."
+                      : "Enregistrer mon profil"
+                  }
+                  disabled={savingProfile}
+                  onPress={() => void saveProfile()}
+                />
+              </View>
             </View>
 
-            <Field
-              label="Prénom"
-              value={firstName}
-              onChangeText={setFirstName}
-              autoCapitalize="words"
-              accessibilityLabel="Prénom"
+            <SectionTitle
+              eyebrow="Préférences"
+              title="Apparence"
+              icon={{
+                ios: "paintbrush.fill",
+                android: "palette",
+                web: "palette",
+              }}
             />
 
-            <Field
-              label="Nom"
-              value={lastName}
-              onChangeText={setLastName}
-              autoCapitalize="words"
-              accessibilityLabel="Nom"
-            />
-
-            <Field
-              label="Adresse e-mail"
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              accessibilityLabel="Adresse e-mail"
-            />
-
-            {emailChanged ? (
-              <>
-                <Text
-                  style={[
-                    styles.help,
-                    { color: theme.colors.foregroundMuted },
-                  ]}
-                >
-                  Pour protéger votre compte, le mot de passe
-                  actuel est requis uniquement lorsque l’adresse
-                  e-mail change.
-                </Text>
-                <TextInput
-                  value={currentEmailPassword}
-                  onChangeText={setCurrentEmailPassword}
-                  secureTextEntry
-                  autoCapitalize="none"
-                  placeholder="Mot de passe actuel"
-                  placeholderTextColor={
-                    theme.colors.foregroundSubtle
-                  }
-                  accessibilityLabel="Mot de passe actuel pour confirmer le changement d’e-mail"
-                  style={[styles.input, inputStyle]}
-                />
-              </>
-            ) : null}
-
-            <AppButton
-              title={
-                savingProfile
-                  ? "Enregistrement..."
-                  : "Enregistrer mon profil"
-              }
-              onPress={() => void saveProfile()}
-              disabled={savingProfile}
-              style={styles.saveButton}
-            />
-          </View>
-
-          <View
-            style={[
-              styles.card,
-              {
-                backgroundColor: theme.colors.surface,
-                borderColor: theme.colors.border,
-                borderRadius: theme.shape.cardRadius,
-                borderWidth: theme.shape.borderWidth,
-                padding: theme.shape.cardPadding,
-              },
-            ]}
-          >
-            <Text
-              style={[
-                styles.cardTitle,
-                { color: theme.colors.foreground },
-              ]}
-            >
-              Apparence
-            </Text>
-            <Text
-              style={[
-                styles.help,
-                { color: theme.colors.foregroundMuted },
-              ]}
-            >
-              Utilisez les mêmes thèmes et couleurs d’accent
-              SmartTraining sur votre espace formateur.
-            </Text>
-            <AppButton
-              title="Configurer l’apparence"
+            <FeatureCard
+              icon={{
+                ios: "paintbrush.pointed.fill",
+                android: "palette",
+                web: "palette",
+              }}
+              title="Personnaliser l’interface"
+              description="Configurez les thèmes et couleurs d’accent de votre espace SmartTraining."
+              actionLabel="Configurer l’apparence"
               onPress={onOpenAppearance}
-              variant="secondary"
-              style={styles.saveButton}
             />
-          </View>
 
-          <View
-            style={[
-              styles.card,
-              {
-                backgroundColor: theme.colors.surface,
-                borderColor: theme.colors.border,
-                borderRadius: theme.shape.cardRadius,
-                borderWidth: theme.shape.borderWidth,
-                padding: theme.shape.cardPadding,
-              },
-            ]}
-          >
-            <Text
-              style={[
-                styles.cardTitle,
-                { color: theme.colors.foreground },
-              ]}
+            <SectionTitle
+              eyebrow="Compte"
+              title="Sécurité"
+              icon={{
+                ios: "lock.shield.fill",
+                android: "security",
+                web: "security",
+              }}
+            />
+
+            <View
+              className="rounded-[20px] border bg-white p-3.5"
+              style={{ borderColor: "#E5DFE8" }}
             >
-              Sécurité
-            </Text>
+              {passwordError ? (
+                <View className="mb-3">
+                  <ErrorMessage message={passwordError} />
+                </View>
+              ) : null}
 
-            {passwordError ? (
-              <ErrorMessage message={passwordError} />
-            ) : null}
+              {passwordSuccess ? (
+                <SuccessBanner message={passwordSuccess} compact />
+              ) : null}
 
-            {passwordSuccess ? (
-              <View
-                style={[
-                  styles.success,
-                  {
-                    backgroundColor:
-                      theme.colors.surfaceSoft,
-                    borderRadius: theme.shape.cardRadius,
-                  },
-                ]}
-              >
+              <ProfileField
+                label="Mot de passe actuel"
+                value={currentPassword}
+                onChangeText={setCurrentPassword}
+                autoCapitalize="none"
+                secureTextEntry
+                maxLength={100}
+                accessibilityLabel="Mot de passe actuel"
+              />
+
+              <ProfileField
+                label="Nouveau mot de passe"
+                value={newPassword}
+                onChangeText={setNewPassword}
+                autoCapitalize="none"
+                secureTextEntry
+                maxLength={100}
+                accessibilityLabel="Nouveau mot de passe"
+              />
+
+              <ProfileField
+                label="Confirmer le nouveau mot de passe"
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                autoCapitalize="none"
+                secureTextEntry
+                maxLength={100}
+                accessibilityLabel="Confirmer le nouveau mot de passe"
+              />
+
+              <PrimaryButton
+                icon={{
+                  ios: "key.fill",
+                  android: "key",
+                  web: "key",
+                }}
+                label={
+                  savingPassword
+                    ? "Enregistrement..."
+                    : "Modifier mon mot de passe"
+                }
+                disabled={savingPassword}
+                onPress={() => void savePassword()}
+              />
+            </View>
+
+            <SectionTitle
+              eyebrow="Données"
+              title="Confidentialité"
+              icon={{
+                ios: "hand.raised.fill",
+                android: "privacy_tip",
+                web: "privacy_tip",
+              }}
+            />
+
+            <FeatureCard
+              icon={{
+                ios: "hand.raised.fill",
+                android: "privacy_tip",
+                web: "privacy_tip",
+              }}
+              title="Vos données et votre vie privée"
+              description="Consultez les données utilisées par SmartTraining, leurs finalités, les mesures de sécurité et les modalités de demande."
+              actionLabel="Voir la politique de confidentialité"
+              onPress={onOpenPrivacy}
+            />
+
+            <View className="mt-5">
+              <AccountDeletionRequestCard />
+            </View>
+
+            <View className="mt-3">
+              <AccountSessionCard />
+            </View>
+
+            {profile ? (
+              <View className="mb-2 mt-4 flex-row items-center justify-center">
+                <View className="h-2 w-2 rounded-full bg-[#16A36A]" />
                 <Text
-                  style={[
-                    styles.successText,
-                    { color: theme.colors.foreground },
-                  ]}
+                  className="ml-2 text-[11px] font-bold"
+                  style={{ color: theme.colors.foregroundSubtle }}
                 >
-                  {passwordSuccess}
+                  Compte actif · profil Formateur
                 </Text>
               </View>
             ) : null}
-
-            <PasswordField
-              label="Mot de passe actuel"
-              value={currentPassword}
-              onChangeText={setCurrentPassword}
-            />
-
-            <PasswordField
-              label="Nouveau mot de passe"
-              value={newPassword}
-              onChangeText={setNewPassword}
-            />
-
-            <PasswordField
-              label="Confirmer le nouveau mot de passe"
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-            />
-
-            <AppButton
-              title={
-                savingPassword
-                  ? "Enregistrement..."
-                  : "Modifier mon mot de passe"
-              }
-              onPress={() => void savePassword()}
-              disabled={savingPassword}
-              style={styles.saveButton}
-            />
           </View>
-
-          <AccountDeletionRequestCard />
-
-          <View
-            style={[
-              styles.card,
-              {
-                backgroundColor: theme.colors.surface,
-                borderColor: theme.colors.border,
-                borderRadius: theme.shape.cardRadius,
-                borderWidth: theme.shape.borderWidth,
-                padding: theme.shape.cardPadding,
-              },
-            ]}
-          >
-            <Text
-              style={{
-                color: theme.colors.accent,
-                fontSize: 11,
-                fontWeight: "900",
-                letterSpacing: 0.8,
-                marginBottom: 6,
-              }}
-            >
-              CONFIDENTIALITÉ
-            </Text>
-            <Text
-              style={{
-                color: theme.colors.foreground,
-                fontSize: 18,
-                fontWeight: "900",
-                lineHeight: 24,
-              }}
-            >
-              Vos données et votre vie privée
-            </Text>
-            <Text
-              style={{
-                color: theme.colors.foregroundMuted,
-                fontSize: 13,
-                lineHeight: 20,
-                marginTop: 8,
-              }}
-            >
-              Consultez les données utilisées par SmartTraining, leurs finalités,
-              les mesures de sécurité et les modalités de demande relatives à vos données.
-            </Text>
-
-            <AppButton
-              title="Voir la politique de confidentialité"
-              onPress={onOpenPrivacy}
-              variant="secondary"
-              style={styles.saveButton}
-            />
-          </View>
-          <AccountSessionCard />
-
-          {profile ? (
-            <Text
-              style={[
-                styles.accountState,
-                { color: theme.colors.foregroundSubtle },
-              ]}
-            >
-              Compte actif · profil Formateur
-            </Text>
-          ) : null}
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </ScreenContainer>
   );
 
-  function Field({
-    label,
-    value,
-    onChangeText,
-    autoCapitalize,
-    keyboardType,
-    accessibilityLabel,
+  function SectionTitle({
+    eyebrow,
+    title,
+    icon,
   }: {
-    label: string;
-    value: string;
-    onChangeText: (value: string) => void;
-    autoCapitalize: "none" | "words";
-    keyboardType?: "email-address";
-    accessibilityLabel: string;
+    eyebrow: string;
+    title: string;
+    icon: SymbolName;
   }) {
     return (
-      <View style={styles.field}>
-        <Text
-          style={[
-            styles.label,
-            { color: theme.colors.foreground },
-          ]}
-        >
-          {label}
-        </Text>
-        <TextInput
-          value={value}
-          onChangeText={onChangeText}
-          autoCapitalize={autoCapitalize}
-          autoCorrect={false}
-          keyboardType={keyboardType}
-          maxLength={150}
-          placeholderTextColor={
-            theme.colors.foregroundSubtle
-          }
-          accessibilityLabel={accessibilityLabel}
-          style={[styles.input, inputStyle]}
-        />
+      <View className="mb-2.5 mt-5 flex-row items-center">
+        <View className="h-8 w-8 items-center justify-center rounded-[10px] bg-[#F1E9FF]">
+          <SymbolView
+            name={icon}
+            tintColor="#7C3AED"
+            size={13}
+            weight="bold"
+          />
+        </View>
+
+        <View className="ml-2.5 min-w-0 flex-1">
+          <Text
+            className="text-[10px] font-black uppercase tracking-[0.6px]"
+            style={{ color: theme.colors.foregroundSubtle }}
+          >
+            {eyebrow}
+          </Text>
+
+          <Text
+            className="mt-0.5 text-[18px] font-black"
+            style={{ color: theme.colors.foreground }}
+          >
+            {title}
+          </Text>
+        </View>
       </View>
     );
   }
 
-  function PasswordField({
-    label,
-    value,
-    onChangeText,
+  function SuccessBanner({
+    message,
+    compact = false,
   }: {
-    label: string;
-    value: string;
-    onChangeText: (value: string) => void;
+    message: string;
+    compact?: boolean;
   }) {
     return (
-      <View style={styles.field}>
+      <View
+        className={`${compact ? "mb-3" : "mt-3"} flex-row items-center rounded-[15px] bg-[#EAFBF3] px-3 py-2.5`}
+      >
+        <SymbolView
+          name={{
+            ios: "checkmark.circle.fill",
+            android: "check_circle",
+            web: "check_circle",
+          }}
+          tintColor="#16845A"
+          size={14}
+          weight="bold"
+        />
+        <Text className="ml-2 flex-1 text-[12px] font-bold text-[#16845A]">
+          {message}
+        </Text>
+      </View>
+    );
+  }
+
+  function SmallAction({
+    icon,
+    label,
+    onPress,
+    disabled = false,
+  }: {
+    icon: SymbolName;
+    label: string;
+    onPress: () => void;
+    disabled?: boolean;
+  }) {
+    return (
+      <Pressable
+        accessibilityRole="button"
+        disabled={disabled}
+        onPress={onPress}
+        android_ripple={{ color: "transparent" }}
+        className="min-w-0 flex-1 flex-row items-center justify-center rounded-[12px] border px-2 py-2.5"
+        style={{
+          backgroundColor: "#FBF9FC",
+          borderColor: "#E5DFE8",
+          opacity: disabled ? 0.5 : 1,
+        }}
+      >
+        <SymbolView
+          name={icon}
+          tintColor="#7C3AED"
+          size={11}
+          weight="bold"
+        />
         <Text
-          style={[
-            styles.label,
-            { color: theme.colors.foreground },
-          ]}
+          numberOfLines={1}
+          className="ml-1.5 text-[11px] font-black"
+          style={{ color: theme.colors.foregroundMuted }}
         >
           {label}
         </Text>
-        <TextInput
-          value={value}
-          onChangeText={onChangeText}
-          secureTextEntry
-          autoCapitalize="none"
-          maxLength={100}
-          placeholderTextColor={
-            theme.colors.foregroundSubtle
-          }
-          accessibilityLabel={label}
-          style={[styles.input, inputStyle]}
+      </Pressable>
+    );
+  }
+
+  function PrimaryButton({
+    icon,
+    label,
+    disabled,
+    onPress,
+  }: {
+    icon: SymbolName;
+    label: string;
+    disabled: boolean;
+    onPress: () => void;
+  }) {
+    return (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ disabled }}
+        disabled={disabled}
+        onPress={onPress}
+        android_ripple={{ color: "transparent" }}
+        className="h-[52px] w-full flex-row items-center justify-center rounded-[14px]"
+        style={{
+          backgroundColor: theme.colors.accent,
+          opacity: disabled ? 0.5 : 1,
+        }}
+      >
+        <SymbolView
+          name={icon}
+          tintColor="#FFFFFF"
+          size={14}
+          weight="bold"
         />
+        <Text className="ml-2 text-[13px] font-black text-white">
+          {label}
+        </Text>
+      </Pressable>
+    );
+  }
+
+  function FeatureCard({
+    icon,
+    title,
+    description,
+    actionLabel,
+    onPress,
+  }: {
+    icon: SymbolName;
+    title: string;
+    description: string;
+    actionLabel: string;
+    onPress: () => void;
+  }) {
+    return (
+      <View
+        className="rounded-[20px] border bg-white p-3.5"
+        style={{ borderColor: "#E5DFE8" }}
+      >
+        <View className="flex-row items-start">
+          <View className="h-10 w-10 items-center justify-center rounded-[12px] bg-[#F1E9FF]">
+            <SymbolView
+              name={icon}
+              tintColor="#7C3AED"
+              size={15}
+              weight="bold"
+            />
+          </View>
+
+          <View className="ml-3 min-w-0 flex-1">
+            <Text
+              className="text-[14px] font-black"
+              style={{ color: theme.colors.foreground }}
+            >
+              {title}
+            </Text>
+
+            <Text
+              className="mt-1 text-[11px] leading-[17px]"
+              style={{ color: theme.colors.foregroundMuted }}
+            >
+              {description}
+            </Text>
+          </View>
+        </View>
+
+        <Pressable
+          accessibilityRole="button"
+          onPress={onPress}
+          android_ripple={{ color: "transparent" }}
+          className="mt-3 flex-row items-center justify-between rounded-[13px] bg-[#F7F2FF] px-3 py-3"
+        >
+          <Text className="text-[12px] font-black text-[#7C3AED]">
+            {actionLabel}
+          </Text>
+          <SymbolView
+            name={{
+              ios: "chevron.right",
+              android: "chevron_right",
+              web: "chevron_right",
+            }}
+            tintColor="#7C3AED"
+            size={12}
+            weight="bold"
+          />
+        </Pressable>
       </View>
     );
   }
 }
-
-const styles = StyleSheet.create({
-  scrollArea: {
-    flex: 1,
-    minHeight: 0,
-  },
-  content: {
-    flexGrow: 1,
-  },
-  page: {
-    width: "100%",
-    maxWidth: 920,
-    alignSelf: "center",
-  },
-  topActions: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 10,
-    marginBottom: 14,
-  },
-  backButton: {
-    alignSelf: "flex-start",
-  },
-  logoutButton: {
-    alignSelf: "flex-start",
-  },
-  card: {
-    marginBottom: 18,
-  },
-  identityRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "center",
-    gap: 16,
-  },
-  avatar: {
-    width: 92,
-    height: 92,
-    borderRadius: 46,
-  },
-  avatarFallback: {
-    width: 92,
-    height: 92,
-    borderRadius: 46,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  avatarText: {
-    fontSize: 30,
-    fontWeight: "900",
-  },
-  identityCopy: {
-    flexGrow: 1,
-    flexShrink: 1,
-    minWidth: 220,
-  },
-  eyebrow: {
-    fontSize: 10,
-    fontWeight: "900",
-    letterSpacing: 1,
-  },
-  identityName: {
-    fontSize: 22,
-    fontWeight: "900",
-    marginTop: 5,
-  },
-  identityEmail: {
-    fontSize: 13,
-    marginTop: 4,
-  },
-  role: {
-    fontSize: 12,
-    fontWeight: "900",
-    marginTop: 8,
-  },
-  photoActions: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-    marginTop: 16,
-  },
-  cardTitle: {
-    fontSize: 19,
-    fontWeight: "900",
-    marginBottom: 4,
-  },
-  field: {
-    marginTop: 14,
-  },
-  label: {
-    fontSize: 13,
-    fontWeight: "900",
-    marginBottom: 7,
-  },
-  input: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    fontSize: 14,
-  },
-  choiceRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 2,
-  },
-  choice: {
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-  },
-  choiceText: {
-    fontSize: 12,
-    fontWeight: "900",
-  },
-  help: {
-    fontSize: 12,
-    lineHeight: 18,
-    marginTop: 10,
-    marginBottom: 10,
-  },
-  saveButton: {
-    alignSelf: "flex-start",
-    marginTop: 16,
-    minWidth: 200,
-  },
-  success: {
-    padding: 12,
-    marginBottom: 14,
-  },
-  successText: {
-    fontSize: 13,
-    fontWeight: "800",
-  },
-  accountState: {
-    fontSize: 11,
-    textAlign: "center",
-    marginBottom: 10,
-  },
-});

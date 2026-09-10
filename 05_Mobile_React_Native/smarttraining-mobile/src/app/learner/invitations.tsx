@@ -46,7 +46,7 @@ export default function LearnerInvitationsRoute() {
     <LearnerInvitationsScreen
       learnerId={user.userId}
       learnerEmail={user.email}
-      onOpenMyTrainings={() => router.push("/trainings" as Href)}
+      onOpenMyTrainings={() => router.push("/learner/my-trainings" as Href)}
     />
   );
 }

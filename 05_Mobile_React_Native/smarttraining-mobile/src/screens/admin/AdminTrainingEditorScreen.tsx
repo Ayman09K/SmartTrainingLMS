@@ -1,12 +1,16 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import * as ImagePicker from "expo-image-picker";
-import { useEffect, useMemo, useState } from "react";
+import { SymbolView } from "expo-symbols";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   BackHandler,
   Image,
+  Keyboard,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   View,
@@ -17,7 +21,6 @@ import AppButton from "../../components/AppButton";
 import {
   PexelsCoverPicker,
 } from "../../components/training/PexelsCoverPicker";
-import ErrorMessage from "../../components/ErrorMessage";
 import LoadingState from "../../components/LoadingState";
 import ScreenContainer from "../../components/ScreenContainer";
 import { AppConfirmSheet } from "../../components/ux/AppStates";
@@ -241,6 +244,169 @@ function enrollmentLabel(value: MobileEnrollmentMode) {
   return "Affectation";
 }
 
+
+function TrainingPremiumAlert({
+  kind,
+  title,
+  message,
+  onClose,
+}: {
+  kind: "error" | "success";
+  title: string;
+  message: string;
+  onClose: () => void;
+}) {
+  const { theme } = useSmartTrainingTheme();
+  const isError = kind === "error";
+  const foreground = isError ? "#C2413D" : "#16845A";
+  const background = isError ? "#FFF4F2" : "#EAFBF3";
+  const border = isError ? "#F2C6C3" : "#BFECD7";
+
+  return (
+    <View
+      className="mb-3 flex-row items-start rounded-[16px] border px-3.5 py-3"
+      style={{ backgroundColor: background, borderColor: border }}
+    >
+      <View className="h-8 w-8 items-center justify-center rounded-[10px] bg-white">
+        <SymbolView
+          name={{
+            ios: isError
+              ? "exclamationmark.triangle.fill"
+              : "checkmark.circle.fill",
+            android: isError ? "error" : "check_circle",
+            web: isError ? "error" : "check_circle",
+          }}
+          tintColor={foreground}
+          size={13}
+          weight="bold"
+        />
+      </View>
+
+      <View className="ml-2.5 min-w-0 flex-1">
+        <Text
+          className="text-[10px] font-black"
+          style={{ color: foreground }}
+        >
+          {title}
+        </Text>
+        <Text
+          className="mt-0.5 text-[9px] leading-[14px]"
+          style={{ color: theme.colors.foregroundMuted }}
+        >
+          {message}
+        </Text>
+      </View>
+
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Fermer le message"
+        onPress={onClose}
+        className="ml-2 h-7 w-7 items-center justify-center rounded-[9px] bg-white"
+      >
+        <SymbolView
+          name={{ ios: "xmark", android: "close", web: "close" }}
+          tintColor={foreground}
+          size={10}
+          weight="bold"
+        />
+      </Pressable>
+    </View>
+  );
+}
+
+function TrainingField(
+  props: React.ComponentProps<typeof TextInput> & {
+    label: string;
+    large?: boolean;
+  },
+) {
+  const { theme } = useSmartTrainingTheme();
+  const { label, multiline, large, ...inputProps } = props;
+
+  return (
+    <View className="mb-3">
+      <Text
+        className="mb-1.5 text-[11px] font-black"
+        style={{ color: theme.colors.foreground }}
+      >
+        {label}
+      </Text>
+
+      <TextInput
+        {...inputProps}
+        accessibilityLabel={inputProps.accessibilityLabel ?? label}
+        multiline={multiline}
+        placeholderTextColor={theme.colors.foregroundSubtle}
+        className={`rounded-[14px] border bg-[#FCFBFD] px-3.5 text-[13px] ${
+          multiline ? "py-3" : "h-[50px]"
+        }`}
+        style={[
+          {
+            color: theme.colors.foreground,
+            borderColor: theme.colors.border,
+            minHeight: multiline ? (large ? 110 : 82) : 50,
+            textAlignVertical: multiline ? "top" : "center",
+          },
+          inputProps.style,
+        ]}
+      />
+    </View>
+  );
+}
+
+function TrainingSelectField({
+  label,
+  value,
+  onPress,
+}: {
+  label: string;
+  value: string;
+  onPress: () => void;
+}) {
+  const { theme } = useSmartTrainingTheme();
+
+  return (
+    <View className="mb-3">
+      <Text
+        className="mb-1.5 text-[11px] font-black"
+        style={{ color: theme.colors.foreground }}
+      >
+        {label}
+      </Text>
+
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`${label} : ${value || "Non renseigné"}`}
+        onPress={onPress}
+        android_ripple={{ color: "transparent" }}
+        className="h-[50px] flex-row items-center rounded-[14px] border bg-[#FCFBFD] px-3.5"
+        style={{ borderColor: theme.colors.border }}
+      >
+        <Text
+          numberOfLines={1}
+          className="min-w-0 flex-1 text-[13px] font-black"
+          style={{ color: theme.colors.foreground }}
+        >
+          {value}
+        </Text>
+
+        <View className="ml-2 h-7 w-7 items-center justify-center rounded-[9px] bg-[#F3EEFF]">
+          <SymbolView
+            name={{
+              ios: "chevron.right",
+              android: "chevron_right",
+              web: "chevron_right",
+            }}
+            tintColor="#7C3AED"
+            size={10}
+            weight="bold"
+          />
+        </View>
+      </Pressable>
+    </View>
+  );
+}
+
 export default function AdminTrainingEditorScreen({
   trainingId,
   onSaved,
@@ -248,6 +414,7 @@ export default function AdminTrainingEditorScreen({
 }: Props) {
   const { theme } = useSmartTrainingTheme();
   const insets = useSafeAreaInsets();
+  const scrollRef = useRef<ScrollView>(null);
   const editing =
     Number.isInteger(trainingId) &&
     (trainingId ?? 0) > 0;
@@ -265,6 +432,7 @@ export default function AdminTrainingEditorScreen({
   const [step, setStep] = useState(0);
   const [picker, setPicker] =
     useState<PickerMode>(null);
+  const [pickerSearch, setPickerSearch] = useState("");
   const [loading, setLoading] =
     useState(true);
   const [saving, setSaving] =
@@ -277,6 +445,29 @@ export default function AdminTrainingEditorScreen({
   const [selectedPexelsPhoto, setSelectedPexelsPhoto] =
     useState<PexelsCoverPhoto | null>(null);
   const [selectingCover, setSelectingCover] = useState(false);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const showSubscription = Keyboard.addListener(
+      "keyboardDidShow",
+      () => setKeyboardVisible(true),
+    );
+    const hideSubscription = Keyboard.addListener(
+      "keyboardDidHide",
+      () => setKeyboardVisible(false),
+    );
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (picker === null) {
+      setPickerSearch("");
+    }
+  }, [picker]);
 
   const sortedCategories = useMemo(
     () =>
@@ -408,20 +599,42 @@ export default function AdminTrainingEditorScreen({
     selectedPexelsPhoto !== null;
 
   useEffect(() => {
-    if (!isDirty || saving) {
-      return;
-    }
-
     const subscription = BackHandler.addEventListener(
       "hardwareBackPress",
       () => {
-        setExitConfirmOpen(true);
+        if (saving) {
+          return true;
+        }
+
+        if (isDirty) {
+          setExitConfirmOpen(true);
+          return true;
+        }
+
+        onCancel();
         return true;
       },
     );
 
     return () => subscription.remove();
-  }, [isDirty, saving]);
+  }, [isDirty, onCancel, saving]);
+
+  function keepFocusedFieldVisible(event: any) {
+    const target = event?.target;
+
+    if (!target) {
+      return;
+    }
+
+    setTimeout(() => {
+      const responder = scrollRef.current as any;
+      responder?.scrollResponderScrollNativeHandleToKeyboard?.(
+        target,
+        110,
+        true,
+      );
+    }, 140);
+  }
 
   function requestCancel() {
     if (isDirty && !saving) {
@@ -749,6 +962,55 @@ export default function AdminTrainingEditorScreen({
     ];
   }
 
+  function pickerTitle(): string {
+    if (picker === "TRAINER") return "Choisir un formateur";
+    if (picker === "CATEGORY") return "Choisir une catégorie";
+    if (picker === "LEVEL") return "Choisir un niveau";
+    if (picker === "LANGUAGE") return "Choisir une langue";
+    if (picker === "VISIBILITY") return "Choisir la visibilité";
+    if (picker === "ENROLLMENT") return "Mode d’inscription";
+    return "Choisir";
+  }
+
+  function pickerSubtitle(): string {
+    if (picker === "TRAINER") {
+      return "Sélectionnez le responsable de la formation.";
+    }
+    if (picker === "CATEGORY") {
+      return "Classez la formation dans une catégorie active.";
+    }
+    return "Sélectionnez une option.";
+  }
+
+  function selectedPickerKey(): string | null {
+    if (picker === "TRAINER") {
+      return form.trainerId ? String(form.trainerId) : null;
+    }
+    if (picker === "CATEGORY") {
+      return form.categoryId ? String(form.categoryId) : null;
+    }
+    if (picker === "LEVEL") return form.level;
+    if (picker === "LANGUAGE") return form.language;
+    if (picker === "VISIBILITY") return form.visibility;
+    if (picker === "ENROLLMENT") return form.enrollmentMode;
+    return null;
+  }
+
+  function visiblePickerOptions(): PickerOption[] {
+    const options = pickerOptions();
+    const normalized = pickerSearch.trim().toLowerCase();
+
+    if (!normalized || (picker !== "TRAINER" && picker !== "CATEGORY")) {
+      return options;
+    }
+
+    return options.filter((option) =>
+      `${option.label} ${option.helper || ""}`
+        .toLowerCase()
+        .includes(normalized),
+    );
+  }
+
   function selectOption(option: PickerOption) {
     if (picker === "TRAINER") {
       field("trainerId", Number(option.key));
@@ -806,487 +1068,522 @@ export default function AdminTrainingEditorScreen({
   }
 
   return (
-    <ScreenContainer>
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled"
+    <ScreenContainer edges={["left", "right"]} style={{ paddingBottom: 0 }}>
+      <KeyboardAvoidingView
+        className="flex-1"
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 8 : 0}
       >
-        <View style={styles.page}>
-          <Text
-            style={[
-              styles.eyebrow,
-              { color: theme.colors.accent },
-            ]}
-          >
-            ADMIN · ÉTAPE {step + 1} SUR 4
-          </Text>
-
-          <Text
-            style={[
-              styles.title,
-              { color: theme.colors.foreground },
-            ]}
-          >
-            {editing
-              ? "Modifier la formation"
-              : "Nouvelle formation"}
-          </Text>
-
-          <Text
-            style={[
-              styles.subtitle,
-              {
-                color:
-                  theme.colors.foregroundMuted,
-              },
-            ]}
-          >
-            {steps[step][1]}
-          </Text>
-
-          <View style={styles.progress}>
-            {steps.map((item, index) => (
-              <Pressable
-                key={item[0]}
-                accessibilityRole="button"
-                accessibilityLabel={`Étape ${index + 1} : ${item[0]}`}
-                accessibilityState={{ selected: index === step }}
-                onPress={() => {
-                  if (
-                    index <= step ||
-                    validate(step)
-                  ) {
-                    setStep(index);
-                  }
-                }}
-                style={styles.progressItem}
-              >
-                <View
-                  style={[
-                    styles.progressBar,
-                    {
-                      backgroundColor:
-                        index <= step
-                          ? theme.colors.accent
-                          : theme.colors.border,
-                    },
-                  ]}
-                />
-                <Text
-                  style={[
-                    styles.progressLabel,
-                    {
-                      color:
-                        index === step
-                          ? theme.colors.foreground
-                          : theme.colors
-                              .foregroundSubtle,
-                    },
-                  ]}
-                >
-                  {item[0]}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-
-          {error ? (
-            <ErrorMessage
-              message={error}
-              onRetry={() => setError("")}
-            />
-          ) : null}
-
-          {notice ? (
+        <ScrollView
+          ref={scrollRef}
+          className="flex-1"
+          contentContainerStyle={{
+            paddingBottom: keyboardVisible
+              ? 180
+              : Math.max(28, insets.bottom + 20),
+          }}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          showsVerticalScrollIndicator={false}
+        >
+          <View className="mx-auto w-full max-w-[760px]">
             <View
-              style={[
-                styles.notice,
-                {
-                  backgroundColor: theme.colors.surfaceSoft,
-                  borderColor: theme.colors.success,
-                },
-              ]}
+              className="mb-4 overflow-hidden rounded-[22px] border bg-white"
+              style={{ borderColor: theme.colors.border }}
             >
-              <Text
-                style={[
-                  styles.noticeText,
-                  { color: theme.colors.success },
-                ]}
-              >
-                {notice}
-              </Text>
-            </View>
-          ) : null}
+              <View className="h-1 bg-[#7C3AED]" />
 
-          <View
-            style={[
-              styles.card,
-              {
-                backgroundColor:
-                  theme.colors.surface,
-                borderColor: theme.colors.border,
-                borderRadius:
-                  theme.shape.cardRadius,
-                borderWidth:
-                  theme.shape.borderWidth,
-              },
-            ]}
-          >
-            {step === 0 ? (
-              <>
-                <SelectField
-                  label="Formateur responsable"
-                  value={
-                    selectedTrainer
-                      ? userLabel(selectedTrainer)
-                      : "Choisir un formateur"
-                  }
-                  onPress={() =>
-                    setPicker("TRAINER")
-                  }
-                />
-
-                <Field
-                  label="Titre"
-                  value={form.title}
-                  onChangeText={(value) =>
-                    field("title", value)
-                  }
-                  placeholder="Ex. Fondamentaux de la relation client"
-                />
-
-                <Field
-                  label="Description de la formation"
-                  value={form.description}
-                  onChangeText={(value) =>
-                    field("description", value)
-                  }
-                  multiline
-                  large
-                  placeholder="Présentez clairement le contenu et le contexte de la formation"
-                />
-
-                <Text
-                  style={[
-                    styles.fieldHelp,
-                    { color: theme.colors.foregroundMuted },
-                  ]}
-                >
-                  Le résumé affiché dans les cartes sera généré automatiquement à partir de cette description.
-                </Text>
-
-                <SelectField
-                  label="Catégorie"
-                  value={
-                    form.categoryLabel ||
-                    "Choisir une catégorie"
-                  }
-                  onPress={() =>
-                    setPicker("CATEGORY")
-                  }
-                />
-
-
-                <View style={styles.coverSection}>
-                  <Text
-                    style={[
-                      styles.label,
-                      { color: theme.colors.foregroundMuted },
-                    ]}
-                  >
-                    Couverture de la formation
-                  </Text>
-
-                  {coverPreviewUri || coverImageUrl ? (
-                    <Image
-                      source={{ uri: coverPreviewUri || coverImageUrl }}
-                      resizeMode="contain"
-                      accessibilityLabel="Aperçu de la couverture de la formation"
-                      style={[
-                        styles.coverPreview,
-                        {
-                          backgroundColor: theme.colors.surfaceSoft,
-                          borderColor: theme.colors.border,
-                        },
-                      ]}
+              <View className="p-4">
+                <View className="flex-row items-start">
+                  <View className="h-12 w-12 shrink-0 items-center justify-center rounded-[15px] bg-[#F1E9FF]">
+                    <SymbolView
+                      name={{
+                        ios: editing ? "pencil.and.list.clipboard" : "plus.rectangle.on.folder.fill",
+                        android: editing ? "edit_note" : "note_add",
+                        web: editing ? "edit_note" : "note_add",
+                      }}
+                      tintColor="#7C3AED"
+                      size={19}
+                      weight="bold"
                     />
-                  ) : (
-                    <View
-                      style={[
-                        styles.coverPlaceholder,
-                        {
-                          backgroundColor: theme.colors.surfaceSoft,
-                          borderColor: theme.colors.border,
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.coverPlaceholderTitle,
-                          { color: theme.colors.foreground },
-                        ]}
-                      >
-                        Aucune couverture
+                  </View>
+
+                  <View className="ml-3 min-w-0 flex-1">
+                    <View className="flex-row items-center justify-between gap-2">
+                      <Text className="text-[10px] font-black uppercase tracking-[0.9px] text-[#7C3AED]">
+                        Admin · étape {step + 1} sur 4
                       </Text>
-                      <Text
-                        style={[
-                          styles.coverPlaceholderText,
-                          { color: theme.colors.foregroundMuted },
-                        ]}
+
+                      {!editing ? (
+                        <View className="rounded-full bg-[#F3EEFF] px-2.5 py-1">
+                          <Text className="text-[8px] font-black text-[#7C3AED]">
+                            Brouillon
+                          </Text>
+                        </View>
+                      ) : null}
+                    </View>
+                    <Text
+                      className="mt-1 text-[23px] font-black leading-[28px]"
+                      style={{ color: theme.colors.foreground }}
+                    >
+                      {editing ? "Modifier la formation" : "Nouvelle formation"}
+                    </Text>
+                    <Text
+                      className="mt-1.5 text-[11px] leading-[17px]"
+                      style={{ color: theme.colors.foregroundMuted }}
+                    >
+                      {steps[step][1]}
+                    </Text>
+                  </View>
+                </View>
+
+                <View className="mt-4 flex-row gap-2">
+                  {steps.map((item, index) => {
+                    const active = index === step;
+                    const reached = index <= step;
+
+                    return (
+                      <Pressable
+                        key={item[0]}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Étape ${index + 1} : ${item[0]}`}
+                        accessibilityState={{ selected: active }}
+                        onPress={() => {
+                          if (index <= step || validate(step)) {
+                            setStep(index);
+                          }
+                        }}
+                        className="min-w-0 flex-1"
                       >
-                        Ajoutez une image 16:9 pour valoriser la formation.
+                        <View
+                          className="h-1 rounded-full"
+                          style={{
+                            backgroundColor: reached
+                              ? "#7C3AED"
+                              : theme.colors.border,
+                          }}
+                        />
+                        <Text
+                          numberOfLines={1}
+                          className="mt-1.5 text-[9px] font-black"
+                          style={{
+                            color: active
+                              ? theme.colors.foreground
+                              : theme.colors.foregroundSubtle,
+                          }}
+                        >
+                          {item[0]}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+            </View>
+
+            {error ? (
+              <TrainingPremiumAlert
+                kind="error"
+                title="Vérifiez les informations"
+                message={error}
+                onClose={() => setError("")}
+              />
+            ) : null}
+
+            {notice ? (
+              <TrainingPremiumAlert
+                kind="success"
+                title="Information enregistrée"
+                message={notice}
+                onClose={() => setNotice("")}
+              />
+            ) : null}
+
+            <View
+              className="overflow-hidden rounded-[22px] border bg-white"
+              style={{ borderColor: theme.colors.border }}
+            >
+              <View className="flex-row items-center border-b border-[#EEE9F0] px-4 py-3">
+                <View className="h-9 w-9 items-center justify-center rounded-[11px] bg-[#F1E9FF]">
+                  <SymbolView
+                    name={{
+                      ios:
+                        step === 0
+                          ? "person.text.rectangle.fill"
+                          : step === 1
+                            ? "target"
+                            : step === 2
+                              ? "slider.horizontal.3"
+                              : "lock.shield.fill",
+                      android:
+                        step === 0
+                          ? "badge"
+                          : step === 1
+                            ? "track_changes"
+                            : step === 2
+                              ? "tune"
+                              : "verified_user",
+                      web:
+                        step === 0
+                          ? "badge"
+                          : step === 1
+                            ? "track_changes"
+                            : step === 2
+                              ? "tune"
+                              : "verified_user",
+                    }}
+                    tintColor="#7C3AED"
+                    size={14}
+                    weight="bold"
+                  />
+                </View>
+
+                <View className="ml-2.5 min-w-0 flex-1">
+                  <Text
+                    className="text-[13px] font-black"
+                    style={{ color: theme.colors.foreground }}
+                  >
+                    {step === 0 ? "Identité de la formation" : steps[step][0]}
+                  </Text>
+                  <Text
+                    className="mt-0.5 text-[9px]"
+                    style={{ color: theme.colors.foregroundMuted }}
+                  >
+                    {step === 0
+                      ? "Responsable, identité et couverture"
+                      : step === 1
+                        ? "Objectifs, prérequis et public"
+                        : step === 2
+                          ? "Niveau, langue et capacité"
+                          : "Visibilité et inscription"}
+                  </Text>
+                </View>
+              </View>
+
+              <View className="p-4">
+                {step === 0 ? (
+                  <>
+                    <TrainingSelectField
+                      label="Formateur responsable"
+                      value={
+                        selectedTrainer
+                          ? userLabel(selectedTrainer)
+                          : "Choisir un formateur"
+                      }
+                      onPress={() => setPicker("TRAINER")}
+                    />
+
+                    <TrainingField
+                      onFocus={keepFocusedFieldVisible}
+                      label="Titre"
+                      value={form.title}
+                      onChangeText={(value) => field("title", value)}
+                      placeholder="Ex. Fondamentaux de la relation client"
+                      returnKeyType="next"
+                    />
+
+                    <TrainingField
+                      onFocus={keepFocusedFieldVisible}
+                      label="Description de la formation"
+                      value={form.description}
+                      onChangeText={(value) => field("description", value)}
+                      multiline
+                      large
+                      placeholder="Présentez clairement le contenu et le contexte de la formation"
+                    />
+
+                    <View className="-mt-1 mb-3 flex-row items-start rounded-[13px] bg-[#F8F6F9] px-3 py-2.5">
+                      <SymbolView
+                        name={{
+                          ios: "sparkles",
+                          android: "auto_awesome",
+                          web: "auto_awesome",
+                        }}
+                        tintColor="#7C3AED"
+                        size={11}
+                      />
+                      <Text
+                        className="ml-2 min-w-0 flex-1 text-[9px] leading-[14px]"
+                        style={{ color: theme.colors.foregroundMuted }}
+                      >
+                        Le résumé affiché dans les cartes sera généré automatiquement à partir de cette description.
                       </Text>
                     </View>
-                  )}
 
-                  <Text
-                    style={[
-                      styles.coverHelp,
-                      { color: theme.colors.foregroundMuted },
-                    ]}
-                  >
-                    JPEG, PNG ou WebP · 10 Mo maximum · recadrez l’image en 16:9 avant validation.
-                  </Text>
+                    <TrainingSelectField
+                      label="Catégorie"
+                      value={form.categoryLabel || "Choisir une catégorie"}
+                      onPress={() => setPicker("CATEGORY")}
+                    />
 
-                  {coverFile ? (
-                    <Text
-                      numberOfLines={1}
-                      style={[
-                        styles.coverFileName,
-                        { color: theme.colors.foreground },
-                      ]}
-                    >
-                      {coverFile.name}
-                    </Text>
-                  ) : null}
+                    <View className="mt-1">
+                      <Text
+                        className="mb-2 text-[11px] font-black"
+                        style={{ color: theme.colors.foreground }}
+                      >
+                        Couverture de la formation
+                      </Text>
 
-                  <AppButton
-                    title={
-                      selectingCover
-                        ? "Ouverture..."
-                        : coverPreviewUri || coverImageUrl
-                          ? "Remplacer la couverture"
-                          : "Choisir une couverture"
-                    }
-                    onPress={() => void chooseCover()}
-                    loading={selectingCover}
-                    disabled={saving}
-                    variant="secondary"
-                    style={styles.coverButton}
-                  />
+                      {coverPreviewUri || coverImageUrl ? (
+                        <Image
+                          source={{ uri: coverPreviewUri || coverImageUrl }}
+                          resizeMode="cover"
+                          accessibilityLabel="Aperçu de la couverture de la formation"
+                          className="w-full rounded-[16px] border"
+                          style={{
+                            aspectRatio: 16 / 9,
+                            borderColor: theme.colors.border,
+                            backgroundColor: theme.colors.surfaceSoft,
+                          }}
+                        />
+                      ) : (
+                        <View
+                          className="w-full items-center justify-center rounded-[16px] border border-dashed px-5 py-8"
+                          style={{
+                            aspectRatio: 16 / 9,
+                            backgroundColor: "#F7F2FF",
+                            borderColor: "#DCCCF7",
+                          }}
+                        >
+                          <View className="h-10 w-10 items-center justify-center rounded-[12px] bg-white">
+                            <SymbolView
+                              name={{
+                                ios: "photo.fill",
+                                android: "image",
+                                web: "image",
+                              }}
+                              tintColor="#7C3AED"
+                              size={16}
+                              weight="bold"
+                            />
+                          </View>
+                          <Text
+                            className="mt-2 text-[12px] font-black"
+                            style={{ color: theme.colors.foreground }}
+                          >
+                            Aucune couverture
+                          </Text>
+                          <Text
+                            className="mt-1 text-center text-[9px] leading-[14px]"
+                            style={{ color: theme.colors.foregroundMuted }}
+                          >
+                            Ajoutez une image 16:9 pour valoriser la formation.
+                          </Text>
+                        </View>
+                      )}
 
-                <PexelsCoverPicker
-                  selectedPhoto={selectedPexelsPhoto}
-                  initialQuery={form.title}
-                  disabled={saving || selectingCover}
-                  onSelect={(photo) => {
-                    setCoverFile(null);
-                    setSelectedPexelsPhoto(photo);
-                    setCoverPreviewUri(
-                      photo.landscapeUrl ||
-                        photo.previewUrl,
-                    );
-                    setError("");
-                    setNotice(
-                      "Couverture Pexels prête. Elle sera importée lors de l’enregistrement.",
-                    );
-                  }}
-                />
-                </View>
-              </>
-            ) : null}
+                      <Text
+                        className="mt-2 text-[9px] leading-[14px]"
+                        style={{ color: theme.colors.foregroundMuted }}
+                      >
+                        JPEG, PNG ou WebP · 10 Mo maximum · recadrage 16:9.
+                      </Text>
 
-            {step === 1 ? (
-              <>
-                <Field
-                  label="Objectifs pédagogiques"
-                  value={form.objectives}
-                  onChangeText={(value) =>
-                    field("objectives", value)
-                  }
-                  multiline
-                />
-                <Field
-                  label="Prérequis"
-                  value={form.prerequisites}
-                  onChangeText={(value) =>
-                    field("prerequisites", value)
-                  }
-                  multiline
-                />
-                <Field
-                  label="Public cible"
-                  value={form.targetAudience}
-                  onChangeText={(value) =>
-                    field("targetAudience", value)
-                  }
-                  multiline
-                />
-              </>
-            ) : null}
+                      {coverFile ? (
+                        <Text
+                          numberOfLines={1}
+                          className="mt-1 text-[9px] font-bold"
+                          style={{ color: theme.colors.foreground }}
+                        >
+                          {coverFile.name}
+                        </Text>
+                      ) : null}
 
-            {step === 2 ? (
-              <>
-                <SelectField
-                  label="Niveau"
-                  value={levelLabel(form.level)}
-                  onPress={() =>
-                    setPicker("LEVEL")
-                  }
-                />
-                <SelectField
-                  label="Langue"
-                  value={
-                    form.language === "en"
-                      ? "English"
-                      : form.language === "ar"
-                        ? "Arabe"
-                        : "Français"
-                  }
-                  onPress={() =>
-                    setPicker("LANGUAGE")
-                  }
-                />
-                <Field
-                  label="Durée estimée (h)"
-                  value={form.durationHours}
-                  onChangeText={(value) =>
-                    field("durationHours", value)
-                  }
-                  keyboardType="numeric"
-                />
-                <Field
-                  label="Participants max."
-                  value={form.maxLearners}
-                  onChangeText={(value) =>
-                    field("maxLearners", value)
-                  }
-                  keyboardType="numeric"
-                />
-              </>
-            ) : null}
+                      <View className="mt-2.5">
+                        <AppButton
+                          title={
+                            selectingCover
+                              ? "Ouverture..."
+                              : coverPreviewUri || coverImageUrl
+                                ? "Remplacer la couverture"
+                                : "Choisir une couverture"
+                          }
+                          onPress={() => void chooseCover()}
+                          loading={selectingCover}
+                          disabled={saving}
+                          variant="secondary"
+                          style={{ width: "100%" }}
+                        />
+                      </View>
 
-            {step === 3 ? (
-              <>
-                <SelectField
-                  label="Visibilité"
-                  value={visibilityLabel(
-                    form.visibility,
-                  )}
-                  onPress={() =>
-                    setPicker("VISIBILITY")
-                  }
-                />
-                <SelectField
-                  label="Mode d’inscription"
-                  value={enrollmentLabel(
-                    form.enrollmentMode,
-                  )}
-                  onPress={() =>
-                    setPicker("ENROLLMENT")
-                  }
-                />
-                {form.enrollmentMode ===
-                "ACCESS_CODE" ? (
-                  <Field
-                    label="Code d’accès"
-                    value={form.accessCode}
-                    onChangeText={(value) =>
-                      field("accessCode", value)
-                    }
-                    autoCapitalize="characters"
-                  />
+                      <PexelsCoverPicker
+                        selectedPhoto={selectedPexelsPhoto}
+                        initialQuery={form.title}
+                        disabled={saving || selectingCover}
+                        onSystemBack={requestCancel}
+                        onSelect={(photo) => {
+                          setCoverFile(null);
+                          setSelectedPexelsPhoto(photo);
+                          setCoverPreviewUri(
+                            photo.landscapeUrl || photo.previewUrl,
+                          );
+                          setError("");
+                          setNotice(
+                            "Couverture Pexels prête. Elle sera importée lors de l’enregistrement.",
+                          );
+                        }}
+                      />
+                    </View>
+                  </>
                 ) : null}
 
-                <View
-                  style={[
-                    styles.summary,
-                    {
-                      backgroundColor:
-                        theme.colors.surfaceSoft,
-                      borderColor:
-                        theme.colors.border,
-                    },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.summaryTitle,
-                      {
-                        color:
-                          theme.colors.foreground,
-                      },
-                    ]}
-                  >
-                    Prêt à enregistrer
-                  </Text>
-                  <Text
-                    style={[
-                      styles.summaryText,
-                      {
-                        color:
-                          theme.colors
-                            .foregroundMuted,
-                      },
-                    ]}
-                  >
-                    Le formateur responsable sera
-                    propriétaire de la formation.
-                    La création reste en brouillon.
-                  </Text>
-                </View>
-              </>
-            ) : null}
-          </View>
+                {step === 1 ? (
+                  <>
+                    <TrainingField
+                      onFocus={keepFocusedFieldVisible}
+                      label="Objectifs pédagogiques"
+                      value={form.objectives}
+                      onChangeText={(value) => field("objectives", value)}
+                      multiline
+                    />
+                    <TrainingField
+                      onFocus={keepFocusedFieldVisible}
+                      label="Prérequis"
+                      value={form.prerequisites}
+                      onChangeText={(value) => field("prerequisites", value)}
+                      multiline
+                    />
+                    <TrainingField
+                      onFocus={keepFocusedFieldVisible}
+                      label="Public cible"
+                      value={form.targetAudience}
+                      onChangeText={(value) => field("targetAudience", value)}
+                      multiline
+                    />
+                  </>
+                ) : null}
 
-          <View style={styles.footer}>
-            <AppButton
-              title={
-                step === 0
-                  ? "Annuler"
-                  : "Précédent"
-              }
-              variant="secondary"
-              onPress={() => {
-                if (step === 0) {
-                  requestCancel();
-                } else {
-                  setStep((current) =>
-                    Math.max(0, current - 1),
-                  );
-                }
-              }}
-              style={styles.footerButton}
-            />
+                {step === 2 ? (
+                  <>
+                    <TrainingSelectField
+                      label="Niveau"
+                      value={levelLabel(form.level)}
+                      onPress={() => setPicker("LEVEL")}
+                    />
+                    <TrainingSelectField
+                      label="Langue"
+                      value={
+                        form.language === "en"
+                          ? "English"
+                          : form.language === "ar"
+                            ? "Arabe"
+                            : "Français"
+                      }
+                      onPress={() => setPicker("LANGUAGE")}
+                    />
+                    <TrainingField
+                      onFocus={keepFocusedFieldVisible}
+                      label="Durée estimée (h)"
+                      value={form.durationHours}
+                      onChangeText={(value) => field("durationHours", value)}
+                      keyboardType="numeric"
+                    />
+                    <TrainingField
+                      onFocus={keepFocusedFieldVisible}
+                      label="Participants max."
+                      value={form.maxLearners}
+                      onChangeText={(value) => field("maxLearners", value)}
+                      keyboardType="numeric"
+                    />
+                  </>
+                ) : null}
 
-            <AppButton
-              title={
-                step < 3
-                  ? "Suivant"
-                  : saving
-                    ? "Enregistrement..."
-                    : editing
-                      ? "Enregistrer"
-                      : "Créer le brouillon"
-              }
-              loading={saving}
-              onPress={() => {
-                if (step < 3) {
-                  if (validate(step)) {
-                    setStep((current) =>
-                      Math.min(3, current + 1),
-                    );
+                {step === 3 ? (
+                  <>
+                    <TrainingSelectField
+                      label="Visibilité"
+                      value={visibilityLabel(form.visibility)}
+                      onPress={() => setPicker("VISIBILITY")}
+                    />
+                    <TrainingSelectField
+                      label="Mode d’inscription"
+                      value={enrollmentLabel(form.enrollmentMode)}
+                      onPress={() => setPicker("ENROLLMENT")}
+                    />
+
+                    {form.enrollmentMode === "ACCESS_CODE" ? (
+                      <TrainingField
+                        onFocus={keepFocusedFieldVisible}
+                        label="Code d’accès"
+                        value={form.accessCode}
+                        onChangeText={(value) => field("accessCode", value)}
+                        autoCapitalize="characters"
+                      />
+                    ) : null}
+
+                    <View className="mt-1 flex-row items-start rounded-[15px] border border-[#DDD1F5] bg-[#F7F2FF] px-3 py-3">
+                      <View className="h-8 w-8 items-center justify-center rounded-[10px] bg-white">
+                        <SymbolView
+                          name={{
+                            ios: "checkmark.shield.fill",
+                            android: "verified_user",
+                            web: "verified_user",
+                          }}
+                          tintColor="#7C3AED"
+                          size={13}
+                          weight="bold"
+                        />
+                      </View>
+                      <View className="ml-2.5 min-w-0 flex-1">
+                        <Text
+                          className="text-[10px] font-black"
+                          style={{ color: theme.colors.foreground }}
+                        >
+                          Prêt à enregistrer
+                        </Text>
+                        <Text
+                          className="mt-0.5 text-[9px] leading-[14px]"
+                          style={{ color: theme.colors.foregroundMuted }}
+                        >
+                          Le formateur responsable sera propriétaire de la formation. La création reste en brouillon.
+                        </Text>
+                      </View>
+                    </View>
+                  </>
+                ) : null}
+              </View>
+            </View>
+
+            <View className="mt-4 flex-row gap-2">
+              <AppButton
+                title={step === 0 ? "Annuler" : "Précédent"}
+                variant="secondary"
+                onPress={() => {
+                  if (step === 0) {
+                    requestCancel();
+                  } else {
+                    setStep((current) => Math.max(0, current - 1));
                   }
-                } else {
-                  void save();
+                }}
+                style={{ flex: 1 }}
+              />
+
+              <AppButton
+                title={
+                  step < 3
+                    ? "Suivant"
+                    : saving
+                      ? "Enregistrement..."
+                      : editing
+                        ? "Enregistrer"
+                        : "Créer le brouillon"
                 }
-              }}
-              style={styles.footerButton}
-            />
+                loading={saving}
+                onPress={() => {
+                  if (step < 3) {
+                    if (validate(step)) {
+                      setStep((current) => Math.min(3, current + 1));
+                    }
+                  } else {
+                    void save();
+                  }
+                }}
+                style={{ flex: 1 }}
+              />
+            </View>
           </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       <AppConfirmSheet
         visible={exitConfirmOpen}
@@ -1307,412 +1604,250 @@ export default function AdminTrainingEditorScreen({
         visible={picker !== null}
         transparent
         animationType="fade"
-        onRequestClose={() =>
-          setPicker(null)
-        }
+        statusBarTranslucent
+        onRequestClose={() => {
+          setPicker(null);
+          setTimeout(() => requestCancel(), 0);
+        }}
       >
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Fermer le sélecteur"
-          style={[styles.modalBackdrop, { paddingBottom: Math.max(14, insets.bottom + 8) }]}
-          onPress={() => setPicker(null)}
+        <KeyboardAvoidingView
+          className="flex-1"
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
           <View
-            style={[
-              styles.modalCard,
-              {
-                backgroundColor:
-                  theme.colors.surfaceElevated,
-                borderColor:
-                  theme.colors.border,
-              },
-            ]}
+            className="flex-1 justify-end bg-black/50 px-3 pt-8"
+            style={{ paddingBottom: Math.max(14, insets.bottom + 8) }}
           >
-            <Text
-              style={[
-                styles.modalTitle,
-                {
-                  color:
-                    theme.colors.foreground,
-                },
-              ]}
-            >
-              Choisir
-            </Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Fermer le sélecteur"
+              className="absolute inset-0"
+              onPress={() => setPicker(null)}
+            />
 
-            <ScrollView
-              style={styles.modalList}
+            <View
+              className="relative z-10 mx-auto w-full max-w-[680px] overflow-hidden rounded-[26px] border bg-white"
+              style={{
+                borderColor: "#DDD1F5",
+                maxHeight: "70%",
+              }}
             >
-              {pickerOptions().map((option) => (
-                <Pressable
-                  key={option.key}
-                  accessibilityRole="button"
-                  accessibilityLabel={option.label}
-                  onPress={() =>
-                    selectOption(option)
-                  }
-                  style={[
-                    styles.option,
-                    {
-                      borderBottomColor:
-                        theme.colors.border,
-                    },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.optionLabel,
-                      {
-                        color:
-                          theme.colors
-                            .foreground,
-                      },
-                    ]}
-                  >
-                    {option.label}
-                  </Text>
-                  {option.helper ? (
+              <View className="h-1 bg-[#7C3AED]" />
+
+              <View className="px-4 pb-3 pt-3.5">
+                <View className="flex-row items-start justify-between">
+                  <View className="min-w-0 flex-1 pr-3">
                     <Text
-                      style={[
-                        styles.optionHelper,
-                        {
-                          color:
-                            theme.colors
-                              .foregroundMuted,
-                        },
-                      ]}
+                      className="text-[16px] font-black"
+                      style={{ color: theme.colors.foreground }}
                     >
-                      {option.helper}
+                      {pickerTitle()}
                     </Text>
+
+                    <Text
+                      className="mt-0.5 text-[9px] leading-[14px]"
+                      style={{ color: theme.colors.foregroundMuted }}
+                    >
+                      {pickerSubtitle()}
+                    </Text>
+                  </View>
+
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Fermer"
+                    onPress={() => setPicker(null)}
+                    className="h-9 w-9 items-center justify-center rounded-[11px] bg-[#F3EEFF]"
+                  >
+                    <SymbolView
+                      name={{
+                        ios: "xmark",
+                        android: "close",
+                        web: "close",
+                      }}
+                      tintColor="#7C3AED"
+                      size={11}
+                      weight="bold"
+                    />
+                  </Pressable>
+                </View>
+
+                {picker === "CATEGORY" || picker === "TRAINER" ? (
+                  <View
+                    className="mt-3 flex-row items-center rounded-[13px] border bg-[#FCFBFD] px-3"
+                    style={{ borderColor: theme.colors.border }}
+                  >
+                    <SymbolView
+                      name={{
+                        ios: "magnifyingglass",
+                        android: "search",
+                        web: "search",
+                      }}
+                      tintColor={theme.colors.foregroundSubtle}
+                      size={13}
+                    />
+
+                    <TextInput
+                      value={pickerSearch}
+                      onChangeText={setPickerSearch}
+                      placeholder={
+                        picker === "CATEGORY"
+                          ? "Rechercher une catégorie"
+                          : "Rechercher un formateur"
+                      }
+                      placeholderTextColor={theme.colors.foregroundSubtle}
+                      className="ml-2 h-[44px] min-w-0 flex-1 text-[11px]"
+                      style={{ color: theme.colors.foreground }}
+                      autoCorrect={false}
+                      returnKeyType="search"
+                    />
+                  </View>
+                ) : null}
+              </View>
+
+              <ScrollView
+                className="border-t border-[#EEE9F0]"
+                contentContainerClassName="px-3 py-3"
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+              >
+                <View className="gap-2">
+                  {visiblePickerOptions().map((option) => {
+                    const selected = selectedPickerKey() === option.key;
+
+                    return (
+                      <Pressable
+                        key={option.key}
+                        accessibilityRole="button"
+                        accessibilityLabel={option.label}
+                        accessibilityState={{ selected }}
+                        onPress={() => selectOption(option)}
+                        android_ripple={{ color: "transparent" }}
+                        className="flex-row items-center rounded-[14px] border px-3 py-3"
+                        style={{
+                          borderColor: selected
+                            ? "#CBB5F7"
+                            : "#ECE7EF",
+                          backgroundColor: selected
+                            ? "#F7F2FF"
+                            : "#FFFFFF",
+                        }}
+                      >
+                        <View
+                          className="h-9 w-9 shrink-0 items-center justify-center rounded-[11px]"
+                          style={{
+                            backgroundColor: selected
+                              ? "#EDE4FF"
+                              : "#F8F6F9",
+                          }}
+                        >
+                          <SymbolView
+                            name={{
+                              ios:
+                                picker === "CATEGORY"
+                                  ? "tag.fill"
+                                  : picker === "TRAINER"
+                                    ? "person.fill"
+                                    : "circle.fill",
+                              android:
+                                picker === "CATEGORY"
+                                  ? "category"
+                                  : picker === "TRAINER"
+                                    ? "person"
+                                    : "circle",
+                              web:
+                                picker === "CATEGORY"
+                                  ? "category"
+                                  : picker === "TRAINER"
+                                    ? "person"
+                                    : "circle",
+                            }}
+                            tintColor={selected ? "#7C3AED" : "#8B7F94"}
+                            size={12}
+                            weight="bold"
+                          />
+                        </View>
+
+                        <View className="ml-2.5 min-w-0 flex-1">
+                          <Text
+                            className="text-[11px] font-black"
+                            style={{
+                              color: selected
+                                ? "#5B21B6"
+                                : theme.colors.foreground,
+                            }}
+                          >
+                            {option.label}
+                          </Text>
+
+                          {option.helper ? (
+                            <Text
+                              className="mt-0.5 text-[8px]"
+                              style={{
+                                color: theme.colors.foregroundMuted,
+                              }}
+                            >
+                              {option.helper}
+                            </Text>
+                          ) : null}
+                        </View>
+
+                        <View
+                          className="ml-2 h-7 w-7 items-center justify-center rounded-[9px]"
+                          style={{
+                            backgroundColor: selected
+                              ? "#7C3AED"
+                              : "#F3EEFF",
+                          }}
+                        >
+                          <SymbolView
+                            name={{
+                              ios: selected
+                                ? "checkmark"
+                                : "chevron.right",
+                              android: selected
+                                ? "check"
+                                : "chevron_right",
+                              web: selected
+                                ? "check"
+                                : "chevron_right",
+                            }}
+                            tintColor={selected ? "#FFFFFF" : "#7C3AED"}
+                            size={10}
+                            weight="bold"
+                          />
+                        </View>
+                      </Pressable>
+                    );
+                  })}
+
+                  {visiblePickerOptions().length === 0 ? (
+                    <View className="items-center px-4 py-7">
+                      <View className="h-10 w-10 items-center justify-center rounded-[12px] bg-[#F3EEFF]">
+                        <SymbolView
+                          name={{
+                            ios: "magnifyingglass",
+                            android: "search",
+                            web: "search",
+                          }}
+                          tintColor="#7C3AED"
+                          size={14}
+                        />
+                      </View>
+                      <Text
+                        className="mt-2 text-[11px] font-black"
+                        style={{ color: theme.colors.foreground }}
+                      >
+                        Aucun résultat
+                      </Text>
+                    </View>
                   ) : null}
-                </Pressable>
-              ))}
-            </ScrollView>
+                </View>
+              </ScrollView>
+            </View>
           </View>
-        </Pressable>
+        </KeyboardAvoidingView>
       </Modal>
     </ScreenContainer>
   );
 
-  function Field(
-    props: React.ComponentProps<
-      typeof TextInput
-    > & {
-      label: string;
-      large?: boolean;
-    },
-  ) {
-    const {
-      label,
-      multiline,
-      large,
-      ...inputProps
-    } = props;
-
-    return (
-      <View style={styles.field}>
-        <Text
-          style={[
-            styles.label,
-            {
-              color:
-                theme.colors.foregroundMuted,
-            },
-          ]}
-        >
-          {label}
-        </Text>
-        <TextInput
-          {...inputProps}
-          accessibilityLabel={inputProps.accessibilityLabel ?? label}
-          multiline={multiline}
-          placeholderTextColor={
-            theme.colors.foregroundSubtle
-          }
-          style={[
-            styles.input,
-            multiline && styles.multiline,
-            large && styles.largeInput,
-            {
-              color:
-                theme.colors.foreground,
-              backgroundColor:
-                theme.colors.background,
-              borderColor:
-                theme.colors.border,
-            },
-          ]}
-        />
-      </View>
-    );
-  }
-
-  function SelectField({
-    label,
-    value,
-    onPress,
-  }: {
-    label: string;
-    value: string;
-    onPress: () => void;
-  }) {
-    return (
-      <View style={styles.field}>
-        <Text
-          style={[
-            styles.label,
-            {
-              color:
-                theme.colors.foregroundMuted,
-            },
-          ]}
-        >
-          {label}
-        </Text>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`${label} : ${value || "Non renseigné"}`}
-          onPress={onPress}
-          style={[
-            styles.select,
-            {
-              backgroundColor:
-                theme.colors.background,
-              borderColor:
-                theme.colors.border,
-            },
-          ]}
-        >
-          <Text
-            style={[
-              styles.selectText,
-              {
-                color:
-                  theme.colors.foreground,
-              },
-            ]}
-          >
-            {value}
-          </Text>
-          <Text
-            style={{
-              color:
-                theme.colors.foregroundSubtle,
-            }}
-          >
-            ›
-          </Text>
-        </Pressable>
-      </View>
-    );
-  }
 }
-
-const styles = StyleSheet.create({
-  scroll: {
-    flex: 1,
-  },
-  content: {
-    flexGrow: 1,
-    paddingBottom: 36,
-  },
-  page: {
-    width: "100%",
-    maxWidth: 760,
-    alignSelf: "center",
-  },
-  eyebrow: {
-    fontSize: 11,
-    fontWeight: "900",
-    letterSpacing: 1,
-  },
-  title: {
-    fontSize: 28,
-    lineHeight: 34,
-    fontWeight: "900",
-    marginTop: 5,
-  },
-  subtitle: {
-    fontSize: 14,
-    marginTop: 5,
-  },
-  progress: {
-    flexDirection: "row",
-    gap: 8,
-    marginTop: 18,
-    marginBottom: 18,
-  },
-  progressItem: {
-    flex: 1,
-    minWidth: 0,
-  },
-  progressBar: {
-    height: 4,
-    borderRadius: 99,
-  },
-  progressLabel: {
-    fontSize: 10,
-    fontWeight: "800",
-    marginTop: 6,
-  },
-  notice: {
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 14,
-  },
-  noticeText: {
-    fontSize: 13,
-    fontWeight: "800",
-  },
-  card: {
-    padding: 18,
-  },
-  field: {
-    marginBottom: 15,
-  },
-  label: {
-    fontSize: 11,
-    fontWeight: "900",
-    marginBottom: 7,
-  },
-  input: {
-    minHeight: 48,
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 13,
-    paddingVertical: 11,
-    fontSize: 14,
-  },
-  multiline: {
-    minHeight: 84,
-    textAlignVertical: "top",
-  },
-  largeInput: {
-    minHeight: 120,
-  },
-  select: {
-    minHeight: 48,
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 13,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  selectText: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  fieldHelp: {
-    fontSize: 12,
-    lineHeight: 18,
-    marginTop: -4,
-    marginBottom: 12,
-  },
-  coverSection: {
-    marginTop: 2,
-  },
-  coverPreview: {
-    width: "100%",
-    aspectRatio: 16 / 9,
-    borderWidth: 1,
-    borderRadius: 14,
-    marginBottom: 10,
-  },
-  coverPlaceholder: {
-    width: "100%",
-    aspectRatio: 16 / 9,
-    borderWidth: 1,
-    borderStyle: "dashed",
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 18,
-    marginBottom: 10,
-  },
-  coverPlaceholderTitle: {
-    fontSize: 14,
-    fontWeight: "900",
-  },
-  coverPlaceholderText: {
-    fontSize: 12,
-    lineHeight: 18,
-    textAlign: "center",
-    marginTop: 4,
-  },
-  coverHelp: {
-    fontSize: 11,
-    lineHeight: 16,
-    marginBottom: 8,
-  },
-  coverFileName: {
-    fontSize: 11,
-    fontWeight: "800",
-    marginBottom: 8,
-  },
-  coverButton: {
-    alignSelf: "flex-start",
-    minWidth: 190,
-  },
-  summary: {
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 13,
-  },
-  summaryTitle: {
-    fontSize: 13,
-    fontWeight: "900",
-  },
-  summaryText: {
-    fontSize: 11,
-    lineHeight: 17,
-    marginTop: 4,
-  },
-  footer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    gap: 10,
-    marginTop: 16,
-  },
-  footerButton: {
-    minWidth: 150,
-  },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.55)",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 18,
-  },
-  modalCard: {
-    width: "100%",
-    maxWidth: 620,
-    maxHeight: "78%",
-    borderWidth: 1,
-    borderRadius: 16,
-    padding: 16,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "900",
-    marginBottom: 10,
-  },
-  modalList: {
-    minHeight: 80,
-  },
-  option: {
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-  },
-  optionLabel: {
-    fontSize: 14,
-    fontWeight: "800",
-  },
-  optionHelper: {
-    fontSize: 10,
-    marginTop: 3,
-  },
-});

@@ -1,10 +1,11 @@
+import { SymbolView } from "expo-symbols";
+import { type ComponentProps } from "react";
 import {
-  StyleSheet,
+  Pressable,
   Text,
   View,
 } from "react-native";
 
-import AppButton from "../AppButton";
 import { TrainingCover } from "../ux/RichPrimitives";
 import {
   buildLearnerMediaUrl,
@@ -19,14 +20,52 @@ type Props = {
   onOpen: () => void;
 };
 
-function visibilityLabel(value?: string | null): string {
+type SymbolName = ComponentProps<typeof SymbolView>["name"];
+
+function visibilityLabel(
+  value?: string | null,
+): string {
   if (value === "PUBLIC") return "Public";
   if (value === "ASSIGNED_ONLY") {
-    return "Affect\u00E9s uniquement";
+    return "Affecté uniquement";
   }
-  if (value === "PRIVATE") return "Priv\u00E9";
+  if (value === "PRIVATE") return "Privé";
 
-  return value || "Acc\u00E8s encadr\u00E9";
+  return value || "Accès encadré";
+}
+
+function MetaPill({
+  icon,
+  value,
+  tint,
+  background,
+}: {
+  icon: SymbolName;
+  value: string;
+  tint: string;
+  background: string;
+}) {
+  return (
+    <View className="min-h-[29px] rounded-[10px] border border-[#EEE9F0] bg-[#FBFAFC] px-[6px] flex-row items-center">
+      <View
+        className="w-[22px] h-[22px] rounded-[7px] mr-[5px] items-center justify-center" style={{ backgroundColor: background }}
+      >
+        <SymbolView
+          name={icon}
+          tintColor={tint}
+          size={11}
+          weight="bold"
+        />
+      </View>
+
+      <Text
+        numberOfLines={1}
+        className="text-[#475467] text-[10px] font-extrabold"
+      >
+        {value}
+      </Text>
+    </View>
+  );
 }
 
 export default function CatalogLearningPathCard({
@@ -38,308 +77,275 @@ export default function CatalogLearningPathCard({
   const description =
     path.shortDescription ||
     path.description ||
-    "D\u00E9couvre les formations organis\u00E9es dans ce parcours.";
+    "Découvre les formations organisées dans ce parcours.";
 
   const coverUrl = buildLearnerMediaUrl(
-    path.coverImageUrl || path.coverImagePath,
+    path.coverImageUrl ||
+      path.coverImagePath,
   );
 
   return (
-    <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: theme.colors.surface,
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`Ouvrir le parcours ${path.title}`}
+      onPress={onOpen}
+      android_ripple={{
+        color: "transparent",
+      }}
+      className="overflow-hidden rounded-[21px] border bg-[#FFFFFF]" style={[{ shadowOpacity: 0.035, shadowRadius: 8, shadowOffset: {
+      width: 0,
+      height: 3,
+    }, elevation: 1 }, {
           borderColor: path.assignedToMe
-            ? theme.colors.accent
+            ? "#C4B5FD"
             : theme.colors.border,
-          borderRadius: theme.shape.cardRadius,
-          borderWidth: Math.max(
-            theme.shape.borderWidth,
-            path.assignedToMe ? 2 : 1,
-          ),
-          padding: theme.shape.cardPadding,
-          shadowColor: theme.colors.foreground,
-          shadowOpacity: theme.shape.shadowOpacity,
-        },
-      ]}
+          shadowColor: theme.colors.shadow,
+        }]}
     >
-      <TrainingCover
-        title={path.title}
-        coverUrl={coverUrl}
-        spacingAfter
-        resizeMode="contain"
-      />
+      <View className="h-[98px] overflow-hidden bg-[#F7F4F9]">
+        <TrainingCover
+          title={path.title}
+          coverUrl={coverUrl}
+          resizeMode="contain"
+        />
 
-      <View style={styles.badgeRow}>
-        <View
-          style={[
-            styles.badge,
-            {
-              backgroundColor: theme.colors.surfaceSoft,
-              borderColor: theme.colors.accent,
-            },
-          ]}
-        >
-          <Text
-            style={[
-              styles.badgeText,
-              { color: theme.colors.accent },
-            ]}
-          >
+        <View className="absolute top-[9px] left-[9px] min-h-[27px] px-[8px] rounded-full bg-[rgba(255,255,255,0.95)] flex-row items-center gap-[5px]">
+          <SymbolView
+            name={{
+              ios: "point.topleft.down.curvedto.point.bottomright.up",
+              android: "route",
+              web: "route",
+            }}
+            tintColor="#7C3AED"
+            size={10}
+            weight="bold"
+          />
+          <Text className="text-[#7C3AED] text-[11px] font-black">
             Parcours
           </Text>
         </View>
 
         <View
-          style={[
-            styles.badge,
-            {
-              backgroundColor: theme.colors.surfaceElevated,
-              borderColor: theme.colors.border,
-            },
-          ]}
+          className={`${(path.assignedToMe ? "absolute top-[9px] right-[9px] min-h-[27px] px-[8px] rounded-full bg-[#ECFDF3] flex-row items-center gap-[5px]" : "absolute top-[9px] right-[9px] min-h-[27px] px-[8px] rounded-full bg-[#EFF6FF] flex-row items-center gap-[5px]")}`}
         >
-          <Text
-            style={[
-              styles.badgeText,
-              { color: theme.colors.foregroundMuted },
-            ]}
-          >
-            {visibilityLabel(path.visibility)}
-          </Text>
-        </View>
+          <SymbolView
+            name={
+              path.assignedToMe
+                ? {
+                    ios: "checkmark.seal.fill",
+                    android: "verified",
+                    web: "verified",
+                  }
+                : {
+                    ios: "sparkles",
+                    android: "auto_awesome",
+                    web: "auto_awesome",
+                  }
+            }
+            tintColor={
+              path.assignedToMe
+                ? "#16A36A"
+                : "#2563EB"
+            }
+            size={10}
+            weight="bold"
+          />
 
-        <View
-          style={[
-            styles.badge,
-            {
-              backgroundColor: theme.colors.surfaceSoft,
-              borderColor: path.assignedToMe
-                ? theme.colors.success
-                : theme.colors.border,
-            },
-          ]}
-        >
           <Text
-            style={[
-              styles.badgeText,
-              {
-                color: path.assignedToMe
-                  ? theme.colors.success
-                  : theme.colors.foregroundMuted,
-              },
-            ]}
+            className={`${(path.assignedToMe ? "text-[#16A36A] text-[11px] font-black" : "text-[#2563EB] text-[11px] font-black")}`}
           >
-            {path.assignedToMe ? "Affect\u00E9" : "\u00C0 d\u00E9couvrir"}
+            {path.assignedToMe
+              ? "Affecté"
+              : "À découvrir"}
           </Text>
         </View>
       </View>
 
-      <Text
-        style={[
-          styles.title,
-          { color: theme.colors.foreground },
-        ]}
-      >
-        {path.title}
-      </Text>
-
-      <Text
-        style={[
-          styles.description,
-          { color: theme.colors.foregroundMuted },
-        ]}
-      >
-        {description}
-      </Text>
-
-      <View style={styles.metaRow}>
-        <View
-          style={[
-            styles.metaPill,
-            { backgroundColor: theme.colors.surfaceSoft },
-          ]}
-        >
+      <View className="p-[11px]">
+        <View className="flex-row items-start gap-[8px]">
           <Text
-            style={[
-              styles.metaText,
-              { color: theme.colors.foregroundMuted },
-            ]}
+            numberOfLines={2}
+            className="flex-1 min-w-[0px] text-[16px] leading-[21px] font-black" style={{ color: theme.colors.foreground }}
           >
-            {path.totalTrainings} formation
-            {path.totalTrainings > 1 ? "s" : ""}
+            {path.title}
           </Text>
-        </View>
 
-        <View
-          style={[
-            styles.metaPill,
-            { backgroundColor: theme.colors.surfaceSoft },
-          ]}
-        >
-          <Text
-            style={[
-              styles.metaText,
-              { color: theme.colors.foregroundMuted },
-            ]}
-          >
-            {path.requiredTrainings} obligatoire
-            {path.requiredTrainings > 1 ? "s" : ""}
-          </Text>
-        </View>
-
-        {path.optionalTrainings > 0 ? (
-          <View
-            style={[
-              styles.metaPill,
-              { backgroundColor: theme.colors.surfaceSoft },
-            ]}
-          >
-            <Text
-              style={[
-                styles.metaText,
-                { color: theme.colors.foregroundMuted },
-              ]}
-            >
-              {path.optionalTrainings} facultative
-              {path.optionalTrainings > 1 ? "s" : ""}
+          <View className="min-h-[27px] max-w-[112px] px-[8px] rounded-full bg-[#F2F4F7] justify-center">
+            <Text className="text-[#667085] text-[10px] font-extrabold">
+              {visibilityLabel(path.visibility)}
             </Text>
           </View>
-        ) : null}
+        </View>
 
-        {path.estimatedDurationHours > 0 ? (
+        <Text
+          numberOfLines={2}
+          className="mt-[4px] text-[12px] leading-[17px]" style={{
+              color:
+                theme.colors.foregroundMuted,
+            }}
+        >
+          {description}
+        </Text>
+
+        <View className="mt-[8px] flex-row flex-wrap gap-[6px]">
+          <MetaPill
+            icon={{
+              ios: "rectangle.stack.fill",
+              android: "view_agenda",
+              web: "view_agenda",
+            }}
+            value={`${path.totalTrainings} formation${
+              path.totalTrainings > 1 ? "s" : ""
+            }`}
+            tint="#7C3AED"
+            background="#F3EEFF"
+          />
+
+          <MetaPill
+            icon={{
+              ios: "checkmark.circle.fill",
+              android: "check_circle",
+              web: "check_circle",
+            }}
+            value={`${path.requiredTrainings} obligatoire${
+              path.requiredTrainings > 1 ? "s" : ""
+            }`}
+            tint="#16A36A"
+            background="#ECFDF3"
+          />
+
+          {path.optionalTrainings > 0 ? (
+            <MetaPill
+              icon={{
+                ios: "plus.circle.fill",
+                android: "add_circle",
+                web: "add_circle",
+              }}
+              value={`${path.optionalTrainings} facultative${
+                path.optionalTrainings > 1 ? "s" : ""
+              }`}
+              tint="#2563EB"
+              background="#EFF6FF"
+            />
+          ) : null}
+
+          {path.estimatedDurationHours > 0 ? (
+            <MetaPill
+              icon={{
+                ios: "clock.fill",
+                android: "schedule",
+                web: "schedule",
+              }}
+              value={`${path.estimatedDurationHours} h`}
+              tint="#D97706"
+              background="#FFF7ED"
+            />
+          ) : null}
+        </View>
+
+        <View
+          className={`mt-[8px] min-h-[50px] rounded-[13px] border px-[8px] flex-row items-center ${(path.canStart ? "border-[#BBF7D0] bg-[#F0FDF4]" : "border-[#BFDBFE] bg-[#EFF6FF]")}`}
+        >
           <View
-            style={[
-              styles.metaPill,
-              { backgroundColor: theme.colors.surfaceSoft },
-            ]}
+            className={`w-[32px] h-[32px] rounded-[10px] mr-[8px] items-center justify-center ${(path.canStart ? "bg-[#FFFFFF]" : "bg-[#FFFFFF]")}`}
           >
+            <SymbolView
+              name={
+                path.canStart
+                  ? {
+                      ios: "play.circle.fill",
+                      android: "play_circle",
+                      web: "play_circle",
+                    }
+                  : {
+                      ios: "eye.fill",
+                      android: "visibility",
+                      web: "visibility",
+                    }
+              }
+              tintColor={
+                path.canStart
+                  ? "#16A36A"
+                  : "#2563EB"
+              }
+              size={14}
+              weight="bold"
+            />
+          </View>
+
+          <View className="flex-1 min-w-[0px]">
             <Text
-              style={[
-                styles.metaText,
-                { color: theme.colors.foregroundMuted },
-              ]}
+              className="text-[11px] font-black" style={{
+                  color: path.canStart
+                    ? "#15803D"
+                    : "#1D4ED8",
+                }}
             >
-              {path.estimatedDurationHours} h
+              {path.canStart
+                ? "Prêt à démarrer"
+                : "Consultable"}
+            </Text>
+
+            <Text className="mt-[2px] text-[#667085] text-[10px] leading-[14px]">
+              {path.canStart
+                ? "Ce parcours t’est affecté et peut être démarré."
+                : "Tu peux découvrir son contenu. Une affectation est requise pour démarrer."}
             </Text>
           </View>
-        ) : null}
-      </View>
+        </View>
 
-      <View
-        style={[
-          styles.stateBox,
-          {
-            backgroundColor: theme.colors.surfaceSoft,
-            borderColor: path.canStart
-              ? theme.colors.success
-              : theme.colors.info,
-            borderRadius: theme.shape.controlRadius,
-            borderWidth: Math.max(
-              1,
-              theme.shape.borderWidth,
-            ),
-            padding: theme.shape.cardPadding,
-          },
-        ]}
-      >
-        <Text
-          style={[
-            styles.stateTitle,
-            {
-              color: path.canStart
-                ? theme.colors.success
-                : theme.colors.info,
-            },
-          ]}
+        <View
+          className={`mt-[9px] min-h-[52px] rounded-[15px] border px-[7px] flex-row items-center ${(path.canStart ? "border-[#7C3AED] bg-[#7C3AED]" : "border-[#5B21B6] bg-[#5B21B6]")}`}
         >
-          {path.canStart
-            ? "Pr\u00EAt \u00E0 d\u00E9marrer"
-            : "Consultable"}
-        </Text>
+          <View className="w-[36px] h-[36px] rounded-[12px] mr-[9px] bg-[rgba(255,255,255,0.16)] items-center justify-center">
+            <SymbolView
+              name={
+                path.canStart
+                  ? {
+                      ios: "play.fill",
+                      android: "play_arrow",
+                      web: "play_arrow",
+                    }
+                  : {
+                      ios: "eye.fill",
+                      android: "visibility",
+                      web: "visibility",
+                    }
+              }
+              tintColor="#FFFFFF"
+              size={13}
+              weight="bold"
+            />
+          </View>
 
-        <Text
-          style={[
-            styles.stateText,
-            { color: theme.colors.foregroundMuted },
-          ]}
-        >
-          {path.canStart
-            ? "Ce parcours t\u2019est affect\u00E9. Ouvre-le pour voir ta progression."
-            : "Tu peux d\u00E9couvrir son contenu. Une affectation est requise pour d\u00E9marrer."}
-        </Text>
+          <View className="flex-1 min-w-[0px]">
+            <Text className="text-[rgba(255,255,255,0.78)] text-[9px] leading-[11px] font-black tracking-[0.45px]">
+              {path.canStart
+                ? "PARCOURS DISPONIBLE"
+                : "CONSULTATION"}
+            </Text>
 
-        <AppButton
-          title={path.canStart ? "Ouvrir le parcours" : "D\u00E9couvrir"}
-          onPress={onOpen}
-          variant={path.canStart ? "primary" : "secondary"}
-          style={styles.action}
-        />
+            <Text className="mt-[2px] text-[#FFFFFF] text-[12px] leading-[16px] font-black">
+              {path.canStart
+                ? "Ouvrir le parcours"
+                : "Consulter le parcours"}
+            </Text>
+          </View>
+
+          <View className="w-[30px] h-[30px] rounded-[15px] bg-[rgba(255,255,255,0.16)] items-center justify-center">
+            <SymbolView
+              name={{
+                ios: "chevron.right",
+                android: "chevron_right",
+                web: "chevron_right",
+              }}
+              tintColor="#FFFFFF"
+              size={11}
+              weight="bold"
+            />
+          </View>
+        </View>
       </View>
-    </View>
+    </Pressable>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    width: "100%",
-    marginBottom: 16,
-  },
-  badgeRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 12,
-  },
-  badge: {
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  badgeText: {
-    fontSize: 11,
-    fontWeight: "800",
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: "900",
-    marginBottom: 8,
-  },
-  description: {
-    fontSize: 14,
-    lineHeight: 21,
-    marginBottom: 14,
-  },
-  metaRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 14,
-  },
-  metaPill: {
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  metaText: {
-    fontSize: 11,
-    fontWeight: "700",
-  },
-  stateBox: {
-    marginTop: 2,
-  },
-  stateTitle: {
-    fontSize: 14,
-    fontWeight: "900",
-    marginBottom: 5,
-  },
-  stateText: {
-    fontSize: 13,
-    lineHeight: 19,
-  },
-  action: {
-    marginTop: 12,
-  },
-});

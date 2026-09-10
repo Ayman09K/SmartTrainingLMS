@@ -1,11 +1,7 @@
-import {
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { SymbolView, type SymbolViewProps } from "expo-symbols";
+import { Stack } from "expo-router";
+import { Pressable, ScrollView, Text, View } from "react-native";
 
-import AppButton from "../../components/AppButton";
 import ScreenContainer from "../../components/ScreenContainer";
 import {
   useSmartTrainingTheme,
@@ -18,11 +14,13 @@ type Props = {
 type Section = {
   title: string;
   paragraphs: string[];
+  icon: SymbolViewProps["name"];
 };
 
 const sections: Section[] = [
   {
     title: "Données traitées",
+    icon: { ios: "person.text.rectangle.fill", android: "badge", web: "badge" },
     paragraphs: [
       "Compte et profil : prénom, nom, adresse e-mail, civilité, photo de profil, rôle, état du compte et préférences d’apparence lorsque ces informations sont renseignées.",
       "Parcours LMS : formations, inscriptions, invitations, groupes ou cohortes, accès aux contenus, progression, complétions et activité sur les modules, leçons et ressources.",
@@ -33,6 +31,7 @@ const sections: Section[] = [
   },
   {
     title: "Finalités",
+    icon: { ios: "scope", android: "track_changes", web: "track_changes" },
     paragraphs: [
       "Créer, sécuriser et administrer les comptes SmartTraining.",
       "Donner accès aux formations et assurer le fonctionnement du LMS.",
@@ -44,6 +43,7 @@ const sections: Section[] = [
   },
   {
     title: "Accès aux données",
+    icon: { ios: "person.2.badge.key.fill", android: "admin_panel_settings", web: "admin_panel_settings" },
     paragraphs: [
       "L’accès dépend du rôle et du besoin métier : l’apprenant consulte principalement ses propres données ; le formateur accède aux données pédagogiques des apprenants qu’il est autorisé à suivre ; l’administrateur dispose des accès nécessaires à l’administration de l’instance.",
       "Les échanges entre services sont limités aux besoins fonctionnels de la plateforme.",
@@ -51,6 +51,7 @@ const sections: Section[] = [
   },
   {
     title: "Sécurité",
+    icon: { ios: "lock.shield.fill", android: "security", web: "security" },
     paragraphs: [
       "SmartTraining utilise notamment une authentification par jeton, des contrôles de rôle et d’autorisation, des mots de passe stockés sous forme protégée, des liens de réinitialisation à durée limitée et à usage unique ainsi que des protections contre les tentatives répétées d’authentification.",
       "La sécurité du transport et de l’hébergement dépend également de la configuration du déploiement utilisé.",
@@ -58,6 +59,7 @@ const sections: Section[] = [
   },
   {
     title: "Conservation",
+    icon: { ios: "archivebox.fill", android: "inventory_2", web: "inventory_2" },
     paragraphs: [
       "Les données sont conservées aussi longtemps qu’elles sont nécessaires au fonctionnement du compte, au parcours de formation, au suivi pédagogique, à l’administration de l’instance et aux obligations applicables au déploiement concerné.",
       "SmartTraining n’affiche pas ici une durée générique qui ne serait pas démontrée par la configuration réelle.",
@@ -65,6 +67,7 @@ const sections: Section[] = [
   },
   {
     title: "Demandes et suppression",
+    icon: { ios: "trash.fill", android: "delete", web: "delete" },
     paragraphs: [
       "Vous pouvez demander des informations sur vos données ou la suppression de votre compte auprès de l’administrateur de votre instance SmartTraining.",
       "Selon le contexte, certaines données pédagogiques peuvent devoir être conservées ou anonymisées lorsqu’une exigence technique, pédagogique ou réglementaire l’impose. Le parcours de demande de suppression proposé dans l’application est traité séparément par la fonctionnalité dédiée.",
@@ -72,6 +75,7 @@ const sections: Section[] = [
   },
   {
     title: "Contact",
+    icon: { ios: "envelope.fill", android: "mail", web: "mail" },
     paragraphs: [
       "Pour une demande liée à la confidentialité, contactez l’administrateur de votre instance SmartTraining. Pour une application distribuée, les coordonnées développeur publiées avec l’application constituent également un point de contact.",
     ],
@@ -82,226 +86,247 @@ export default function PrivacyScreen({ onBack }: Props) {
   const { theme } = useSmartTrainingTheme();
 
   return (
-    <ScreenContainer>
+    <>
+      <Stack.Screen
+        options={{
+          title: "Confidentialité",
+          headerTitleAlign: "center",
+          headerBackVisible: false,
+          headerLeft: () => (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Retour"
+              hitSlop={6}
+              onPress={onBack}
+              android_ripple={{ color: "transparent" }}
+              style={({ pressed }) => ({
+                width: 44,
+                height: 44,
+                marginLeft: 2,
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: 14,
+                borderWidth: 1,
+                borderColor: "rgba(255,255,255,0.18)",
+                backgroundColor: pressed
+                  ? "rgba(255,255,255,0.18)"
+                  : "rgba(255,255,255,0.10)",
+              })}
+            >
+              <SymbolView
+                name={{
+                  ios: "chevron.left",
+                  android: "chevron_left",
+                  web: "chevron_left",
+                }}
+                tintColor={theme.colors.headerForeground}
+                size={24}
+                weight="bold"
+              />
+            </Pressable>
+          ),
+        }}
+      />
+      <ScreenContainer>
       <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.content}
+        className="flex-1"
+        style={{ backgroundColor: theme.colors.background }}
+        contentContainerStyle={{ paddingBottom: 22 }}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.page}>
-          <AppButton
-            title="Retour"
-            onPress={onBack}
-            variant="secondary"
-            style={styles.backButton}
-          />
-
+        <View className="w-full self-center" style={{ maxWidth: 860 }}>
           <View
-            style={[
-              styles.hero,
-              {
-                backgroundColor: theme.colors.surface,
-                borderColor: theme.colors.border,
-                borderRadius: theme.shape.cardRadius,
-                borderWidth: theme.shape.borderWidth,
-                padding: theme.shape.cardPadding,
-              },
-            ]}
+            className="overflow-hidden rounded-[22px] border"
+            style={{
+              backgroundColor: theme.colors.surface,
+              borderColor: theme.colors.border,
+              shadowColor: theme.colors.shadow,
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: theme.shape.shadowOpacity,
+              shadowRadius: 14,
+              elevation: 2,
+            }}
           >
-            <Text style={[styles.eyebrow, { color: theme.colors.accent }]}>
-              CONFIDENTIALITÉ
-            </Text>
-            <Text style={[styles.title, { color: theme.colors.foreground }]}>
-              Politique de confidentialité
-            </Text>
-            <Text
-              style={[
-                styles.lead,
-                { color: theme.colors.foregroundMuted },
-              ]}
-            >
-              Comprendre quelles données SmartTraining utilise, pourquoi elles
-              sont nécessaires et comment elles sont protégées.
-            </Text>
-            <Text
-              style={[
-                styles.updated,
-                { color: theme.colors.foregroundSubtle },
-              ]}
-            >
-              Dernière mise à jour : 20 août 2026 · Web & Mobile
-            </Text>
+            <View className="h-1.5" style={{ backgroundColor: theme.colors.accent }} />
+            <View className="relative overflow-hidden px-4 py-3.5">
+              <View
+                className="absolute -right-12 -top-14 h-32 w-32 rounded-full"
+                style={{ backgroundColor: theme.colors.surfaceSoft }}
+              />
+              <View className="flex-row items-center">
+                <View
+                  className="h-12 w-12 items-center justify-center rounded-[16px]"
+                  style={{ backgroundColor: theme.colors.surfaceSoft }}
+                >
+                  <SymbolView
+                    name={{ ios: "hand.raised.fill", android: "privacy_tip", web: "privacy_tip" }}
+                    tintColor={theme.colors.accent}
+                    size={22}
+                    weight="bold"
+                  />
+                </View>
+                <View className="ml-3 min-w-0 flex-1 pr-2">
+                  <Text
+                    className="text-[10px] font-black uppercase tracking-[0.9px]"
+                    style={{ color: theme.colors.accent }}
+                  >
+                    Confidentialité
+                  </Text>
+                  <Text
+                    className="mt-0.5 text-[22px] font-black leading-[27px]"
+                    style={{ color: theme.colors.foreground }}
+                  >
+                    Vos données, en toute transparence
+                  </Text>
+                  <Text
+                    className="mt-1 text-[12px] leading-[18px]"
+                    style={{ color: theme.colors.foregroundMuted }}
+                  >
+                    Comprendre quelles données SmartTraining utilise, pourquoi elles sont nécessaires et comment elles sont protégées.
+                  </Text>
+                </View>
+              </View>
+
+              <View className="mt-3 flex-row flex-wrap gap-1.5">
+                {["Données", "Sécurité", "Contrôle"].map((label) => (
+                  <View
+                    key={label}
+                    className="rounded-full px-2.5 py-1"
+                    style={{ backgroundColor: theme.colors.surfaceSoft }}
+                  >
+                    <Text
+                      className="text-[10px] font-black"
+                      style={{ color: theme.colors.accent }}
+                    >
+                      {label}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+
+              <Text
+                className="mt-2.5 text-[10px] font-bold"
+                style={{ color: theme.colors.foregroundSubtle }}
+              >
+                Dernière mise à jour : 20 août 2026 · Web & Mobile
+              </Text>
+            </View>
           </View>
 
           <View
-            style={[
-              styles.notice,
-              {
-                backgroundColor: theme.colors.surfaceSoft,
-                borderColor: theme.colors.border,
-                borderRadius: theme.shape.controlRadius,
-                borderWidth: theme.shape.borderWidth,
-              },
-            ]}
+            className="mt-2.5 flex-row items-start rounded-[16px] border px-3.5 py-3"
+            style={{
+              backgroundColor: theme.colors.surfaceSoft,
+              borderColor: theme.colors.border,
+            }}
           >
-            <Text
-              style={[
-                styles.noticeText,
-                { color: theme.colors.foregroundMuted },
-              ]}
+            <View
+              className="h-8 w-8 items-center justify-center rounded-[11px]"
+              style={{ backgroundColor: theme.colors.surface }}
             >
-              Cette page décrit le fonctionnement actuel de SmartTraining AI.
-              Les paramètres du déploiement réel et les services effectivement
-              activés doivent rester cohérents avec cette politique.
+              <SymbolView
+                name={{ ios: "info.circle.fill", android: "info", web: "info" }}
+                tintColor={theme.colors.info}
+                size={15}
+                weight="bold"
+              />
+            </View>
+            <Text
+              className="ml-2.5 flex-1 text-[10.5px] leading-[16px]"
+              style={{ color: theme.colors.foregroundMuted }}
+            >
+              Cette page décrit le fonctionnement actuel de SmartTraining AI. Les paramètres du déploiement réel et les services effectivement activés doivent rester cohérents avec cette politique.
+            </Text>
+          </View>
+
+          <View className="mt-4 mb-0.5">
+            <Text
+              className="text-[18px] font-black"
+              style={{ color: theme.colors.foreground }}
+            >
+              Politique de confidentialité
+            </Text>
+            <Text
+              className="mt-1 text-[11px] leading-[17px]"
+              style={{ color: theme.colors.foregroundMuted }}
+            >
+              Les informations ci-dessous reprennent le contenu fonctionnel actuel de SmartTraining.
             </Text>
           </View>
 
           {sections.map((section) => (
             <View
               key={section.title}
-              style={[
-                styles.card,
-                {
-                  backgroundColor: theme.colors.surface,
-                  borderColor: theme.colors.border,
-                  borderRadius: theme.shape.cardRadius,
-                  borderWidth: theme.shape.borderWidth,
-                  padding: theme.shape.cardPadding,
-                },
-              ]}
+              className="mt-2 rounded-[18px] border p-3.5"
+              style={{
+                backgroundColor: theme.colors.surface,
+                borderColor: theme.colors.border,
+              }}
             >
-              <Text
-                style={[
-                  styles.sectionTitle,
-                  { color: theme.colors.foreground },
-                ]}
-              >
-                {section.title}
-              </Text>
-
-              {section.paragraphs.map((paragraph) => (
-                <View key={paragraph} style={styles.paragraphRow}>
-                  <View
-                    style={[
-                      styles.bullet,
-                      { backgroundColor: theme.colors.accent },
-                    ]}
+              <View className="flex-row items-center">
+                <View
+                  className="h-9 w-9 items-center justify-center rounded-[12px]"
+                  style={{ backgroundColor: theme.colors.surfaceSoft }}
+                >
+                  <SymbolView
+                    name={section.icon}
+                    tintColor={theme.colors.accent}
+                    size={16}
+                    weight="bold"
                   />
-                  <Text
-                    style={[
-                      styles.paragraph,
-                      { color: theme.colors.foregroundMuted },
-                    ]}
-                  >
-                    {paragraph}
-                  </Text>
                 </View>
-              ))}
+                <Text
+                  className="ml-2.5 flex-1 text-[16px] font-black leading-[21px]"
+                  style={{ color: theme.colors.foreground }}
+                >
+                  {section.title}
+                </Text>
+              </View>
+
+              <View className="mt-2">
+                {section.paragraphs.map((paragraph) => (
+                  <View key={paragraph} className="mt-1.5 flex-row items-start">
+                    <View
+                      className="mt-[7px] h-1.5 w-1.5 rounded-full"
+                      style={{ backgroundColor: theme.colors.accent }}
+                    />
+                    <Text
+                      className="ml-2.5 flex-1 text-[11.5px] leading-[18px]"
+                      style={{ color: theme.colors.foregroundMuted }}
+                    >
+                      {paragraph}
+                    </Text>
+                  </View>
+                ))}
+              </View>
             </View>
           ))}
 
-          <Text
-            style={[
-              styles.disclaimer,
-              { color: theme.colors.foregroundSubtle },
-            ]}
+          <View
+            className="mt-3 rounded-[16px] border px-3.5 py-3"
+            style={{
+              backgroundColor: theme.colors.surface,
+              borderColor: theme.colors.border,
+            }}
           >
-            Cette politique décrit les fonctions de la solution ; elle ne
-            constitue pas, à elle seule, une déclaration de conformité
-            juridique globale. Le déploiement, les prestataires réellement
-            activés et les pratiques de l’organisation exploitante doivent
-            rester cohérents avec les informations communiquées aux
-            utilisateurs.
-          </Text>
+            <View className="flex-row items-start">
+              <SymbolView
+                name={{ ios: "checkmark.shield.fill", android: "verified_user", web: "verified_user" }}
+                tintColor={theme.colors.success}
+                size={22}
+                weight="bold"
+              />
+              <Text
+                className="ml-2.5 flex-1 text-[10.5px] leading-[16px]"
+                style={{ color: theme.colors.foregroundSubtle }}
+              >
+                Cette politique décrit les fonctions de la solution ; elle ne constitue pas, à elle seule, une déclaration de conformité juridique globale. Le déploiement, les prestataires réellement activés et les pratiques de l’organisation exploitante doivent rester cohérents avec les informations communiquées aux utilisateurs.
+              </Text>
+            </View>
+          </View>
         </View>
       </ScrollView>
-    </ScreenContainer>
+      </ScreenContainer>
+    </>
   );
 }
-
-const styles = StyleSheet.create({
-  scroll: {
-    flex: 1,
-    minHeight: 0,
-  },
-  content: {
-    flexGrow: 1,
-    padding: 18,
-    paddingBottom: 48,
-  },
-  page: {
-    alignSelf: "center",
-    width: "100%",
-    maxWidth: 920,
-    gap: 14,
-  },
-  backButton: {
-    alignSelf: "flex-start",
-    minWidth: 130,
-  },
-  hero: {
-    width: "100%",
-  },
-  eyebrow: {
-    fontSize: 11,
-    fontWeight: "900",
-    letterSpacing: 1,
-    marginBottom: 7,
-  },
-  title: {
-    fontSize: 28,
-    lineHeight: 34,
-    fontWeight: "900",
-  },
-  lead: {
-    fontSize: 15,
-    lineHeight: 22,
-    marginTop: 9,
-  },
-  updated: {
-    fontSize: 12,
-    lineHeight: 18,
-    marginTop: 12,
-    fontWeight: "700",
-  },
-  notice: {
-    padding: 14,
-  },
-  noticeText: {
-    fontSize: 13,
-    lineHeight: 20,
-    fontWeight: "600",
-  },
-  card: {
-    width: "100%",
-  },
-  sectionTitle: {
-    fontSize: 19,
-    lineHeight: 25,
-    fontWeight: "900",
-    marginBottom: 10,
-  },
-  paragraphRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 10,
-    marginTop: 8,
-  },
-  bullet: {
-    width: 7,
-    height: 7,
-    borderRadius: 999,
-    marginTop: 7,
-    flexShrink: 0,
-  },
-  paragraph: {
-    flex: 1,
-    fontSize: 14,
-    lineHeight: 21,
-  },
-  disclaimer: {
-    fontSize: 11,
-    lineHeight: 17,
-    paddingHorizontal: 4,
-  },
-});

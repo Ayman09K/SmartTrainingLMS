@@ -1,4 +1,6 @@
+import { SymbolView } from "expo-symbols";
 import { Href, router } from "expo-router";
+import type { ComponentProps } from "react";
 import { useEffect, useMemo, useState } from "react";
 import {
   BackHandler,
@@ -26,9 +28,7 @@ import {
   updateTrainerLesson,
   updateTrainerModule,
 } from "../../features/trainer/trainerAuthoringService";
-import {
-  useSmartTrainingTheme,
-} from "../../theme/provider/SmartTrainingThemeProvider";
+import { useSmartTrainingTheme } from "../../theme/provider/SmartTrainingThemeProvider";
 import type {
   MobileLessonCompletionRule,
   TrainerFullLessonResponse,
@@ -72,6 +72,17 @@ type DeleteTarget =
       moduleId: number;
     };
 
+type SymbolName = ComponentProps<typeof SymbolView>["name"];
+type Tone = "violet" | "blue" | "green" | "orange" | "red";
+
+const TONES: Record<Tone, { soft: string; icon: string }> = {
+  violet: { soft: "#F1E9FF", icon: "#7C3AED" },
+  blue: { soft: "#EAF2FF", icon: "#397BE8" },
+  green: { soft: "#EAFBF3", icon: "#12A66A" },
+  orange: { soft: "#FFF4E5", icon: "#F59E0B" },
+  red: { soft: "#FFF0F1", icon: "#E5484D" },
+};
+
 const emptyModuleDraft: ModuleDraft = {
   title: "",
   description: "",
@@ -104,7 +115,6 @@ const completionRules: {
   },
 ];
 
-// PATCH16_A8C5L_AUTHORING_CONTENT_CLARITY_V1
 function normalizedPedagogicalText(value?: string): string {
   return (value || "")
     .trim()
@@ -114,12 +124,13 @@ function normalizedPedagogicalText(value?: string): string {
 
 function samePedagogicalText(left?: string, right?: string): boolean {
   const normalizedLeft = normalizedPedagogicalText(left);
+
   return Boolean(
-    normalizedLeft && normalizedLeft === normalizedPedagogicalText(right),
+    normalizedLeft &&
+      normalizedLeft === normalizedPedagogicalText(right),
   );
 }
 
-// PATCH16_A8C5O_API_ERROR_MESSAGE_V1
 function apiErrorMessage(error: unknown): string | null {
   if (!error || typeof error !== "object") {
     return null;
@@ -139,6 +150,7 @@ function apiErrorMessage(error: unknown): string | null {
 
     for (const key of ["message", "detail", "error"]) {
       const value = payload[key];
+
       if (typeof value === "string" && value.trim()) {
         return value.trim();
       }
@@ -156,6 +168,7 @@ function apiErrorMessage(error: unknown): string | null {
 
 function errorText(error: unknown): string {
   const backendMessage = apiErrorMessage(error);
+
   if (backendMessage) {
     return backendMessage;
   }
@@ -171,27 +184,21 @@ function errorText(error: unknown): string {
   return "L’opération n’a pas pu être réalisée.";
 }
 
-function completionLabel(
-  value?: string,
-): string {
+function completionLabel(value?: string): string {
   return (
-    completionRules.find((rule) => rule.value === value)
-      ?.label ??
+    completionRules.find((rule) => rule.value === value)?.label ??
     value ??
     "Tous les blocs requis"
   );
 }
 
-// PATCH16_A8C5O_STABLE_CONTENT_INPUTS_V1
 function FieldLabel({ text }: { text: string }) {
   const { theme } = useSmartTrainingTheme();
 
   return (
     <Text
-      style={[
-        styles.label,
-        { color: theme.colors.foregroundMuted },
-      ]}
+      className="mb-1.5 text-[11px] font-black"
+      style={{ color: theme.colors.foregroundMuted }}
     >
       {text}
     </Text>
@@ -202,7 +209,7 @@ function EditorInput({
   multiline = false,
   large = false,
   ...props
-}: React.ComponentProps<typeof TextInput> & {
+}: ComponentProps<typeof TextInput> & {
   multiline?: boolean;
   large?: boolean;
 }) {
@@ -214,17 +221,19 @@ function EditorInput({
       accessibilityLabel={props.accessibilityLabel}
       multiline={multiline}
       placeholderTextColor={theme.colors.foregroundSubtle}
-      style={[
-        styles.input,
-        multiline && styles.multiline,
-        large && styles.largeInput,
-        {
-          color: theme.colors.foreground,
-          backgroundColor: theme.colors.background,
-          borderColor: theme.colors.border,
-          borderRadius: theme.shape.controlRadius,
-        },
-      ]}
+      className={[
+        "mb-3.5 min-h-[48px] rounded-[14px] border px-3.5 py-3 text-[13px]",
+        multiline ? "min-h-[86px]" : "",
+        large ? "min-h-[120px]" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+      style={{
+        color: theme.colors.foreground,
+        backgroundColor: "#FBFAF8",
+        borderColor: "#E2DCE6",
+        textAlignVertical: multiline ? "top" : "center",
+      }}
     />
   );
 }
@@ -242,16 +251,14 @@ export default function TrainerTrainingContentScreen({
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
-  const [moduleEditorOpen, setModuleEditorOpen] =
-    useState(false);
+  const [moduleEditorOpen, setModuleEditorOpen] = useState(false);
   const [moduleDraft, setModuleDraft] =
     useState<ModuleDraft>(emptyModuleDraft);
   const [moduleDraftBaseline, setModuleDraftBaseline] = useState(
     () => JSON.stringify(emptyModuleDraft),
   );
 
-  const [lessonEditorOpen, setLessonEditorOpen] =
-    useState(false);
+  const [lessonEditorOpen, setLessonEditorOpen] = useState(false);
   const [lessonDraft, setLessonDraft] =
     useState<LessonDraft | null>(null);
   const [lessonDraftBaseline, setLessonDraftBaseline] = useState("");
@@ -268,10 +275,33 @@ export default function TrainerTrainingContentScreen({
     () =>
       [...(training?.modules ?? [])].sort(
         (left, right) =>
-          (left.orderIndex ?? 0) -
-          (right.orderIndex ?? 0),
+          (left.orderIndex ?? 0) - (right.orderIndex ?? 0),
       ),
     [training],
+  );
+
+  const totalLessons = useMemo(
+    () =>
+      modules.reduce(
+        (total, module) => total + (module.lessons?.length ?? 0),
+        0,
+      ),
+    [modules],
+  );
+
+  const totalResources = useMemo(
+    () =>
+      modules.reduce(
+        (moduleTotal, module) =>
+          moduleTotal +
+          (module.lessons ?? []).reduce(
+            (lessonTotal, lesson) =>
+              lessonTotal + (lesson.resources?.length ?? 0),
+            0,
+          ),
+        0,
+      ),
+    [modules],
   );
 
   async function load() {
@@ -321,11 +351,14 @@ export default function TrainerTrainingContentScreen({
   }, [trainerId, trainingId]);
 
   const moduleDraftDirty =
-    moduleEditorOpen && JSON.stringify(moduleDraft) !== moduleDraftBaseline;
+    moduleEditorOpen &&
+    JSON.stringify(moduleDraft) !== moduleDraftBaseline;
+
   const lessonDraftDirty =
     lessonEditorOpen &&
     lessonDraft !== null &&
     JSON.stringify(lessonDraft) !== lessonDraftBaseline;
+
   const hasUnsavedDraft = moduleDraftDirty || lessonDraftDirty;
 
   useEffect(() => {
@@ -336,22 +369,31 @@ export default function TrainerTrainingContentScreen({
     const subscription = BackHandler.addEventListener(
       "hardwareBackPress",
       () => {
-        setDiscardDraftKind(moduleDraftDirty ? "MODULE" : "LESSON");
+        setDiscardDraftKind(
+          moduleDraftDirty ? "MODULE" : "LESSON",
+        );
         return true;
       },
     );
 
     return () => subscription.remove();
-  }, [hasUnsavedDraft, lessonDraftDirty, moduleDraftDirty, working]);
+  }, [
+    hasUnsavedDraft,
+    lessonDraftDirty,
+    moduleDraftDirty,
+    working,
+  ]);
 
   function requestCloseModuleEditor() {
     if (working) {
       return;
     }
+
     if (moduleDraftDirty) {
       setDiscardDraftKind("MODULE");
       return;
     }
+
     setModuleEditorOpen(false);
   }
 
@@ -359,10 +401,12 @@ export default function TrainerTrainingContentScreen({
     if (working) {
       return;
     }
+
     if (lessonDraftDirty) {
       setDiscardDraftKind("LESSON");
       return;
     }
+
     setLessonEditorOpen(false);
     setLessonDraft(null);
     setLessonDraftBaseline("");
@@ -377,6 +421,7 @@ export default function TrainerTrainingContentScreen({
       setLessonDraft(null);
       setLessonDraftBaseline("");
     }
+
     setDiscardDraftKind(null);
   }
 
@@ -385,15 +430,15 @@ export default function TrainerTrainingContentScreen({
       modules.length === 0
         ? 1
         : Math.max(
-            ...modules.map(
-              (module) => module.orderIndex ?? 0,
-            ),
+            ...modules.map((module) => module.orderIndex ?? 0),
           ) + 1;
+
     const nextDraft: ModuleDraft = {
       title: "",
       description: "",
       orderIndex: String(nextOrder),
     };
+
     setModuleDraft(nextDraft);
     setModuleDraftBaseline(JSON.stringify(nextDraft));
     setError("");
@@ -401,15 +446,14 @@ export default function TrainerTrainingContentScreen({
     setModuleEditorOpen(true);
   }
 
-  function openEditModule(
-    module: TrainerFullModuleResponse,
-  ) {
+  function openEditModule(module: TrainerFullModuleResponse) {
     const nextDraft = {
       id: module.id,
       title: module.title || "",
       description: module.description || "",
       orderIndex: String(module.orderIndex ?? 1),
     };
+
     setModuleDraft(nextDraft);
     setModuleDraftBaseline(JSON.stringify(nextDraft));
     setModuleEditorOpen(true);
@@ -429,9 +473,7 @@ export default function TrainerTrainingContentScreen({
     }
 
     if (!Number.isInteger(orderIndex) || orderIndex <= 0) {
-      setError(
-        "L’ordre du module doit être un entier positif.",
-      );
+      setError("L’ordre du module doit être un entier positif.");
       return;
     }
 
@@ -448,10 +490,7 @@ export default function TrainerTrainingContentScreen({
       };
 
       if (moduleDraft.id) {
-        await updateTrainerModule(
-          moduleDraft.id,
-          request,
-        );
+        await updateTrainerModule(moduleDraft.id, request);
         setNotice("Module modifié.");
       } else {
         await createTrainerModule(request);
@@ -473,23 +512,18 @@ export default function TrainerTrainingContentScreen({
   ): TrainerFullLessonResponse[] {
     return [...(module.lessons ?? [])].sort(
       (left, right) =>
-        (left.orderIndex ?? 0) -
-        (right.orderIndex ?? 0),
+        (left.orderIndex ?? 0) - (right.orderIndex ?? 0),
     );
   }
 
-  function openCreateLesson(
-    module: TrainerFullModuleResponse,
-  ) {
+  function openCreateLesson(module: TrainerFullModuleResponse) {
     const lessons = sortedLessons(module);
 
     const nextOrder =
       lessons.length === 0
         ? 1
         : Math.max(
-            ...lessons.map(
-              (lesson) => lesson.orderIndex ?? 0,
-            ),
+            ...lessons.map((lesson) => lesson.orderIndex ?? 0),
           ) + 1;
 
     const nextDraft: LessonDraft = {
@@ -503,10 +537,10 @@ export default function TrainerTrainingContentScreen({
       required: true,
       completionRule: "ALL_REQUIRED_BLOCKS",
     };
+
     setLessonDraft(nextDraft);
     setLessonDraftBaseline(JSON.stringify(nextDraft));
     setLessonAdvancedOpen(false);
-
     setError("");
     setNotice("");
     setLessonEditorOpen(true);
@@ -531,16 +565,15 @@ export default function TrainerTrainingContentScreen({
       completionRule:
         lesson.completionRule &&
         completionRules.some(
-          (rule) =>
-            rule.value === lesson.completionRule,
+          (rule) => rule.value === lesson.completionRule,
         )
           ? (lesson.completionRule as MobileLessonCompletionRule)
           : "ALL_REQUIRED_BLOCKS",
     };
+
     setLessonDraft(nextDraft);
     setLessonDraftBaseline(JSON.stringify(nextDraft));
     setLessonAdvancedOpen(false);
-
     setError("");
     setNotice("");
     setLessonEditorOpen(true);
@@ -553,9 +586,7 @@ export default function TrainerTrainingContentScreen({
 
     const title = lessonDraft.title.trim();
     const orderIndex = Number(lessonDraft.orderIndex);
-    const duration = Number(
-      lessonDraft.estimatedDurationMinutes,
-    );
+    const duration = Number(lessonDraft.estimatedDurationMinutes);
     const description = lessonDraft.description.trim();
     const objective = lessonDraft.objective.trim();
     const content = lessonDraft.content.trim();
@@ -583,16 +614,11 @@ export default function TrainerTrainingContentScreen({
     }
 
     if (!Number.isInteger(orderIndex) || orderIndex <= 0) {
-      setError(
-        "L’ordre de la leçon doit être un entier positif.",
-      );
+      setError("L’ordre de la leçon doit être un entier positif.");
       return;
     }
 
-    if (
-      !Number.isInteger(duration) ||
-      duration < 0
-    ) {
+    if (!Number.isInteger(duration) || duration < 0) {
       setError(
         "La durée estimée doit être un entier positif ou nul.",
       );
@@ -617,10 +643,7 @@ export default function TrainerTrainingContentScreen({
       };
 
       if (lessonDraft.id) {
-        await updateTrainerLesson(
-          lessonDraft.id,
-          request,
-        );
+        await updateTrainerLesson(lessonDraft.id, request);
         setNotice("Leçon modifiée.");
       } else {
         await createTrainerLesson(request);
@@ -682,8 +705,7 @@ export default function TrainerTrainingContentScreen({
       return;
     }
 
-    const currentOrder =
-      module.orderIndex ?? index + 1;
+    const currentOrder = module.orderIndex ?? index + 1;
     const targetOrder =
       target.orderIndex ?? index + direction + 1;
 
@@ -735,17 +757,14 @@ export default function TrainerTrainingContentScreen({
       return;
     }
 
-    const currentOrder =
-      lesson.orderIndex ?? index + 1;
+    const currentOrder = lesson.orderIndex ?? index + 1;
     const targetOrder =
       target.orderIndex ?? index + direction + 1;
 
     const completionRule = (
       value?: string,
     ): MobileLessonCompletionRule =>
-      completionRules.some(
-        (rule) => rule.value === value,
-      )
+      completionRules.some((rule) => rule.value === value)
         ? (value as MobileLessonCompletionRule)
         : "ALL_REQUIRED_BLOCKS";
 
@@ -765,9 +784,7 @@ export default function TrainerTrainingContentScreen({
           estimatedDurationMinutes:
             lesson.estimatedDurationMinutes ?? 0,
           required: lesson.required !== false,
-          completionRule: completionRule(
-            lesson.completionRule,
-          ),
+          completionRule: completionRule(lesson.completionRule),
         }),
         updateTrainerLesson(target.id, {
           moduleId: module.id,
@@ -779,9 +796,7 @@ export default function TrainerTrainingContentScreen({
           estimatedDurationMinutes:
             target.estimatedDurationMinutes ?? 0,
           required: target.required !== false,
-          completionRule: completionRule(
-            target.completionRule,
-          ),
+          completionRule: completionRule(target.completionRule),
         }),
       ]);
 
@@ -795,9 +810,7 @@ export default function TrainerTrainingContentScreen({
   }
 
   if (loading) {
-    return (
-      <LoadingState message="Chargement du contenu..." />
-    );
+    return <LoadingState message="Chargement du contenu..." />;
   }
 
   if (!training) {
@@ -810,9 +823,7 @@ export default function TrainerTrainingContentScreen({
             setError("");
 
             void load()
-              .catch((caught) =>
-                setError(errorText(caught)),
-              )
+              .catch((caught) => setError(errorText(caught)))
               .finally(() => setLoading(false));
           }}
         />
@@ -823,447 +834,594 @@ export default function TrainerTrainingContentScreen({
   const editable = training.status === "DRAFT";
 
   return (
-    <ScreenContainer>
+    <ScreenContainer
+      edges={["left", "right", "bottom"]}
+      style={{
+        padding: 0,
+        backgroundColor: "#F8F6F3",
+      }}
+    >
       <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.content}
+        className="flex-1"
+        contentContainerStyle={{ paddingBottom: 32 }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.page}>
-          <Text
-            style={[
-              styles.eyebrow,
-              { color: theme.colors.accent },
-            ]}
-          >
-            CONTENU PÉDAGOGIQUE
-          </Text>
-
-          <Text
-            style={[
-              styles.title,
-              { color: theme.colors.foreground },
-            ]}
-          >
-            {training.title}
-          </Text>
-
-          <Text
-            style={[
-              styles.subtitle,
-              { color: theme.colors.foregroundMuted },
-            ]}
-          >
-            Construisez les modules et les leçons directement
-            depuis le mobile.
-          </Text>
-
+        <View className="mx-auto w-full max-w-[760px] px-4">
+          {/* HERO */}
           <View
-            style={[
-              styles.statusCard,
-              {
-                backgroundColor: theme.colors.surfaceSoft,
-                borderColor: theme.colors.border,
-              },
-            ]}
+            className="-mx-4 rounded-b-[26px] px-5 pb-5 pt-4"
+            style={{
+              backgroundColor: theme.colors.headerBackground,
+              shadowColor: "#0F172A",
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.1,
+              shadowRadius: 12,
+              elevation: 3,
+            }}
           >
-            <View style={styles.statusText}>
-              <Text
-                style={[
-                  styles.statusTitle,
-                  { color: theme.colors.foreground },
-                ]}
+            <View className="flex-row items-start">
+              <View
+                className="h-[52px] w-[52px] items-center justify-center rounded-[16px]"
+                style={{ backgroundColor: "#2B1A49" }}
               >
-                {editable
-                  ? "Brouillon modifiable"
-                  : "Contenu verrouillé"}
-              </Text>
+                <SymbolView
+                  name={{
+                    ios: "books.vertical.fill",
+                    android: "menu_book",
+                    web: "menu_book",
+                  }}
+                  tintColor="#C4B5FD"
+                  size={22}
+                  weight="bold"
+                />
+              </View>
 
-              <Text
-                style={[
-                  styles.statusDescription,
-                  {
-                    color:
-                      theme.colors.foregroundMuted,
-                  },
-                ]}
-              >
-                {editable
-                  ? "Modules et leçons sont entièrement modifiables."
-                  : "Remettez la formation en brouillon pour modifier son contenu."}
-              </Text>
+              <View className="ml-3 min-w-0 flex-1">
+                <Text className="text-[11px] font-black uppercase tracking-[0.8px] text-[#C4B5FD]">
+                  Contenu pédagogique
+                </Text>
+
+                <Text className="mt-1 text-[23px] font-black leading-[29px] text-white">
+                  {training.title}
+                </Text>
+
+                <Text className="mt-2 text-[11px] leading-[17px] text-white/70">
+                  Structurez les modules, les leçons et leurs ressources.
+                </Text>
+              </View>
             </View>
 
-            {editable ? (
-              <AppButton
-                title="Nouveau module"
-                onPress={openCreateModule}
-                style={styles.newButton}
+            <View className="mt-4 flex-row flex-wrap gap-2">
+              <HeroPill
+                icon={{
+                  ios: "rectangle.stack.fill",
+                  android: "view_module",
+                  web: "view_module",
+                }}
+                value={`${modules.length} module${
+                  modules.length > 1 ? "s" : ""
+                }`}
               />
-            ) : null}
+
+              <HeroPill
+                icon={{
+                  ios: "doc.text.fill",
+                  android: "description",
+                  web: "description",
+                }}
+                value={`${totalLessons} leçon${
+                  totalLessons > 1 ? "s" : ""
+                }`}
+              />
+
+              <HeroPill
+                icon={{
+                  ios: "paperclip",
+                  android: "attach_file",
+                  web: "attach_file",
+                }}
+                value={`${totalResources} ressource${
+                  totalResources > 1 ? "s" : ""
+                }`}
+              />
+            </View>
+          </View>
+
+          {/* STATUT + CTA */}
+          <View
+            className="mt-4 rounded-[20px] border bg-white p-3.5"
+            style={cardStyle}
+          >
+            <View className="flex-row items-center">
+              <View
+                className="h-10 w-10 items-center justify-center rounded-[13px]"
+                style={{
+                  backgroundColor: editable
+                    ? TONES.green.soft
+                    : TONES.orange.soft,
+                }}
+              >
+                <SymbolView
+                  name={
+                    editable
+                      ? {
+                          ios: "pencil",
+                          android: "edit",
+                          web: "edit",
+                        }
+                      : {
+                          ios: "lock.fill",
+                          android: "lock",
+                          web: "lock",
+                        }
+                  }
+                  tintColor={
+                    editable
+                      ? TONES.green.icon
+                      : TONES.orange.icon
+                  }
+                  size={17}
+                  weight="bold"
+                />
+              </View>
+
+              <View className="ml-3 min-w-0 flex-1">
+                <Text
+                  className="text-[13px] font-black"
+                  style={{ color: theme.colors.foreground }}
+                >
+                  {editable
+                    ? "Brouillon modifiable"
+                    : "Contenu verrouillé"}
+                </Text>
+
+                <Text
+                  className="mt-0.5 text-[11px] leading-[17px]"
+                  style={{ color: theme.colors.foregroundMuted }}
+                >
+                  {editable
+                    ? "Modules et leçons peuvent être modifiés."
+                    : "Remettez la formation en brouillon pour modifier son contenu."}
+                </Text>
+              </View>
+
+              {editable ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Nouveau module"
+                  onPress={openCreateModule}
+                  android_ripple={{ color: "transparent" }}
+                  className="ml-2 flex-row items-center rounded-[13px] px-3 py-2.5"
+                  style={{ backgroundColor: theme.colors.accent }}
+                >
+                  <SymbolView
+                    name={{
+                      ios: "plus",
+                      android: "add",
+                      web: "add",
+                    }}
+                    tintColor="#FFFFFF"
+                    size={14}
+                    weight="bold"
+                  />
+
+                  <Text className="ml-1.5 text-[11px] font-black text-white">
+                    Module
+                  </Text>
+                </Pressable>
+              ) : null}
+            </View>
           </View>
 
           {error ? (
-            <ErrorMessage
-              message={error}
-              onRetry={() => setError("")}
-            />
+            <View className="mt-4">
+              <ErrorMessage
+                message={error}
+                onRetry={() => setError("")}
+              />
+            </View>
           ) : null}
 
           {notice ? (
             <View
-              style={[
-                styles.notice,
-                {
-                  backgroundColor:
-                    theme.colors.surfaceSoft,
-                  borderColor: theme.colors.border,
-                },
-              ]}
+              className="mt-4 flex-row items-center rounded-[16px] border p-3"
+              style={{
+                backgroundColor: theme.colors.surfaceSoft,
+                borderColor: theme.colors.border,
+              }}
             >
+              <View className="h-8 w-8 items-center justify-center rounded-full bg-white">
+                <SymbolView
+                  name={{
+                    ios: "checkmark",
+                    android: "check",
+                    web: "check",
+                  }}
+                  tintColor={theme.colors.success}
+                  size={14}
+                  weight="bold"
+                />
+              </View>
+
               <Text
-                style={[
-                  styles.noticeText,
-                  { color: theme.colors.foreground },
-                ]}
+                className="ml-2.5 flex-1 text-[11px] font-extrabold"
+                style={{ color: theme.colors.foreground }}
               >
                 {notice}
               </Text>
             </View>
           ) : null}
 
-          <View style={styles.sectionHeader}>
-            <View>
+          <View className="mb-3 mt-5 flex-row items-center">
+            <View
+              className="h-[42px] w-[42px] items-center justify-center rounded-[14px]"
+              style={{ backgroundColor: theme.colors.surfaceSoft }}
+            >
+              <SymbolView
+                name={{
+                  ios: "rectangle.stack.fill",
+                  android: "view_module",
+                  web: "view_module",
+                }}
+                tintColor={theme.colors.accent}
+                size={18}
+                weight="bold"
+              />
+            </View>
+
+            <View className="ml-2.5 flex-1">
               <Text
-                style={[
-                  styles.sectionTitle,
-                  { color: theme.colors.foreground },
-                ]}
+                className="text-[21px] font-black"
+                style={{ color: theme.colors.foreground }}
               >
                 Structure
               </Text>
 
               <Text
-                style={[
-                  styles.sectionSubtitle,
-                  {
-                    color:
-                      theme.colors.foregroundMuted,
-                  },
-                ]}
+                className="mt-0.5 text-[11px]"
+                style={{ color: theme.colors.foregroundMuted }}
               >
-                {modules.length} module
-                {modules.length > 1 ? "s" : ""}
+                {modules.length} module{modules.length > 1 ? "s" : ""} dans
+                cette formation
               </Text>
             </View>
           </View>
 
           {modules.length === 0 ? (
             <View
-              style={[
-                styles.emptyCard,
-                {
-                  backgroundColor: theme.colors.surface,
-                  borderColor: theme.colors.border,
-                  borderRadius:
-                    theme.shape.cardRadius,
-                  borderWidth:
-                    theme.shape.borderWidth,
-                },
-              ]}
+              className="items-center rounded-[22px] border bg-white px-5 py-8"
+              style={cardStyle}
             >
+              <View
+                className="h-[66px] w-[66px] items-center justify-center rounded-full"
+                style={{ backgroundColor: theme.colors.surfaceSoft }}
+              >
+                <SymbolView
+                  name={{
+                    ios: "rectangle.stack.badge.plus",
+                    android: "library_add",
+                    web: "library_add",
+                  }}
+                  tintColor={theme.colors.accent}
+                  size={26}
+                  weight="bold"
+                />
+              </View>
+
               <Text
-                style={[
-                  styles.emptyTitle,
-                  { color: theme.colors.foreground },
-                ]}
+                className="mt-4 text-[17px] font-black"
+                style={{ color: theme.colors.foreground }}
               >
                 Aucun module
               </Text>
+
               <Text
-                style={[
-                  styles.emptyText,
-                  {
-                    color:
-                      theme.colors.foregroundMuted,
-                  },
-                ]}
+                className="mt-1.5 text-center text-[11px] leading-[17px]"
+                style={{ color: theme.colors.foregroundMuted }}
               >
                 Commencez par créer le premier module.
               </Text>
+
+              {editable ? (
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={openCreateModule}
+                  android_ripple={{ color: "transparent" }}
+                  className="mt-4 flex-row items-center rounded-[14px] px-4 py-3"
+                  style={{ backgroundColor: theme.colors.accent }}
+                >
+                  <SymbolView
+                    name={{
+                      ios: "plus",
+                      android: "add",
+                      web: "add",
+                    }}
+                    tintColor="#FFFFFF"
+                    size={15}
+                    weight="bold"
+                  />
+
+                  <Text className="ml-2 text-[11px] font-black text-white">
+                    Nouveau module
+                  </Text>
+                </Pressable>
+              ) : null}
             </View>
           ) : (
             modules.map((module, moduleIndex) => {
               const lessons = sortedLessons(module);
+              const moduleResourceCount = lessons.reduce(
+                (total, lesson) =>
+                  total + (lesson.resources?.length ?? 0),
+                0,
+              );
 
               return (
                 <View
                   key={module.id}
-                  style={[
-                    styles.moduleCard,
-                    {
-                      backgroundColor:
-                        theme.colors.surface,
-                      borderColor: theme.colors.border,
-                      borderRadius:
-                        theme.shape.cardRadius,
-                      borderWidth:
-                        theme.shape.borderWidth,
-                    },
-                  ]}
+                  className="mb-4 overflow-hidden rounded-[22px] border bg-white"
+                  style={cardStyle}
                 >
-                  <View style={styles.moduleTop}>
-                    <View
-                      style={[
-                        styles.orderBadge,
-                        {
-                          backgroundColor:
-                            theme.colors.surfaceSoft,
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.orderText,
-                          {
-                            color:
-                              theme.colors.accent,
-                          },
-                        ]}
+                  {/* MODULE HEADER */}
+                  <View className="p-3.5">
+                    <View className="flex-row items-start">
+                      <View
+                        className="h-11 w-11 items-center justify-center rounded-[14px]"
+                        style={{
+                          backgroundColor: theme.colors.surfaceSoft,
+                        }}
                       >
-                        {module.orderIndex ?? "-"}
-                      </Text>
+                        <Text
+                          className="text-[15px] font-black"
+                          style={{ color: theme.colors.accent }}
+                        >
+                          {module.orderIndex ?? "-"}
+                        </Text>
+                      </View>
+
+                      <View className="ml-3 min-w-0 flex-1">
+                        <Text
+                          className="text-[17px] font-black leading-[22px]"
+                          style={{ color: theme.colors.foreground }}
+                        >
+                          {module.title}
+                        </Text>
+
+                        {module.description ? (
+                          <Text
+                            className="mt-1 text-[11px] leading-[17px]"
+                            style={{
+                              color: theme.colors.foregroundMuted,
+                            }}
+                          >
+                            {module.description}
+                          </Text>
+                        ) : null}
+
+                        <View className="mt-2 flex-row flex-wrap gap-1.5">
+                          <InfoPill
+                            icon={{
+                              ios: "doc.text.fill",
+                              android: "description",
+                              web: "description",
+                            }}
+                            value={`${lessons.length} leçon${
+                              lessons.length > 1 ? "s" : ""
+                            }`}
+                          />
+
+                          <InfoPill
+                            icon={{
+                              ios: "paperclip",
+                              android: "attach_file",
+                              web: "attach_file",
+                            }}
+                            value={`${moduleResourceCount} ressource${
+                              moduleResourceCount > 1 ? "s" : ""
+                            }`}
+                          />
+                        </View>
+                      </View>
                     </View>
 
-                    <View style={styles.moduleText}>
-                      <Text
-                        style={[
-                          styles.moduleTitle,
-                          {
-                            color:
-                              theme.colors.foreground,
-                          },
-                        ]}
-                      >
-                        {module.title}
-                      </Text>
-
-                      <Text
-                        style={[
-                          styles.moduleDescription,
-                          {
-                            color:
-                              theme.colors
-                                .foregroundMuted,
-                          },
-                        ]}
-                      >
-                        {module.description ||
-                          "Aucune description."}
-                      </Text>
-                    </View>
-                  </View>
-
-                  {editable ? (
-                    <>
-                      <View style={styles.reorderActions}>
-                        <AppButton
-                          title="Monter"
-                          variant="secondary"
+                    {editable ? (
+                      <View className="mt-3 flex-row items-center gap-2">
+                        <SmallAction
+                          label="Monter"
+                          icon={{
+                            ios: "arrow.up",
+                            android: "arrow_upward",
+                            web: "arrow_upward",
+                          }}
                           disabled={working || moduleIndex === 0}
-                          onPress={() =>
-                            void moveModule(module, -1)
-                          }
-                          style={styles.reorderButton}
+                          onPress={() => void moveModule(module, -1)}
                         />
-                        <AppButton
-                          title="Descendre"
-                          variant="secondary"
+
+                        <SmallAction
+                          label="Descendre"
+                          icon={{
+                            ios: "arrow.down",
+                            android: "arrow_downward",
+                            web: "arrow_downward",
+                          }}
                           disabled={
                             working ||
                             moduleIndex === modules.length - 1
                           }
+                          onPress={() => void moveModule(module, 1)}
+                        />
+
+                        <SmallAction
+                          label="Modifier"
+                          icon={{
+                            ios: "pencil",
+                            android: "edit",
+                            web: "edit",
+                          }}
+                          onPress={() => openEditModule(module)}
+                        />
+
+                        <SmallAction
+                          label="Supprimer"
+                          icon={{
+                            ios: "trash.fill",
+                            android: "delete",
+                            web: "delete",
+                          }}
+                          tone="red"
                           onPress={() =>
-                            void moveModule(module, 1)
+                            setDeleteTarget({
+                              kind: "MODULE",
+                              item: module,
+                            })
                           }
-                          style={styles.reorderButton}
                         />
                       </View>
+                    ) : null}
+                  </View>
 
-                    <View style={styles.actions}>
-                      <AppButton
-                      title="Nouvelle leçon"
-                      onPress={() =>
-                      openCreateLesson(module)
-                      }
-                      style={styles.newLessonButton}
-                      />
-
-                      <View style={styles.moduleSecondaryActions}>
-                        <AppButton
-                        title="Modifier module"
-                        variant="secondary"
-                        onPress={() =>
-                        openEditModule(module)
-                        }
-                        style={styles.moduleSecondaryButton}
-                        />
-
-                        <AppButton
-                        title="Supprimer module"
-                        variant="secondary"
-                        onPress={() =>
-                        setDeleteTarget({
-                        kind: "MODULE",
-                        item: module,
-                        })
-                        }
-                        style={styles.moduleSecondaryButton}
-                        />
-                      </View>
-                    </View>
-                    </>
-                  ) : null}
-
+                  {/* LESSONS */}
                   <View
-                    style={[
-                      styles.lessonsSection,
-                      {
-                        borderTopColor:
-                          theme.colors.border,
-                      },
-                    ]}
+                    className="border-t px-3.5 pb-3.5 pt-3"
+                    style={{ borderTopColor: "#EEE9F0" }}
                   >
-                    <View style={styles.lessonsHeader}>
+                    <View className="mb-2.5 flex-row items-center">
                       <Text
-                        style={[
-                          styles.lessonsTitle,
-                          {
-                            color:
-                              theme.colors.foreground,
-                          },
-                        ]}
+                        className="flex-1 text-[13px] font-black"
+                        style={{ color: theme.colors.foreground }}
                       >
                         Leçons
                       </Text>
 
-                      <Text
-                        style={[
-                          styles.lessonsCount,
-                          {
-                            color:
-                              theme.colors
-                                .foregroundMuted,
-                          },
-                        ]}
+                      <View
+                        className="rounded-full px-2.5 py-1"
+                        style={{
+                          backgroundColor: theme.colors.surfaceSoft,
+                        }}
                       >
-                        {lessons.length}
-                      </Text>
+                        <Text
+                          className="text-[11px] font-black"
+                          style={{ color: theme.colors.accent }}
+                        >
+                          {lessons.length}
+                        </Text>
+                      </View>
+
+                      {editable ? (
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel={`Nouvelle leçon dans ${module.title}`}
+                          onPress={() => openCreateLesson(module)}
+                          android_ripple={{ color: "transparent" }}
+                          className="ml-2 flex-row items-center rounded-full px-2.5 py-1.5"
+                          style={{ backgroundColor: theme.colors.accent }}
+                        >
+                          <SymbolView
+                            name={{
+                              ios: "plus",
+                              android: "add",
+                              web: "add",
+                            }}
+                            tintColor="#FFFFFF"
+                            size={12}
+                            weight="bold"
+                          />
+
+                          <Text className="ml-1 text-[11px] font-black text-white">
+                            Leçon
+                          </Text>
+                        </Pressable>
+                      ) : null}
                     </View>
 
                     {lessons.length === 0 ? (
-                      <Text
-                        style={[
-                          styles.noLesson,
-                          {
-                            color:
-                              theme.colors
-                                .foregroundSubtle,
-                          },
-                        ]}
+                      <View
+                        className="rounded-[16px] px-3.5 py-4"
+                        style={{ backgroundColor: "#FAF8FC" }}
                       >
-                        Aucune leçon dans ce module.
-                      </Text>
+                        <Text
+                          className="text-center text-[10px]"
+                          style={{
+                            color: theme.colors.foregroundSubtle,
+                          }}
+                        >
+                          Aucune leçon dans ce module.
+                        </Text>
+                      </View>
                     ) : (
                       lessons.map((lesson, lessonIndex) => (
                         <View
                           key={lesson.id}
-                          style={[
-                            styles.lessonCard,
-                            {
-                              backgroundColor:
-                                theme.colors
-                                  .surfaceSoft,
-                              borderColor:
-                                theme.colors.border,
-                            },
-                          ]}
+                          className="mb-2.5 rounded-[18px] border bg-[#FCFBFD] p-3"
+                          style={{ borderColor: "#E8E2EB" }}
                         >
-                          <View
-                            style={styles.lessonTop}
-                          >
+                          <View className="flex-row items-start">
                             <View
-                              style={[
-                                styles.lessonOrder,
-                                {
-                                  backgroundColor:
-                                    theme.colors
-                                      .background,
-                                },
-                              ]}
+                              className="h-9 w-9 items-center justify-center rounded-xl"
+                              style={{
+                                backgroundColor:
+                                  theme.colors.surfaceSoft,
+                              }}
                             >
                               <Text
-                                style={[
-                                  styles.lessonOrderText,
-                                  {
-                                    color:
-                                      theme.colors
-                                        .accent,
-                                  },
-                                ]}
+                                className="text-[12px] font-black"
+                                style={{ color: theme.colors.accent }}
                               >
-                                {lesson.orderIndex ??
-                                  "-"}
+                                {lesson.orderIndex ?? "-"}
                               </Text>
                             </View>
 
-                            <View
-                              style={
-                                styles.lessonText
-                              }
-                            >
+                            <View className="ml-2.5 min-w-0 flex-1">
                               <Text
-                                style={[
-                                  styles.lessonTitle,
-                                  {
-                                    color:
-                                      theme.colors
-                                        .foreground,
-                                  },
-                                ]}
+                                className="text-[13px] font-black leading-[16px]"
+                                style={{
+                                  color: theme.colors.foreground,
+                                }}
                               >
                                 {lesson.title}
                               </Text>
 
-                              <Text
-                                style={[
-                                  styles.lessonMeta,
-                                  {
-                                    color:
-                                      theme.colors
-                                        .foregroundMuted,
-                                  },
-                                ]}
-                              >
-                                {lesson.estimatedDurationMinutes ??
-                                  0}{" "}
-                                min ·{" "}
-                                {lesson.required ===
-                                false
-                                  ? "Optionnelle"
-                                  : "Obligatoire"}
-                              </Text>
+                              <View className="mt-1.5 flex-row flex-wrap gap-1.5">
+                                <MetaPill
+                                  icon={{
+                                    ios: "clock.fill",
+                                    android: "schedule",
+                                    web: "schedule",
+                                  }}
+                                  text={`${
+                                    lesson.estimatedDurationMinutes ?? 0
+                                  } min`}
+                                />
+
+                                <MetaPill
+                                  icon={{
+                                    ios: lesson.required === false
+                                      ? "circle"
+                                      : "checkmark.circle.fill",
+                                    android:
+                                      lesson.required === false
+                                        ? "radio_button_unchecked"
+                                        : "check_circle",
+                                    web:
+                                      lesson.required === false
+                                        ? "radio_button_unchecked"
+                                        : "check_circle",
+                                  }}
+                                  text={
+                                    lesson.required === false
+                                      ? "Optionnelle"
+                                      : "Obligatoire"
+                                  }
+                                />
+                              </View>
 
                               <Text
-                                style={[
-                                  styles.lessonRule,
-                                  {
-                                    color:
-                                      theme.colors
-                                        .foregroundSubtle,
-                                  },
-                                ]}
+                                className="mt-1.5 text-[10px]"
+                                style={{
+                                  color:
+                                    theme.colors.foregroundSubtle,
+                                }}
                               >
                                 {completionLabel(
                                   lesson.completionRule,
@@ -1273,64 +1431,108 @@ export default function TrainerTrainingContentScreen({
                           </View>
 
                           {lesson.objective ? (
-                            <Text
-                              style={[
-                                styles.lessonObjective,
-                                {
-                                  color:
-                                    theme.colors
-                                      .foregroundMuted,
-                                },
-                              ]}
+                            <View
+                              className="mt-2.5 rounded-[13px] px-3 py-2.5"
+                              style={{
+                                backgroundColor:
+                                  theme.colors.surfaceSoft,
+                              }}
                             >
-                              Objectif :{" "}
-                              {lesson.objective}
-                            </Text>
+                              <Text
+                                className="text-[11px] font-black uppercase tracking-[0.5px]"
+                                style={{ color: theme.colors.accent }}
+                              >
+                                Objectif
+                              </Text>
+
+                              <Text
+                                className="mt-1 text-[11px] leading-[17px]"
+                                style={{
+                                  color: theme.colors.foregroundMuted,
+                                }}
+                              >
+                                {lesson.objective}
+                              </Text>
+                            </View>
                           ) : null}
 
-                          <Text
-                            style={[
-                              styles.resourceCount,
-                              {
-                                color:
-                                  theme.colors
-                                    .foregroundSubtle,
-                              },
-                            ]}
-                          >
-                            {lesson.resources?.length ??
-                              0}{" "}
-                            ressource(s)
-                          </Text>
-
-                          <View
-                            style={
-                              styles.lessonActions
+                          <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel={`Ressources de ${lesson.title}`}
+                            onPress={() =>
+                              router.push(
+                                `/trainer/trainings/${trainingId}/resources/${lesson.id}` as Href,
+                              )
                             }
+                            android_ripple={{ color: "transparent" }}
+                            className="mt-2.5 flex-row items-center rounded-[14px] border bg-white px-3 py-2.5"
+                            style={{ borderColor: "#E8E2EB" }}
                           >
-                            <AppButton
-                              title="Ressources"
-                              variant="secondary"
-                              onPress={() =>
-                                router.push(
-                                  `/trainer/trainings/${trainingId}/resources/${lesson.id}` as Href,
-                                )
+                            <View
+                              className="h-8 w-8 items-center justify-center rounded-[10px]"
+                              style={{
+                                backgroundColor: TONES.blue.soft,
+                              }}
+                            >
+                              <SymbolView
+                                name={{
+                                  ios: "paperclip",
+                                  android: "attach_file",
+                                  web: "attach_file",
+                                }}
+                                tintColor={TONES.blue.icon}
+                                size={14}
+                                weight="bold"
+                              />
+                            </View>
+
+                            <View className="ml-2.5 flex-1">
+                              <Text
+                                className="text-[11px] font-black"
+                                style={{
+                                  color: theme.colors.foreground,
+                                }}
+                              >
+                                Ressources
+                              </Text>
+
+                              <Text
+                                className="mt-0.5 text-[10px]"
+                                style={{
+                                  color:
+                                    theme.colors.foregroundMuted,
+                                }}
+                              >
+                                {lesson.resources?.length ?? 0} ressource
+                                {(lesson.resources?.length ?? 0) > 1
+                                  ? "s"
+                                  : ""}
+                              </Text>
+                            </View>
+
+                            <SymbolView
+                              name={{
+                                ios: "chevron.right",
+                                android: "chevron_right",
+                                web: "chevron_right",
+                              }}
+                              tintColor={
+                                theme.colors.foregroundSubtle
                               }
-                              style={
-                                styles.lessonPrimaryButton
-                              }
+                              size={15}
+                              weight="bold"
                             />
-                          </View>
+                          </Pressable>
 
                           {editable ? (
-                            <View
-                              style={
-                                styles.lessonActions
-                              }
-                            >
-                              <AppButton
-                                title="Monter"
-                                variant="secondary"
+                            <View className="mt-2.5 flex-row items-center gap-2">
+                              <SmallAction
+                                label="Monter"
+                                icon={{
+                                  ios: "arrow.up",
+                                  android: "arrow_upward",
+                                  web: "arrow_upward",
+                                }}
                                 disabled={
                                   working || lessonIndex === 0
                                 }
@@ -1341,14 +1543,15 @@ export default function TrainerTrainingContentScreen({
                                     -1,
                                   )
                                 }
-                                style={
-                                  styles.lessonSecondaryButton
-                                }
                               />
 
-                              <AppButton
-                                title="Descendre"
-                                variant="secondary"
+                              <SmallAction
+                                label="Descendre"
+                                icon={{
+                                  ios: "arrow.down",
+                                  android: "arrow_downward",
+                                  web: "arrow_downward",
+                                }}
                                 disabled={
                                   working ||
                                   lessonIndex ===
@@ -1361,38 +1564,34 @@ export default function TrainerTrainingContentScreen({
                                     1,
                                   )
                                 }
-                                style={
-                                  styles.lessonSecondaryButton
-                                }
                               />
 
-                              <AppButton
-                                title="Modifier"
-                                variant="secondary"
+                              <SmallAction
+                                label="Modifier"
+                                icon={{
+                                  ios: "pencil",
+                                  android: "edit",
+                                  web: "edit",
+                                }}
                                 onPress={() =>
-                                  openEditLesson(
-                                    module,
-                                    lesson,
-                                  )
-                                }
-                                style={
-                                  styles.lessonSecondaryButton
+                                  openEditLesson(module, lesson)
                                 }
                               />
 
-                              <AppButton
-                                title="Supprimer"
-                                variant="secondary"
+                              <SmallAction
+                                label="Supprimer"
+                                icon={{
+                                  ios: "trash.fill",
+                                  android: "delete",
+                                  web: "delete",
+                                }}
+                                tone="red"
                                 onPress={() =>
                                   setDeleteTarget({
                                     kind: "LESSON",
                                     item: lesson,
-                                    moduleId:
-                                      module.id,
+                                    moduleId: module.id,
                                   })
-                                }
-                                style={
-                                  styles.lessonSecondaryButton
                                 }
                               />
                             </View>
@@ -1408,6 +1607,7 @@ export default function TrainerTrainingContentScreen({
         </View>
       </ScrollView>
 
+      {/* MODULE EDITOR */}
       <Modal
         visible={moduleEditorOpen}
         transparent
@@ -1415,71 +1615,87 @@ export default function TrainerTrainingContentScreen({
         onRequestClose={requestCloseModuleEditor}
       >
         <View style={styles.modalBackdrop}>
-          <View
-            style={[
-              styles.modalCard,
-              {
-                backgroundColor:
-                  theme.colors.surfaceElevated,
-                borderColor: theme.colors.border,
-                borderRadius: theme.shape.cardRadius,
-                borderWidth: theme.shape.borderWidth,
-              },
-            ]}
-          >
-            <Text
-              style={[
-                styles.modalTitle,
-                { color: theme.colors.foreground },
-              ]}
-            >
-              {moduleDraft.id
-                ? "Modifier le module"
-                : "Nouveau module"}
-            </Text>
+          <View style={styles.modalShell}>
+            <View className="flex-row items-center">
+              <View
+                className="h-10 w-10 items-center justify-center rounded-[13px]"
+                style={{ backgroundColor: theme.colors.surfaceSoft }}
+              >
+                <SymbolView
+                  name={{
+                    ios: "rectangle.stack.fill",
+                    android: "view_module",
+                    web: "view_module",
+                  }}
+                  tintColor={theme.colors.accent}
+                  size={17}
+                  weight="bold"
+                />
+              </View>
 
-            <FieldLabel text="Titre" />
-            <EditorInput
-              accessibilityLabel="Titre du module"
-              value={moduleDraft.title}
-              onChangeText={(value) =>
-                setModuleDraft((current) => ({
-                  ...current,
-                  title: value,
-                }))
-              }
-              placeholder="Ex. Comprendre les fondamentaux"
-            />
+              <View className="ml-2.5 flex-1">
+                <Text
+                  className="text-[20px] font-black"
+                  style={{ color: theme.colors.foreground }}
+                >
+                  {moduleDraft.id
+                    ? "Modifier le module"
+                    : "Nouveau module"}
+                </Text>
 
-            <FieldLabel text="Description" />
-            <EditorInput
-              accessibilityLabel="Description du module"
-              value={moduleDraft.description}
-              onChangeText={(value) =>
-                setModuleDraft((current) => ({
-                  ...current,
-                  description: value,
-                }))
-              }
-              placeholder="Description du module..."
-              multiline
-            />
+                <Text
+                  className="mt-0.5 text-[10px]"
+                  style={{ color: theme.colors.foregroundMuted }}
+                >
+                  Renseignez les informations du module.
+                </Text>
+              </View>
+            </View>
 
-            <FieldLabel text="Ordre" />
-            <EditorInput
-              accessibilityLabel="Ordre du module"
-              value={moduleDraft.orderIndex}
-              onChangeText={(value) =>
-                setModuleDraft((current) => ({
-                  ...current,
-                  orderIndex: value,
-                }))
-              }
-              keyboardType="numeric"
-              placeholder="1"
-            />
+            <View className="mt-5">
+              <FieldLabel text="Titre" />
+              <EditorInput
+                accessibilityLabel="Titre du module"
+                value={moduleDraft.title}
+                onChangeText={(value) =>
+                  setModuleDraft((current) => ({
+                    ...current,
+                    title: value,
+                  }))
+                }
+                placeholder="Ex. Comprendre les fondamentaux"
+              />
 
-            <View style={styles.modalActions}>
+              <FieldLabel text="Description" />
+              <EditorInput
+                accessibilityLabel="Description du module"
+                value={moduleDraft.description}
+                onChangeText={(value) =>
+                  setModuleDraft((current) => ({
+                    ...current,
+                    description: value,
+                  }))
+                }
+                placeholder="Description du module..."
+                multiline
+              />
+
+              <FieldLabel text="Ordre" />
+              <EditorInput
+                accessibilityLabel="Ordre du module"
+                value={moduleDraft.orderIndex}
+                onChangeText={(value) =>
+                  setModuleDraft((current) => ({
+                    ...current,
+                    orderIndex: value,
+                  }))
+                }
+                keyboardType="numeric"
+                placeholder="1"
+              />
+            </View>
+
+            <View className="mt-1 flex-row flex-wrap justify-end gap-2.5">
               <AppButton
                 title="Annuler"
                 variant="secondary"
@@ -1487,6 +1703,7 @@ export default function TrainerTrainingContentScreen({
                 onPress={requestCloseModuleEditor}
                 style={styles.modalButton}
               />
+
               <AppButton
                 title={
                   working
@@ -1504,6 +1721,7 @@ export default function TrainerTrainingContentScreen({
         </View>
       </Modal>
 
+      {/* LESSON EDITOR */}
       <Modal
         visible={lessonEditorOpen}
         transparent
@@ -1513,340 +1731,327 @@ export default function TrainerTrainingContentScreen({
         <View style={styles.modalBackdrop}>
           <ScrollView
             style={styles.lessonModalScroll}
-            contentContainerStyle={
-              styles.lessonModalScrollContent
-            }
+            contentContainerStyle={styles.lessonModalScrollContent}
             keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
           >
-            <View
-              style={[
-                styles.modalCard,
-                styles.lessonModalCard,
-                {
-                  backgroundColor:
-                    theme.colors.surfaceElevated,
-                  borderColor: theme.colors.border,
-                  borderRadius:
-                    theme.shape.cardRadius,
-                  borderWidth:
-                    theme.shape.borderWidth,
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.modalTitle,
-                  {
-                    color:
-                      theme.colors.foreground,
-                  },
-                ]}
-              >
-                {lessonDraft?.id
-                  ? "Modifier la leçon"
-                  : "Nouvelle leçon"}
-              </Text>
+            <View style={[styles.modalShell, styles.lessonModalShell]}>
+              <View className="flex-row items-center">
+                <View
+                  className="h-10 w-10 items-center justify-center rounded-[13px]"
+                  style={{ backgroundColor: theme.colors.surfaceSoft }}
+                >
+                  <SymbolView
+                    name={{
+                      ios: "doc.text.fill",
+                      android: "description",
+                      web: "description",
+                    }}
+                    tintColor={theme.colors.accent}
+                    size={17}
+                    weight="bold"
+                  />
+                </View>
 
-              {lessonDraft ? (
-                <>
+                <View className="ml-2.5 flex-1">
                   <Text
-                    style={[
-                      styles.editorGuide,
-                      { color: theme.colors.foregroundMuted },
-                    ]}
+                    className="text-[20px] font-black"
+                    style={{ color: theme.colors.foreground }}
                   >
-                    {lessonDraft.id
-                      ? "Modifiez le titre ou ouvrez les options avancées si nécessaire."
-                      : "Donnez simplement un titre à la leçon. Vous pourrez compléter les informations pédagogiques ensuite."}
+                    {lessonDraft?.id
+                      ? "Modifier la leçon"
+                      : "Nouvelle leçon"}
                   </Text>
 
+                  <Text
+                    className="mt-0.5 text-[10px]"
+                    style={{ color: theme.colors.foregroundMuted }}
+                  >
+                    {lessonDraft?.id
+                      ? "Modifiez les informations nécessaires."
+                      : "Commencez par le titre de la leçon."}
+                  </Text>
+                </View>
+              </View>
+
+              {lessonDraft ? (
+                <View className="mt-5">
                   <FieldLabel text="Titre de la leçon" />
                   <EditorInput
                     accessibilityLabel="Titre de la leçon"
                     value={lessonDraft.title}
                     onChangeText={(value) =>
-                      setLessonDraft(
-                        (current) =>
-                          current
-                            ? {
-                                ...current,
-                                title: value,
-                              }
-                            : current,
+                      setLessonDraft((current) =>
+                        current
+                          ? {
+                              ...current,
+                              title: value,
+                            }
+                          : current,
                       )
                     }
                     placeholder="Ex. Comprendre le parcours d’une requête"
                   />
 
-                  {/* MOBILE_LESSON_CREATE_MINIMAL_INLINE_ERROR_V2 */}
-                  {/* MOBILE_LESSON_EDIT_ADVANCED_COLLAPSE_SAFE_V1 */}
                   {lessonDraft.id ? (
                     <>
-                      <AppButton
-                        title={
-                          lessonAdvancedOpen
-                            ? "Masquer les options avancées"
-                            : "Afficher les options avancées"
-                        }
-                        variant="secondary"
+                      <Pressable
+                        accessibilityRole="button"
                         onPress={() =>
                           setLessonAdvancedOpen(
                             (current) => !current,
                           )
                         }
-                      />
+                        android_ripple={{ color: "transparent" }}
+                        className="mb-3.5 flex-row items-center justify-center rounded-[14px] border bg-white px-3 py-3"
+                        style={{ borderColor: "#E2DCE6" }}
+                      >
+                        <SymbolView
+                          name={{
+                            ios: lessonAdvancedOpen
+                              ? "chevron.up"
+                              : "chevron.down",
+                            android: lessonAdvancedOpen
+                              ? "expand_less"
+                              : "expand_more",
+                            web: lessonAdvancedOpen
+                              ? "expand_less"
+                              : "expand_more",
+                          }}
+                          tintColor={theme.colors.accent}
+                          size={15}
+                          weight="bold"
+                        />
+
+                        <Text
+                          className="ml-2 text-[11px] font-black"
+                          style={{ color: theme.colors.accent }}
+                        >
+                          {lessonAdvancedOpen
+                            ? "Masquer les options avancées"
+                            : "Afficher les options avancées"}
+                        </Text>
+                      </Pressable>
 
                       {lessonAdvancedOpen ? (
                         <>
-<FieldLabel text="Introduction courte (facultative)" />
-                  <EditorInput
-                    accessibilityLabel="Description de la leçon"
-                    value={lessonDraft.description}
-                    onChangeText={(value) =>
-                      setLessonDraft(
-                        (current) =>
-                          current
-                            ? {
-                                ...current,
-                                description:
-                                  value,
-                              }
-                            : current,
-                      )
-                    }
-                    placeholder="Présentez en une ou deux phrases ce que cette leçon va couvrir, sans recopier son titre."
-                    multiline
-                  />
+                          <FieldLabel text="Introduction courte (facultative)" />
+                          <EditorInput
+                            accessibilityLabel="Description de la leçon"
+                            value={lessonDraft.description}
+                            onChangeText={(value) =>
+                              setLessonDraft((current) =>
+                                current
+                                  ? {
+                                      ...current,
+                                      description: value,
+                                    }
+                                  : current,
+                              )
+                            }
+                            placeholder="Présentez en une ou deux phrases ce que cette leçon va couvrir, sans recopier son titre."
+                            multiline
+                          />
 
-                  <FieldLabel text="Objectif pédagogique (facultatif)" />
-                  <EditorInput
-                    accessibilityLabel="Objectif pédagogique"
-                    value={lessonDraft.objective}
-                    onChangeText={(value) =>
-                      setLessonDraft(
-                        (current) =>
-                          current
-                            ? {
-                                ...current,
-                                objective: value,
-                              }
-                            : current,
-                      )
-                    }
-                    placeholder="À la fin, l’apprenant saura…"
-                    multiline
-                  />
+                          <FieldLabel text="Objectif pédagogique (facultatif)" />
+                          <EditorInput
+                            accessibilityLabel="Objectif pédagogique"
+                            value={lessonDraft.objective}
+                            onChangeText={(value) =>
+                              setLessonDraft((current) =>
+                                current
+                                  ? {
+                                      ...current,
+                                      objective: value,
+                                    }
+                                  : current,
+                              )
+                            }
+                            placeholder="À la fin, l’apprenant saura…"
+                            multiline
+                          />
 
-                  <FieldLabel text="Explication principale" />
-                  <EditorInput
-                    accessibilityLabel="Contenu de la leçon"
-                    value={lessonDraft.content}
-                    onChangeText={(value) =>
-                      setLessonDraft(
-                        (current) =>
-                          current
-                            ? {
-                                ...current,
-                                content: value,
-                              }
-                            : current,
-                      )
-                    }
-                    placeholder="Expliquez ici les notions, étapes ou consignes. Les médias et synthèses seront ajoutés ensuite dans Ressources."
-                    multiline
-                    large
-                  />
+                          <FieldLabel text="Explication principale" />
+                          <EditorInput
+                            accessibilityLabel="Contenu de la leçon"
+                            value={lessonDraft.content}
+                            onChangeText={(value) =>
+                              setLessonDraft((current) =>
+                                current
+                                  ? {
+                                      ...current,
+                                      content: value,
+                                    }
+                                  : current,
+                              )
+                            }
+                            placeholder="Expliquez ici les notions, étapes ou consignes. Les médias et synthèses seront ajoutés ensuite dans Ressources."
+                            multiline
+                            large
+                          />
 
-                  <View style={styles.twoColumns}>
-                    <View style={styles.column}>
-                      <FieldLabel text="Ordre" />
-                      <EditorInput
-                        accessibilityLabel="Ordre de la leçon"
-                        value={
-                          lessonDraft.orderIndex
-                        }
-                        onChangeText={(value) =>
-                          setLessonDraft(
-                            (current) =>
-                              current
-                                ? {
-                                    ...current,
-                                    orderIndex:
-                                      value,
-                                  }
-                                : current,
-                          )
-                        }
-                        keyboardType="numeric"
-                        placeholder="1"
-                      />
-                    </View>
-
-                    <View style={styles.column}>
-                      <FieldLabel text="Durée (min)" />
-                      <EditorInput
-                        accessibilityLabel="Durée estimée en minutes"
-                        value={
-                          lessonDraft.estimatedDurationMinutes
-                        }
-                        onChangeText={(value) =>
-                          setLessonDraft(
-                            (current) =>
-                              current
-                                ? {
-                                    ...current,
-                                    estimatedDurationMinutes:
-                                      value,
-                                  }
-                                : current,
-                          )
-                        }
-                        keyboardType="numeric"
-                        placeholder="10"
-                      />
-                    </View>
-                  </View>
-
-                  <View
-                    style={[
-                      styles.requiredRow,
-                      {
-                        backgroundColor:
-                          theme.colors.surfaceSoft,
-                        borderColor:
-                          theme.colors.border,
-                      },
-                    ]}
-                  >
-                    <View style={styles.requiredText}>
-                      <Text
-                        style={[
-                          styles.requiredTitle,
-                          {
-                            color:
-                              theme.colors
-                                .foreground,
-                          },
-                        ]}
-                      >
-                        Leçon obligatoire
-                      </Text>
-
-                      <Text
-                        style={[
-                          styles.requiredDescription,
-                          {
-                            color:
-                              theme.colors
-                                .foregroundMuted,
-                          },
-                        ]}
-                      >
-                        Cette leçon compte dans les
-                        exigences du parcours.
-                      </Text>
-                    </View>
-
-                    <Switch
-                      value={lessonDraft.required}
-                      onValueChange={(value) =>
-                        setLessonDraft(
-                          (current) =>
-                            current
-                              ? {
-                                  ...current,
-                                  required: value,
+                          <View className="flex-row flex-wrap gap-3">
+                            <View className="min-w-0 flex-1 basis-[160px]">
+                              <FieldLabel text="Ordre" />
+                              <EditorInput
+                                accessibilityLabel="Ordre de la leçon"
+                                value={lessonDraft.orderIndex}
+                                onChangeText={(value) =>
+                                  setLessonDraft((current) =>
+                                    current
+                                      ? {
+                                          ...current,
+                                          orderIndex: value,
+                                        }
+                                      : current,
+                                  )
                                 }
-                              : current,
-                        )
-                      }
-                    />
-                  </View>
+                                keyboardType="numeric"
+                                placeholder="1"
+                              />
+                            </View>
 
-                  <FieldLabel text="Règle de complétion" />
+                            <View className="min-w-0 flex-1 basis-[160px]">
+                              <FieldLabel text="Durée (min)" />
+                              <EditorInput
+                                accessibilityLabel="Durée estimée en minutes"
+                                value={
+                                  lessonDraft.estimatedDurationMinutes
+                                }
+                                onChangeText={(value) =>
+                                  setLessonDraft((current) =>
+                                    current
+                                      ? {
+                                          ...current,
+                                          estimatedDurationMinutes:
+                                            value,
+                                        }
+                                      : current,
+                                  )
+                                }
+                                keyboardType="numeric"
+                                placeholder="10"
+                              />
+                            </View>
+                          </View>
 
-                  <View
-                    style={styles.ruleOptions}
-                  >
-                    {completionRules.map(
-                      (rule) => {
-                        const selected =
-                          lessonDraft.completionRule ===
-                          rule.value;
+                          <View
+                            className="mb-3.5 flex-row items-center rounded-[14px] border p-3"
+                            style={{
+                              backgroundColor:
+                                theme.colors.surfaceSoft,
+                              borderColor: theme.colors.border,
+                            }}
+                          >
+                            <View className="flex-1">
+                              <Text
+                                className="text-[12px] font-black"
+                                style={{
+                                  color: theme.colors.foreground,
+                                }}
+                              >
+                                Leçon obligatoire
+                              </Text>
 
-                        return (
-                          <Pressable
-                            key={rule.value}
-                            accessibilityRole="radio"
-                            accessibilityLabel={rule.label}
-                            accessibilityState={{ selected }}
-                            onPress={() =>
-                              setLessonDraft(
-                                (current) =>
+                              <Text
+                                className="mt-0.5 text-[11px] leading-[17px]"
+                                style={{
+                                  color:
+                                    theme.colors.foregroundMuted,
+                                }}
+                              >
+                                Cette leçon compte dans les exigences du
+                                parcours.
+                              </Text>
+                            </View>
+
+                            <Switch
+                              value={lessonDraft.required}
+                              onValueChange={(value) =>
+                                setLessonDraft((current) =>
                                   current
                                     ? {
                                         ...current,
-                                        completionRule:
-                                          rule.value,
+                                        required: value,
                                       }
                                     : current,
-                              )
-                            }
-                            style={[
-                              styles.ruleOption,
-                              {
-                                backgroundColor:
-                                  selected
-                                    ? theme.colors
-                                        .accent
-                                    : theme.colors
-                                        .surfaceSoft,
-                                borderColor:
-                                  selected
-                                    ? theme.colors
-                                        .accent
-                                    : theme.colors
-                                        .border,
-                              },
-                            ]}
-                          >
-                            <Text
-                              style={[
-                                styles.ruleOptionText,
-                                {
-                                  color: selected
-                                    ? theme.colors
-                                        .background
-                                    : theme.colors
-                                        .foreground,
-                                },
-                              ]}
-                            >
-                              {rule.label}
-                            </Text>
-                          </Pressable>
-                        );
-                      },
-                    )}
-                  </View>
+                                )
+                              }
+                              trackColor={{
+                                false: "#DED8E2",
+                                true: theme.colors.accent,
+                              }}
+                              thumbColor="#FFFFFF"
+                            />
+                          </View>
 
-                                          </>
+                          <FieldLabel text="Règle de complétion" />
+
+                          <View className="mb-3.5 flex-row flex-wrap gap-2">
+                            {completionRules.map((rule) => {
+                              const selected =
+                                lessonDraft.completionRule ===
+                                rule.value;
+
+                              return (
+                                <Pressable
+                                  key={rule.value}
+                                  accessibilityRole="radio"
+                                  accessibilityLabel={rule.label}
+                                  accessibilityState={{ selected }}
+                                  onPress={() =>
+                                    setLessonDraft((current) =>
+                                      current
+                                        ? {
+                                            ...current,
+                                            completionRule:
+                                              rule.value,
+                                          }
+                                        : current,
+                                    )
+                                  }
+                                  android_ripple={{
+                                    color: "transparent",
+                                  }}
+                                  className="rounded-full border px-3 py-2"
+                                  style={{
+                                    backgroundColor: selected
+                                      ? theme.colors.accent
+                                      : theme.colors.surfaceSoft,
+                                    borderColor: selected
+                                      ? theme.colors.accent
+                                      : theme.colors.border,
+                                  }}
+                                >
+                                  <Text
+                                    className="text-[9px] font-extrabold"
+                                    style={{
+                                      color: selected
+                                        ? "#FFFFFF"
+                                        : theme.colors.foreground,
+                                    }}
+                                  >
+                                    {rule.label}
+                                  </Text>
+                                </Pressable>
+                              );
+                            })}
+                          </View>
+                        </>
                       ) : null}
                     </>
                   ) : null}
 
-{error ? (
-                    <ErrorMessage
-                      title="Vérifiez la leçon"
-                      message={error}
-                    />
+                  {error ? (
+                    <View className="mb-3">
+                      <ErrorMessage
+                        title="Vérifiez la leçon"
+                        message={error}
+                      />
+                    </View>
                   ) : null}
 
-                  <View
-                    style={
-                      styles.modalActions
-                    }
-                  >
+                  <View className="mt-1 flex-row flex-wrap justify-end gap-2.5">
                     <AppButton
                       title="Annuler"
                       variant="secondary"
@@ -1864,13 +2069,11 @@ export default function TrainerTrainingContentScreen({
                             : "Créer la leçon"
                       }
                       loading={working}
-                      onPress={() =>
-                        void saveLesson()
-                      }
+                      onPress={() => void saveLesson()}
                       style={styles.modalButton}
                     />
                   </View>
-                </>
+                </View>
               ) : null}
             </View>
           </ScrollView>
@@ -1889,6 +2092,7 @@ export default function TrainerTrainingContentScreen({
         onCancel={() => setDiscardDraftKind(null)}
       />
 
+      {/* DELETE */}
       <Modal
         visible={deleteTarget !== null}
         transparent
@@ -1900,23 +2104,26 @@ export default function TrainerTrainingContentScreen({
         }}
       >
         <View style={styles.modalBackdrop}>
-          <View
-            style={[
-              styles.modalCard,
-              {
-                backgroundColor:
-                  theme.colors.surfaceElevated,
-                borderColor: theme.colors.border,
-                borderRadius: theme.shape.cardRadius,
-                borderWidth: theme.shape.borderWidth,
-              },
-            ]}
-          >
+          <View style={styles.modalShell}>
+            <View
+              className="h-11 w-11 items-center justify-center rounded-[14px]"
+              style={{ backgroundColor: TONES.red.soft }}
+            >
+              <SymbolView
+                name={{
+                  ios: "trash.fill",
+                  android: "delete",
+                  web: "delete",
+                }}
+                tintColor={TONES.red.icon}
+                size={18}
+                weight="bold"
+              />
+            </View>
+
             <Text
-              style={[
-                styles.modalTitle,
-                { color: theme.colors.foreground },
-              ]}
+              className="mt-4 text-[20px] font-black"
+              style={{ color: theme.colors.foreground }}
             >
               {deleteTarget?.kind === "MODULE"
                 ? "Supprimer le module ?"
@@ -1924,13 +2131,8 @@ export default function TrainerTrainingContentScreen({
             </Text>
 
             <Text
-              style={[
-                styles.confirmText,
-                {
-                  color:
-                    theme.colors.foregroundMuted,
-                },
-              ]}
+              className="mt-2 text-[10px] leading-[16px]"
+              style={{ color: theme.colors.foregroundMuted }}
             >
               {deleteTarget?.kind === "MODULE"
                 ? "La suppression d’un module peut également supprimer ses leçons et ressources. Le backend applique les règles métier finales."
@@ -1938,35 +2140,25 @@ export default function TrainerTrainingContentScreen({
             </Text>
 
             <Text
-              style={[
-                styles.confirmName,
-                { color: theme.colors.foreground },
-              ]}
+              className="mt-3 text-[13px] font-black"
+              style={{ color: theme.colors.foreground }}
             >
               {deleteTarget?.item.title}
             </Text>
 
-            <View style={styles.modalActions}>
+            <View className="mt-5 flex-row flex-wrap justify-end gap-2.5">
               <AppButton
                 title="Annuler"
                 variant="secondary"
                 disabled={working}
-                onPress={() =>
-                  setDeleteTarget(null)
-                }
+                onPress={() => setDeleteTarget(null)}
                 style={styles.modalButton}
               />
 
               <AppButton
-                title={
-                  working
-                    ? "Suppression..."
-                    : "Supprimer"
-                }
+                title={working ? "Suppression..." : "Supprimer"}
                 loading={working}
-                onPress={() =>
-                  void confirmDelete()
-                }
+                onPress={() => void confirmDelete()}
                 style={styles.modalButton}
               />
             </View>
@@ -1976,265 +2168,174 @@ export default function TrainerTrainingContentScreen({
     </ScreenContainer>
   );
 
+  function HeroPill({
+    icon,
+    value,
+  }: {
+    icon: SymbolName;
+    value: string;
+  }) {
+    return (
+      <View className="flex-row items-center rounded-full bg-white/10 px-3 py-1.5">
+        <SymbolView
+          name={icon}
+          tintColor="#C4B5FD"
+          size={12}
+          weight="bold"
+        />
+
+        <Text className="ml-1.5 text-[11px] font-black text-white/85">
+          {value}
+        </Text>
+      </View>
+    );
+  }
+
+  function InfoPill({
+    icon,
+    value,
+  }: {
+    icon: SymbolName;
+    value: string;
+  }) {
+    return (
+      <View
+        className="flex-row items-center rounded-full px-2.5 py-1.5"
+        style={{ backgroundColor: theme.colors.surfaceSoft }}
+      >
+        <SymbolView
+          name={icon}
+          tintColor={theme.colors.accent}
+          size={11}
+        />
+
+        <Text
+          className="ml-1.5 text-[9px] font-extrabold"
+          style={{ color: theme.colors.foregroundMuted }}
+        >
+          {value}
+        </Text>
+      </View>
+    );
+  }
+
+  function MetaPill({
+    icon,
+    text,
+  }: {
+    icon: SymbolName;
+    text: string;
+  }) {
+    return (
+      <View className="flex-row items-center">
+        <SymbolView
+          name={icon}
+          tintColor={theme.colors.foregroundSubtle}
+          size={11}
+        />
+
+        <Text
+          className="ml-1 text-[10px]"
+          style={{ color: theme.colors.foregroundMuted }}
+        >
+          {text}
+        </Text>
+      </View>
+    );
+  }
+
+  function SmallAction({
+    label,
+    icon,
+    onPress,
+    disabled = false,
+    tone = "violet",
+  }: {
+    label: string;
+    icon: SymbolName;
+    onPress: () => void;
+    disabled?: boolean;
+    tone?: Tone;
+  }) {
+    const palette = TONES[tone];
+
+    return (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        accessibilityState={{ disabled }}
+        disabled={disabled}
+        onPress={onPress}
+        android_ripple={{ color: "transparent" }}
+        className="min-w-0 flex-1 items-center justify-center rounded-[12px] border px-1.5 py-2"
+        style={{
+          borderColor: "#E7E1E9",
+          backgroundColor: disabled ? "#F7F5F7" : "#FFFFFF",
+          opacity: disabled ? 0.45 : 1,
+        }}
+      >
+        <SymbolView
+          name={icon}
+          tintColor={
+            disabled
+              ? theme.colors.foregroundSubtle
+              : palette.icon
+          }
+          size={13}
+          weight="bold"
+        />
+
+        <Text
+          numberOfLines={1}
+          className="mt-1 text-[8px] font-black"
+          style={{
+            color: disabled
+              ? theme.colors.foregroundSubtle
+              : tone === "red"
+                ? palette.icon
+                : theme.colors.foregroundMuted,
+          }}
+        >
+          {label}
+        </Text>
+      </Pressable>
+    );
+  }
 }
 
+const cardStyle = {
+  borderColor: "#E2DCE6",
+  shadowColor: "#0F172A",
+  shadowOffset: { width: 0, height: 3 },
+  shadowOpacity: 0.06,
+  shadowRadius: 10,
+  elevation: 2,
+} as const;
+
 const styles = StyleSheet.create({
-  scroll: {
-    flex: 1,
-    minHeight: 0,
-  },
-  content: {
-    flexGrow: 1,
-    paddingBottom: 40,
-  },
-  page: {
-    width: "100%",
-    maxWidth: 900,
-    alignSelf: "center",
-  },
-  eyebrow: {
-    fontSize: 11,
-    fontWeight: "900",
-    letterSpacing: 1,
-    marginBottom: 6,
-  },
-  title: {
-    fontSize: 27,
-    lineHeight: 33,
-    fontWeight: "900",
-  },
-  subtitle: {
-    fontSize: 14,
-    lineHeight: 20,
-    marginTop: 5,
-    marginBottom: 16,
-  },
-  statusCard: {
-    borderWidth: 1,
-    borderRadius: 14,
-    padding: 15,
-    flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "center",
-    gap: 12,
-    marginBottom: 15,
-  },
-  statusText: {
-    flex: 1,
-    minWidth: 220,
-  },
-  statusTitle: {
-    fontSize: 14,
-    fontWeight: "900",
-  },
-  statusDescription: {
-    fontSize: 12,
-    lineHeight: 18,
-    marginTop: 4,
-  },
-  newButton: {
-    minWidth: 150,
-  },
-  notice: {
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 14,
-  },
-  noticeText: {
-    fontSize: 13,
-    fontWeight: "800",
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
-    marginTop: 5,
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    fontSize: 19,
-    fontWeight: "900",
-  },
-  sectionSubtitle: {
-    fontSize: 12,
-    marginTop: 3,
-  },
-  emptyCard: {
-    padding: 22,
-  },
-  emptyTitle: {
-    fontSize: 17,
-    fontWeight: "900",
-  },
-  emptyText: {
-    fontSize: 13,
-    lineHeight: 19,
-    marginTop: 5,
-  },
-  moduleCard: {
-    padding: 18,
-    marginBottom: 16,
-  },
-  moduleTop: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 12,
-  },
-  orderBadge: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  orderText: {
-    fontSize: 16,
-    fontWeight: "900",
-  },
-  moduleText: {
-    flex: 1,
-    minWidth: 0,
-  },
-  moduleTitle: {
-    fontSize: 18,
-    lineHeight: 24,
-    fontWeight: "900",
-  },
-  moduleDescription: {
-    fontSize: 13,
-    lineHeight: 20,
-    marginTop: 6,
-  },
-  reorderActions: {
-    flexDirection: "row",
-    flexWrap: "nowrap",
-    gap: 8,
-    marginTop: 14,
-  },
-  reorderButton: {
-    flex: 1,
-    minWidth: 0,
-  },
-  actions: {
-    gap: 9,
-    marginTop: 12,
-  },
-  actionButton: {
-    minWidth: 0,
-  },
-  newLessonButton: {
-    width: "100%",
-  },
-  moduleSecondaryActions: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  moduleSecondaryButton: {
-    flex: 1,
-    minWidth: 0,
-  },
-  lessonsSection: {
-    borderTopWidth: 1,
-    marginTop: 16,
-    paddingTop: 15,
-  },
-  lessonsHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 10,
-  },
-  lessonsTitle: {
-    fontSize: 15,
-    fontWeight: "900",
-  },
-  lessonsCount: {
-    fontSize: 12,
-    fontWeight: "800",
-  },
-  noLesson: {
-    fontSize: 12,
-    fontStyle: "italic",
-  },
-  lessonCard: {
-    borderWidth: 1,
-    borderRadius: 16,
-    padding: 15,
-    marginBottom: 12,
-  },
-  lessonTop: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 11,
-  },
-  lessonOrder: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  lessonOrderText: {
-    fontSize: 13,
-    fontWeight: "900",
-  },
-  lessonText: {
-    flex: 1,
-    minWidth: 0,
-  },
-  lessonTitle: {
-    fontSize: 16,
-    lineHeight: 22,
-    fontWeight: "900",
-  },
-  lessonMeta: {
-    fontSize: 11,
-    lineHeight: 16,
-    marginTop: 5,
-  },
-  lessonRule: {
-    fontSize: 10,
-    marginTop: 3,
-  },
-  lessonObjective: {
-    fontSize: 11,
-    lineHeight: 17,
-    marginTop: 9,
-  },
-  resourceCount: {
-    fontSize: 10,
-    fontWeight: "700",
-    marginTop: 8,
-  },
-  lessonActions: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginTop: 14,
-  },
-  lessonButton: {
-    minWidth: 0,
-  },
-  lessonPrimaryButton: {
-    width: "100%",
-  },
-  lessonSecondaryButton: {
-    flexGrow: 1,
-    flexBasis: "46%",
-    minWidth: 0,
-  },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.52)",
+    backgroundColor: "rgba(15, 23, 42, 0.56)",
     justifyContent: "center",
     alignItems: "center",
     padding: 18,
   },
-  modalCard: {
+  modalShell: {
     width: "100%",
     maxWidth: 620,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E2DCE6",
+    borderRadius: 24,
     padding: 18,
+    shadowColor: "#0F172A",
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
+    elevation: 10,
   },
   lessonModalScroll: {
     width: "100%",
@@ -2245,101 +2346,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 18,
   },
-  lessonModalCard: {
+  lessonModalShell: {
     maxWidth: 680,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "900",
-    marginBottom: 16,
-  },
-  editorGuide: {
-    fontSize: 12,
-    lineHeight: 18,
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 11,
-    fontWeight: "900",
-    marginBottom: 7,
-  },
-  input: {
-    minHeight: 48,
-    borderWidth: 1,
-    paddingHorizontal: 13,
-    paddingVertical: 11,
-    fontSize: 14,
-    marginBottom: 14,
-  },
-  multiline: {
-    minHeight: 86,
-    textAlignVertical: "top",
-  },
-  largeInput: {
-    minHeight: 120,
-  },
-  twoColumns: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-  },
-  column: {
-    flexGrow: 1,
-    flexBasis: 180,
-    minWidth: 0,
-  },
-  requiredRow: {
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    marginBottom: 14,
-  },
-  requiredText: {
-    flex: 1,
-  },
-  requiredTitle: {
-    fontSize: 13,
-    fontWeight: "900",
-  },
-  requiredDescription: {
-    fontSize: 11,
-    lineHeight: 16,
-    marginTop: 3,
-  },
-  ruleOptions: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 7,
-    marginBottom: 14,
-  },
-  ruleOption: {
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 11,
-    paddingVertical: 8,
-  },
-  ruleOptionText: {
-    fontSize: 10,
-    fontWeight: "800",
-  },
-  confirmText: {
-    fontSize: 13,
-    lineHeight: 20,
-  },
-  confirmName: {
-    fontSize: 15,
-    fontWeight: "900",
-    marginTop: 12,
-  },
-  modalActions: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "flex-end",
-    gap: 9,
-    marginTop: 18,
   },
   modalButton: {
     minWidth: 130,

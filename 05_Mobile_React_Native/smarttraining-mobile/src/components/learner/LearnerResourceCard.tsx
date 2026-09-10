@@ -1,11 +1,12 @@
+import type { ComponentProps } from "react";
+import { SymbolView } from "expo-symbols";
 import {
+  ActivityIndicator,
   Platform,
-  StyleSheet,
-  Text,
+  Pressable,
   View,
 } from "react-native";
 
-import AppButton from "../AppButton";
 import LearnerInlineMedia from "./LearnerInlineMedia";
 import {
   normalizeLearnerResourceType,
@@ -13,9 +14,10 @@ import {
 import {
   useSmartTrainingTheme,
 } from "../../theme/provider/SmartTrainingThemeProvider";
-import {
+import type {
   LearnerTrainingResource,
 } from "../../types/learnerTraining";
+import { Text } from "../nativewindui/Text";
 
 type Props = {
   resource: LearnerTrainingResource;
@@ -25,12 +27,15 @@ type Props = {
   videoCompleted?: boolean;
 };
 
+type SymbolName =
+  ComponentProps<typeof SymbolView>["name"];
+
 function resourceLabel(type?: string | null): string {
   const normalized = normalizeLearnerResourceType(type);
 
   if (normalized === "TEXT") return "Texte";
   if (normalized === "IMAGE") return "Image";
-  if (normalized === "VIDEO") return "Vid\u00E9o";
+  if (normalized === "VIDEO") return "Vidéo";
   if (normalized === "PDF") return "PDF";
   if (normalized === "DOCUMENT") return "Document";
   if (normalized === "EXTERNAL_LINK") return "Lien externe";
@@ -48,6 +53,61 @@ function durationLabel(seconds?: number | null): string {
   return `${minutes} min`;
 }
 
+function resourceIcon(
+  type?: string | null,
+): SymbolName {
+  const normalized = normalizeLearnerResourceType(type);
+
+  if (normalized === "IMAGE") {
+    return {
+      ios: "photo.fill",
+      android: "image",
+      web: "image",
+    };
+  }
+
+  if (normalized === "VIDEO") {
+    return {
+      ios: "play.rectangle.fill",
+      android: "play_circle",
+      web: "play_circle",
+    };
+  }
+
+  if (normalized === "PDF") {
+    return {
+      ios: "doc.richtext.fill",
+      android: "picture_as_pdf",
+      web: "picture_as_pdf",
+    };
+  }
+
+  if (normalized === "SCORM") {
+    return {
+      ios: "cube.fill",
+      android: "view_in_ar",
+      web: "view_in_ar",
+    };
+  }
+
+  if (
+    normalized === "DOCUMENT" ||
+    normalized === "EXTERNAL_LINK"
+  ) {
+    return {
+      ios: "link",
+      android: "link",
+      web: "link",
+    };
+  }
+
+  return {
+    ios: "text.alignleft",
+    android: "subject",
+    web: "subject",
+  };
+}
+
 export default function LearnerResourceCard({
   resource,
   busy,
@@ -58,92 +118,88 @@ export default function LearnerResourceCard({
   const { theme } = useSmartTrainingTheme();
 
   const type = normalizeLearnerResourceType(resource.type);
-  const hasOpenableUrl = Boolean(resource.publicUrl || resource.url);
+  const hasOpenableUrl = Boolean(
+    resource.publicUrl || resource.url,
+  );
   const duration = durationLabel(resource.durationSeconds);
 
   return (
     <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: theme.colors.surfaceElevated,
-          borderColor: theme.colors.border,
-          borderRadius: theme.shape.controlRadius,
-          borderWidth: theme.shape.borderWidth,
-          padding: Math.max(
-            14,
-            theme.shape.cardPadding - 6,
-          ),
-        },
-      ]}
+      className="mt-[10px] overflow-hidden rounded-[18px] border bg-white p-[12px]"
+      style={{
+        borderColor: theme.colors.border,
+      }}
     >
-      <View style={styles.header}>
-        <View
-          style={[
-            styles.typeBadge,
-            {
-              backgroundColor: theme.colors.surfaceSoft,
-              borderRadius: 999,
-            },
-          ]}
-        >
-          <Text
-            style={[
-              styles.typeText,
-              { color: theme.colors.accent },
-            ]}
-          >
-            {resourceLabel(resource.type)}
-          </Text>
+      <View className="flex-row items-start">
+        <View className="h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[13px] bg-[#F3EEFF]">
+          <SymbolView
+            name={resourceIcon(resource.type)}
+            tintColor="#7C3AED"
+            size={17}
+            weight="bold"
+          />
         </View>
 
-        {duration ? (
+        <View className="ml-[10px] min-w-0 flex-1">
+          <View className="flex-row flex-wrap items-center gap-[6px]">
+            <View className="rounded-full bg-[#F3EEFF] px-[9px] py-[5px]">
+              <Text className="text-[9px] font-black uppercase tracking-[0.45px] text-[#7C3AED]">
+                {resourceLabel(resource.type)}
+              </Text>
+            </View>
+
+            {duration ? (
+              <View className="flex-row items-center rounded-full bg-[#F8F6F3] px-[8px] py-[5px]">
+                <SymbolView
+                  name={{
+                    ios: "clock.fill",
+                    android: "schedule",
+                    web: "schedule",
+                  }}
+                  tintColor="#667085"
+                  size={9}
+                  weight="bold"
+                />
+                <Text
+                  className="ml-[4px] text-[9px] font-black"
+                  style={{ color: theme.colors.foregroundMuted }}
+                >
+                  {duration}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+
           <Text
-            style={[
-              styles.duration,
-              { color: theme.colors.foregroundMuted },
-            ]}
+            className="mt-[7px] text-[16px] font-black leading-[21px]"
+            style={{ color: theme.colors.foreground }}
           >
-            {duration}
+            {resource.title}
           </Text>
-        ) : null}
+
+          {resource.description ? (
+            <Text
+              className="mt-[4px] text-[12px] leading-[18px]"
+              style={{ color: theme.colors.foregroundMuted }}
+            >
+              {resource.description}
+            </Text>
+          ) : null}
+        </View>
       </View>
-
-      <Text
-        style={[
-          styles.title,
-          { color: theme.colors.foreground },
-        ]}
-      >
-        {resource.title}
-      </Text>
-
-      {resource.description ? (
-        <Text
-          style={[
-            styles.description,
-            { color: theme.colors.foregroundMuted },
-          ]}
-        >
-          {resource.description}
-        </Text>
-      ) : null}
 
       {type === "TEXT" && resource.textContent ? (
         <View
-          style={[
-            styles.textBox,
-            {
-              backgroundColor: theme.colors.surfaceSoft,
-              borderRadius: theme.shape.controlRadius,
-            },
-          ]}
+          className="mt-[11px] rounded-[14px] px-[11px] py-[10px]"
+          style={{
+            backgroundColor: theme.colors.surfaceSoft,
+          }}
         >
           <Text
-            style={[
-              styles.textContent,
-              { color: theme.colors.foregroundMuted },
-            ]}
+            className="text-[12px] leading-[19px]"
+            style={{
+              color: theme.colors.foregroundMuted,
+            }}
           >
             {resource.textContent}
           </Text>
@@ -152,7 +208,7 @@ export default function LearnerResourceCard({
 
       {(type === "IMAGE" ||
         type === "VIDEO" ||
-        type === "PDF") &&
+        (type === "PDF" && Platform.OS === "web")) &&
       hasOpenableUrl ? (
         <LearnerInlineMedia
           resource={resource}
@@ -160,114 +216,228 @@ export default function LearnerResourceCard({
         />
       ) : null}
 
-      {type === "SCORM" ? (
-        <AppButton
-          title="Ouvrir le contenu"
-          onPress={onOpen}
-          loading={busy}
-          style={styles.button}
-        />
-      ) : null}
-
-      {(type === "DOCUMENT" || type === "EXTERNAL_LINK") &&
-      hasOpenableUrl ? (
-        <AppButton
-          title="Ouvrir la ressource"
-          onPress={onOpen}
+      {type === "PDF" &&
+      hasOpenableUrl &&
+      Platform.OS !== "web" ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Consulter le PDF"
+          accessibilityState={{ disabled: busy }}
           disabled={busy}
-          variant="secondary"
-          style={styles.button}
-        />
+          onPress={onOpen}
+          android_ripple={{ color: "transparent" }}
+          className="mt-[11px] min-h-[62px] flex-row items-center overflow-hidden rounded-[16px] bg-[#7C3AED] px-[10px] py-[9px]"
+          style={{
+            opacity: busy ? 0.65 : 1,
+          }}
+        >
+          <View className="h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[13px] bg-white/15">
+            {busy ? (
+              <ActivityIndicator
+                size="small"
+                color="#FFFFFF"
+              />
+            ) : (
+              <SymbolView
+                name={{
+                  ios: "doc.richtext.fill",
+                  android: "picture_as_pdf",
+                  web: "picture_as_pdf",
+                }}
+                tintColor="#FFFFFF"
+                size={16}
+                weight="bold"
+              />
+            )}
+          </View>
+
+          <View className="ml-[10px] min-w-0 flex-1">
+            <Text
+              className="text-[8px] font-black uppercase tracking-[0.6px]"
+              style={{
+                color: "rgba(255,255,255,0.72)",
+              }}
+            >
+              Document PDF
+            </Text>
+
+            <Text
+              className="mt-[2px] text-[13px] font-black"
+              style={{ color: "#FFFFFF" }}
+              numberOfLines={1}
+            >
+              Consulter le PDF
+            </Text>
+          </View>
+
+          <View className="ml-[8px] h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[11px] bg-white/15">
+            <SymbolView
+              name={{
+                ios: "arrow.up.right",
+                android: "open_in_new",
+                web: "open_in_new",
+              }}
+              tintColor="#FFFFFF"
+              size={12}
+              weight="bold"
+            />
+          </View>
+        </Pressable>
       ) : null}
 
-      {type === "VIDEO" && Platform.OS !== "web" ? (
-        <AppButton
-          title={videoCompleted ? "Vidéo terminée" : "J’ai terminé la vidéo"}
-          onPress={onVideoCompleted}
-          loading={busy}
+      {type === "SCORM" ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ disabled: busy }}
+          disabled={busy}
+          onPress={onOpen}
+          android_ripple={{ color: "transparent" }}
+          className="mt-[11px] min-h-[46px] flex-row items-center justify-center rounded-[13px] bg-[#7C3AED] px-[12px]"
+          style={{ opacity: busy ? 0.65 : 1 }}
+        >
+          {busy ? (
+            <ActivityIndicator
+              size="small"
+              color="#FFFFFF"
+            />
+          ) : (
+            <SymbolView
+              name={{
+                ios: "arrow.up.right.square.fill",
+                android: "open_in_new",
+                web: "open_in_new",
+              }}
+              tintColor="#FFFFFF"
+              size={13}
+              weight="bold"
+            />
+          )}
+          <Text className="ml-[7px] text-[11px] font-black text-white">
+            Ouvrir le contenu
+          </Text>
+        </Pressable>
+      ) : null}
+
+      {(type === "DOCUMENT" ||
+        type === "EXTERNAL_LINK") &&
+      hasOpenableUrl ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ disabled: busy }}
+          disabled={busy}
+          onPress={onOpen}
+          android_ripple={{ color: "transparent" }}
+          className="mt-[11px] min-h-[46px] flex-row items-center justify-center rounded-[13px] border bg-white px-[12px]"
+          style={{
+            borderColor: theme.colors.border,
+            opacity: busy ? 0.65 : 1,
+          }}
+        >
+          <SymbolView
+            name={{
+              ios: "arrow.up.right.square.fill",
+              android: "open_in_new",
+              web: "open_in_new",
+            }}
+            tintColor="#7C3AED"
+            size={13}
+            weight="bold"
+          />
+          <Text className="ml-[7px] text-[11px] font-black text-[#7C3AED]">
+            Ouvrir la ressource
+          </Text>
+        </Pressable>
+      ) : null}
+
+      {type === "VIDEO" &&
+      Platform.OS !== "web" ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{
+            disabled: busy || videoCompleted,
+          }}
           disabled={busy || videoCompleted}
-          variant="secondary"
-          style={styles.button}
-        />
+          onPress={onVideoCompleted}
+          android_ripple={{ color: "transparent" }}
+          className="mt-[10px] min-h-[44px] flex-row items-center justify-center rounded-[13px] border px-[11px]"
+          style={{
+            backgroundColor: videoCompleted
+              ? "#ECFDF3"
+              : "#FFFFFF",
+            borderColor: videoCompleted
+              ? "#BBF7D0"
+              : theme.colors.border,
+            opacity: busy ? 0.65 : 1,
+          }}
+        >
+          {busy ? (
+            <ActivityIndicator
+              size="small"
+              color="#7C3AED"
+            />
+          ) : (
+            <SymbolView
+              name={{
+                ios: videoCompleted
+                  ? "checkmark.circle.fill"
+                  : "checkmark.circle",
+                android: videoCompleted
+                  ? "check_circle"
+                  : "radio_button_unchecked",
+                web: videoCompleted
+                  ? "check_circle"
+                  : "radio_button_unchecked",
+              }}
+              tintColor={
+                videoCompleted ? "#16A36A" : "#7C3AED"
+              }
+              size={13}
+              weight="bold"
+            />
+          )}
+
+          <Text
+            className="ml-[7px] text-[10px] font-black"
+            style={{
+              color: videoCompleted
+                ? "#15803D"
+                : "#7C3AED",
+            }}
+          >
+            {videoCompleted
+              ? "Vidéo terminée"
+              : "J’ai terminé la vidéo"}
+          </Text>
+        </Pressable>
       ) : null}
 
       {type === "SCORM" ? (
         <View
-          style={[
-            styles.scormHintBox,
-            {
-              backgroundColor: theme.colors.surfaceSoft,
-              borderRadius: theme.shape.controlRadius,
-            },
-          ]}
+          className="mt-[9px] flex-row items-start rounded-[13px] px-[10px] py-[9px]"
+          style={{
+            backgroundColor: theme.colors.surfaceSoft,
+          }}
         >
+          <SymbolView
+            name={{
+              ios: "info.circle.fill",
+              android: "info",
+              web: "info",
+            }}
+            tintColor={theme.colors.accent}
+            size={12}
+            weight="bold"
+          />
           <Text
-            style={[
-              styles.scormHint,
-              { color: theme.colors.foregroundMuted },
-            ]}
+            className="ml-[7px] min-w-0 flex-1 text-[10px] leading-[15px]"
+            style={{
+              color: theme.colors.foregroundMuted,
+            }}
           >
-            Terminez le module interactif pour mettre à jour votre progression.
+            Termine le module interactif pour mettre à jour ta progression.
           </Text>
         </View>
       ) : null}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    marginTop: 10,
-  },
-  header: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 8,
-    marginBottom: 9,
-  },
-  typeBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  typeText: {
-    fontSize: 10,
-    fontWeight: "900",
-    letterSpacing: 0.5,
-  },
-  duration: {
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  title: {
-    fontSize: 15,
-    lineHeight: 21,
-    fontWeight: "900",
-  },
-  description: {
-    fontSize: 14,
-    lineHeight: 19,
-    marginTop: 5,
-  },
-  textBox: {
-    padding: 14,
-    marginTop: 12,
-  },
-  textContent: {
-    fontSize: 14,
-    lineHeight: 21,
-  },
-  button: {
-    alignSelf: "flex-start",
-    marginTop: 12,
-  },
-  scormHintBox: {
-    marginTop: 10,
-    padding: 12,
-  },
-  scormHint: {
-    fontSize: 12,
-    lineHeight: 18,
-  },
-});

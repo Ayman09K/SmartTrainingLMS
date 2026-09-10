@@ -16,11 +16,20 @@ export default function ForgotPasswordRoute() {
         }}
       />
 
-      <ScreenContainer edges={["top", "right", "bottom", "left"]}>
+      <ScreenContainer
+        edges={[
+          "top",
+          "right",
+          "bottom",
+          "left",
+        ]}
+      >
         <ForgotPasswordScreen
-          onBackToLogin={() =>
-            router.replace("/" as Href)
-          }
+          onBackToLogin={() => {
+            router.replace(
+              "/?skipOnboarding=1" as Href,
+            );
+          }}
         />
       </ScreenContainer>
     </>

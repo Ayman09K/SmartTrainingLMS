@@ -6,22 +6,13 @@ import {
   Pressable,
   RefreshControl,
   ScrollView,
-  StyleSheet,
   Text,
   View,
 } from "react-native";
 
-import { API_BASE_URL } from "../../api/apiConfig";
 import AppButton from "../../components/AppButton";
 import SmartTrainingBrandMark from "../../components/branding/SmartTrainingBrandMark";
 import ScreenContainer from "../../components/ScreenContainer";
-import {
-  ActivityItem,
-  GroupTile,
-  PriorityItem,
-  TrainingTile,
-  type PriorityItemSeverity,
-} from "../../components/ux/RichPrimitives";
 import {
   AppEmptyState,
   AppErrorState,
@@ -35,14 +26,9 @@ import {
   getAdminFullTraining,
   getAdminTrainings,
 } from "../../features/admin/adminTrainingService";
-import {
-  uxSpacing,
-  uxTypography,
-} from "../../theme/design-system/uxSemanticTokens";
 import { useSmartTrainingTheme } from "../../theme/provider/SmartTrainingThemeProvider";
 import type { ConnectedUser } from "../../types/auth";
 import type { LearnerProfile } from "../../types/learnerProfile";
-
 
 type Props = {
   user: ConnectedUser;
@@ -76,6 +62,8 @@ type DashboardData = {
   degradedSections: string[];
 };
 
+type AlertTone = "info" | "warning" | "error";
+
 function displayName(user: ConnectedUser): string {
   const fullName = [user.firstName, user.lastName]
     .filter(Boolean)
@@ -83,6 +71,30 @@ function displayName(user: ConnectedUser): string {
     .trim();
 
   return fullName || user.email;
+}
+
+function dynamicGreeting(date = new Date()): string {
+  const hour = date.getHours();
+
+  if (hour >= 5 && hour < 12) {
+    return "Bonjour";
+  }
+
+  if (hour >= 12 && hour < 18) {
+    return "Bon après-midi";
+  }
+
+  return "Bonsoir";
+}
+
+function greetingEmoji(date = new Date()): string {
+  const hour = date.getHours();
+
+  if (hour >= 5 && hour < 18) {
+    return "👋";
+  }
+
+  return "🌙";
 }
 
 function profileInitials(
@@ -96,22 +108,6 @@ function profileInitials(
   if (initials) return initials;
 
   return (user.email || "?").trim().charAt(0).toUpperCase() || "?";
-}
-
-function resolveMediaUrl(value?: string | null): string | null {
-  const trimmed = value?.trim();
-
-  if (!trimmed) {
-    return null;
-  }
-
-  if (/^https?:\/\//i.test(trimmed) || trimmed.startsWith("data:")) {
-    return trimmed;
-  }
-
-  const base = API_BASE_URL.replace(/\/api\/?$/, "");
-  const path = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
-  return `${base}${path}`;
 }
 
 function safeTimestamp(value?: string | null): number {
@@ -167,7 +163,7 @@ function isDataInsufficient(alert: AdminAlert): boolean {
   return text.includes("DATA_INSUFFICIENT") || text.includes("INSUFFICIENT");
 }
 
-function alertSeverity(alert: AdminAlert): PriorityItemSeverity {
+function alertSeverity(alert: AdminAlert): AlertTone {
   if (isDataInsufficient(alert)) {
     return "info";
   }
@@ -213,7 +209,9 @@ function alertDescription(
   }
 
   if (isDataInsufficient(alert)) {
-    parts.push("Le signal reste distinct d’un risque élevé tant que les données ne suffisent pas.");
+    parts.push(
+      "Le signal reste distinct d’un risque élevé tant que les données ne suffisent pas.",
+    );
   }
 
   return parts.join(" • ") || "Signal à examiner depuis l’espace Pilotage.";
@@ -259,10 +257,7 @@ function activityRows(
   }
 
   for (const row of trainings) {
-    const at =
-      row.full?.updatedAt ||
-      row.full?.publishedAt ||
-      row.full?.createdAt;
+    const at = row.full?.updatedAt || row.full?.publishedAt || row.full?.createdAt;
 
     if (!at) {
       continue;
@@ -359,33 +354,65 @@ async function loadDashboardData(): Promise<DashboardData> {
 
 function SectionHeading({
   title,
-  description,
+  subtitle,
+  onPress,
 }: {
   title: string;
-  description?: string;
+  subtitle: string;
+  onPress?: () => void;
 }) {
   const { theme } = useSmartTrainingTheme();
 
+  const sectionBarColor: Record<string, string> = {
+    "Indicateurs clés": "#7C3AED",
+    "Pilotage prioritaire": "#EF4444",
+    "Formations à superviser": "#2563EB",
+    "Activité récente": "#16A36A",
+    "Groupes actifs": "#D97706",
+  };
+  const barColor = sectionBarColor[title] || "#7C3AED";
+
   return (
-    <View style={styles.sectionHeading}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          { color: theme.colors.foreground },
-        ]}
-      >
-        {title}
-      </Text>
-      {description ? (
-        <Text
-          style={[
-            styles.sectionDescription,
-            { color: theme.colors.foregroundMuted },
-          ]}
-        >
-          {description}
-        </Text>
-      ) : null}
+    <View className="mb-4">
+      <View className="flex-row items-center justify-between gap-3">
+        <View className="min-w-0 flex-1 flex-row items-start">
+          <View className="mr-3 mt-1 h-9 w-1.5 rounded-full" style={{ backgroundColor: barColor }} />
+
+          <View className="min-w-0 flex-1">
+            <Text
+              className="text-[20px] font-black tracking-[-0.45px]"
+              style={{ color: theme.colors.foreground }}
+            >
+              {title}
+            </Text>
+            <Text
+              className="mt-1 text-[12px] leading-[17px]"
+              style={{ color: theme.colors.foregroundMuted }}
+            >
+              {subtitle}
+            </Text>
+          </View>
+        </View>
+
+        {onPress ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Voir tout — ${title}`}
+            onPress={onPress}
+            hitSlop={8}
+            android_ripple={{ color: "transparent" }}
+            className="flex-row items-center rounded-full bg-violet-50 px-3 py-2"
+            style={({ pressed }) => ({ opacity: pressed ? 0.72 : 1 })}
+          >
+            <Text className="text-[11px] font-black text-violet-700">
+              Voir tout
+            </Text>
+            <Text className="ml-1 text-[16px] font-black leading-[16px] text-violet-700">
+              ›
+            </Text>
+          </Pressable>
+        ) : null}
+      </View>
     </View>
   );
 }
@@ -394,14 +421,16 @@ function DashboardMetricCard({
   label,
   value,
   icon,
+  color,
+  background,
   onPress,
-  attention = false,
 }: {
   label: string;
   value: number;
   icon: SymbolViewProps["name"];
+  color: string;
+  background: string;
   onPress: () => void;
-  attention?: boolean;
 }) {
   const { theme } = useSmartTrainingTheme();
 
@@ -410,67 +439,446 @@ function DashboardMetricCard({
       accessibilityRole="button"
       accessibilityLabel={`${label} : ${value}`}
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.metricCard,
-        {
-          backgroundColor: theme.colors.surface,
-          borderColor: theme.colors.border,
-          borderWidth: theme.shape.borderWidth,
-          borderRadius: theme.shape.cardRadius,
-          opacity: pressed ? 0.82 : 1,
-        },
-      ]}
+      android_ripple={{ color: "transparent" }}
+      className="relative w-[48.5%] overflow-hidden rounded-[20px] border border-[#EEE9F1] bg-white px-3.5 pb-3.5 pt-4"
+      style={({ pressed }) => ({
+        opacity: pressed ? 0.84 : 1,
+        transform: [{ scale: pressed ? 0.985 : 1 }],
+        shadowColor: "#312E4A",
+        shadowOpacity: 0.045,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 4 },
+        elevation: 2,
+      })}
     >
       <View
-        style={[
-          styles.metricIcon,
-          {
-            backgroundColor: theme.colors.surfaceSoft,
-            borderColor: theme.colors.border,
-          },
-        ]}
-      >
+        pointerEvents="none"
+        className="absolute left-0 right-0 top-0 h-[3px]"
+        style={{ backgroundColor: color }}
+      />
+
+      <View className="flex-row items-center justify-between">
+        <View
+          className="h-10 w-10 items-center justify-center rounded-[14px]"
+          style={{ backgroundColor: background }}
+        >
+          <SymbolView name={icon} tintColor={color} size={19} weight="bold" />
+        </View>
+
+        <Text
+          className="text-[26px] font-black leading-[30px] tracking-[-0.9px]"
+          style={{ color: theme.colors.foreground }}
+        >
+          {value}
+        </Text>
+      </View>
+
+      <View className="mt-3 flex-row items-center justify-between gap-2">
+        <Text
+          numberOfLines={2}
+          className="min-w-0 flex-1 text-[11px] font-extrabold leading-[14px]"
+          style={{ color: theme.colors.foregroundMuted }}
+        >
+          {label}
+        </Text>
+
+        <View
+          className="h-6 w-6 items-center justify-center rounded-full"
+          style={{ backgroundColor: background }}
+        >
+          <Text className="text-[15px] font-black leading-[15px]" style={{ color }}>
+            ›
+          </Text>
+        </View>
+      </View>
+    </Pressable>
+  );
+}
+
+function AdminTrainingCard({
+  item,
+  onPress,
+}: {
+  item: TrainingRow;
+  onPress: () => void;
+}) {
+  const { theme } = useSmartTrainingTheme();
+  const category =
+    item.summary.category || item.full?.category || "Sans catégorie";
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`Ouvrir la formation ${item.summary.title}`}
+      onPress={onPress}
+      android_ripple={{ color: "transparent" }}
+      className="mb-3 flex-row items-center rounded-[22px] bg-white p-3.5"
+      style={({ pressed }) => ({
+        opacity: pressed ? 0.84 : 1,
+        shadowColor: "#0F172A",
+        shadowOpacity: 0.035,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 3 },
+        elevation: 1,
+      })}
+    >
+      <View className="h-[58px] w-[58px] items-center justify-center rounded-[18px] bg-[#F3EEFF]">
         <SymbolView
-          name={icon}
-          tintColor={
-            attention
-              ? theme.colors.warning
-              : theme.colors.accent
-          }
-          size={22}
+          name={{
+            ios: "books.vertical.fill",
+            android: "library_books",
+            web: "library_books",
+          }}
+          tintColor="#7C3AED"
+          size={23}
           weight="bold"
         />
       </View>
 
-      <View style={styles.metricCopy}>
-        <Text
-          style={[
-            styles.metricValue,
-            { color: theme.colors.foreground },
-          ]}
-        >
-          {value}
-        </Text>
+      <View className="ml-3 min-w-0 flex-1">
+        <View className="flex-row items-center gap-2">
+          <View className="rounded-full bg-violet-50 px-2 py-1">
+            <Text className="text-[8px] font-black uppercase text-violet-700">
+              {trainingStatusLabel(item.summary.status)}
+            </Text>
+          </View>
+          <Text
+            numberOfLines={1}
+            className="min-w-0 flex-1 text-right text-[9px] font-bold"
+            style={{ color: theme.colors.foregroundSubtle }}
+          >
+            {category}
+          </Text>
+        </View>
+
         <Text
           numberOfLines={2}
-          style={[
-            styles.metricLabel,
-            { color: theme.colors.foregroundMuted },
-          ]}
+          className="mt-2 text-[14px] font-black leading-[18px]"
+          style={{ color: theme.colors.foreground }}
         >
-          {label}
+          {item.summary.title}
+        </Text>
+
+        <Text
+          numberOfLines={1}
+          className="mt-1 text-[10px]"
+          style={{ color: theme.colors.foregroundMuted }}
+        >
+          {item.full?.shortDescription || "Formation du catalogue SmartTraining"}
         </Text>
       </View>
 
-      <Text
-        importantForAccessibility="no"
-        style={[
-          styles.metricChevron,
-          { color: theme.colors.accent },
-        ]}
+      <View className="ml-2 h-9 w-9 items-center justify-center rounded-full bg-violet-50">
+        <SymbolView
+          name={{ ios: "chevron.right", android: "chevron_right", web: "chevron_right" }}
+          tintColor="#7C3AED"
+          size={16}
+          weight="bold"
+        />
+      </View>
+    </Pressable>
+  );
+}
+
+function PriorityAlertCard({
+  title,
+  description,
+  tone,
+  onPress,
+}: {
+  title: string;
+  description: string;
+  tone: AlertTone;
+  onPress: () => void;
+}) {
+  const { theme } = useSmartTrainingTheme();
+
+  const palette =
+    tone === "error"
+      ? {
+          color: "#DC2626",
+          background: "#FEF2F2",
+          icon: {
+            ios: "exclamationmark.triangle.fill",
+            android: "warning",
+            web: "warning",
+          } as SymbolViewProps["name"],
+          label: "Prioritaire",
+        }
+      : tone === "warning"
+        ? {
+            color: "#D97706",
+            background: "#FFF7ED",
+            icon: {
+              ios: "exclamationmark.circle.fill",
+              android: "error_outline",
+              web: "error_outline",
+            } as SymbolViewProps["name"],
+            label: "À examiner",
+          }
+        : {
+            color: "#2563EB",
+            background: "#EFF6FF",
+            icon: {
+              ios: "info.circle.fill",
+              android: "info",
+              web: "info",
+            } as SymbolViewProps["name"],
+            label: "Information",
+          };
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      onPress={onPress}
+      android_ripple={{ color: "transparent" }}
+      className="relative mb-3 overflow-hidden rounded-[22px] border border-[#E8E2EA] bg-[#FFFDFC] p-3.5"
+      style={({ pressed }) => ({
+        opacity: pressed ? 0.84 : 1,
+        shadowColor: theme.colors.shadow,
+        shadowOpacity: 0.035,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 3 },
+        elevation: 1,
+      })}
+    >
+      <View
+        pointerEvents="none"
+        className="absolute -right-7 -top-8 h-20 w-20 rounded-full"
+        style={{ backgroundColor: palette.background, opacity: 0.7 }}
+      />
+      <View className="flex-row items-start">
+        <View
+          className="h-10 w-10 items-center justify-center rounded-[14px]"
+          style={{ backgroundColor: palette.background }}
+        >
+          <SymbolView
+            name={palette.icon}
+            tintColor={palette.color}
+            size={19}
+            weight="bold"
+          />
+        </View>
+
+        <View className="ml-3 min-w-0 flex-1">
+          <View className="flex-row items-center justify-between gap-2">
+            <Text
+              numberOfLines={2}
+              className="flex-1 text-[14px] font-black leading-[18px]"
+              style={{ color: "#111827" }}
+            >
+              {title}
+            </Text>
+            <View
+              className="rounded-full px-2 py-1"
+              style={{ backgroundColor: palette.background }}
+            >
+              <Text
+                className="text-[8px] font-black uppercase"
+                style={{ color: palette.color }}
+              >
+                {palette.label}
+              </Text>
+            </View>
+          </View>
+
+          <Text
+            numberOfLines={3}
+            className="mt-1.5 text-[10px] leading-[15px]"
+            style={{ color: "#6B7280" }}
+          >
+            {description}
+          </Text>
+
+          <View className="mt-2 flex-row items-center justify-end">
+            <Text className="text-[10px] font-black text-violet-700">
+              Ouvrir le pilotage
+            </Text>
+            <Text className="ml-1 text-[18px] font-bold leading-[18px] text-violet-700">
+              ›
+            </Text>
+          </View>
+        </View>
+      </View>
+    </Pressable>
+  );
+}
+
+function ActivityCard({
+  item,
+  isLast,
+}: {
+  item: ActivityRow;
+  isLast: boolean;
+}) {
+  const { theme } = useSmartTrainingTheme();
+
+  return (
+    <View className="flex-row">
+      <View className="w-6 items-center">
+        <View className="mt-1.5 h-2.5 w-2.5 rounded-full border-2 border-violet-100 bg-violet-600" />
+        {!isLast ? <View className="w-[1.5px] flex-1 bg-violet-100" /> : null}
+      </View>
+
+      <View
+        className="mb-3 flex-1 rounded-[18px] bg-white px-3.5 py-3"
+        style={{
+          shadowColor: "#0F172A",
+          shadowOpacity: 0.025,
+          shadowRadius: 6,
+          shadowOffset: { width: 0, height: 2 },
+          elevation: 1,
+        }}
       >
-        ›
-      </Text>
+        <Text
+          numberOfLines={2}
+          className="text-[12px] font-black leading-[16px]"
+          style={{ color: theme.colors.foreground }}
+        >
+          {item.title}
+        </Text>
+        {item.description ? (
+          <Text
+            numberOfLines={2}
+            className="mt-1 text-[10px] leading-[14px]"
+            style={{ color: theme.colors.foregroundMuted }}
+          >
+            {item.description}
+          </Text>
+        ) : null}
+        <Text className="mt-1.5 text-[9px] font-bold text-violet-600">
+          {formatDateTime(item.at)}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+function GroupCard({
+  group,
+  onPress,
+}: {
+  group: AdminGroup;
+  onPress: () => void;
+}) {
+  const { theme } = useSmartTrainingTheme();
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`Ouvrir le groupe ${group.name}`}
+      onPress={onPress}
+      android_ripple={{ color: "transparent" }}
+      className="mb-3 flex-row items-center rounded-[22px] bg-white p-3.5"
+      style={({ pressed }) => ({
+        opacity: pressed ? 0.84 : 1,
+        shadowColor: theme.colors.shadow,
+        shadowOpacity: 0.035,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 3 },
+        elevation: 1,
+      })}
+    >
+      <View className="h-11 w-11 items-center justify-center rounded-[15px] bg-violet-100">
+        <SymbolView
+          name={{ ios: "person.3.fill", android: "groups", web: "groups" }}
+          tintColor="#7C3AED"
+          size={20}
+          weight="bold"
+        />
+      </View>
+
+      <View className="ml-3 min-w-0 flex-1">
+        <Text
+          numberOfLines={1}
+          className="text-[14px] font-black"
+          style={{ color: theme.colors.foreground }}
+        >
+          {group.name}
+        </Text>
+        <Text
+          numberOfLines={2}
+          className="mt-1 text-[10px] leading-[14px]"
+          style={{ color: theme.colors.foregroundMuted }}
+        >
+          {group.description || `Propriétaire : ${group.ownerRole}`}
+        </Text>
+      </View>
+
+      <View className="ml-2 items-end">
+        <Text className="text-[18px] font-black text-violet-700">
+          {group.memberCount}
+        </Text>
+        <Text className="text-[8px] font-black uppercase tracking-[0.5px] text-violet-500">
+          membres
+        </Text>
+      </View>
+      <Text className="ml-2 text-[20px] font-bold text-violet-600">›</Text>
+    </Pressable>
+  );
+}
+
+
+function QuickActionRow({
+  title,
+  subtitle,
+  icon,
+  color,
+  background,
+  onPress,
+  isLast = false,
+}: {
+  title: string;
+  subtitle: string;
+  icon: SymbolViewProps["name"];
+  color: string;
+  background: string;
+  onPress: () => void;
+  isLast?: boolean;
+}) {
+  const { theme } = useSmartTrainingTheme();
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      onPress={onPress}
+      android_ripple={{ color: "transparent" }}
+      className={`flex-row items-center px-3.5 py-3.5 ${isLast ? "" : "border-b border-[#F0ECF2]"}`}
+      style={({ pressed }) => ({ opacity: pressed ? 0.72 : 1 })}
+    >
+      <View
+        className="h-10 w-10 items-center justify-center rounded-[14px]"
+        style={{ backgroundColor: background }}
+      >
+        <SymbolView name={icon} tintColor={color} size={19} weight="bold" />
+      </View>
+
+      <View className="ml-3 min-w-0 flex-1">
+        <Text
+          className="text-[13px] font-black"
+          style={{ color: theme.colors.foreground }}
+        >
+          {title}
+        </Text>
+        <Text
+          numberOfLines={1}
+          className="mt-0.5 text-[10px]"
+          style={{ color: theme.colors.foregroundMuted }}
+        >
+          {subtitle}
+        </Text>
+      </View>
+
+      <View
+        className="ml-3 h-8 w-8 items-center justify-center rounded-full"
+        style={{ backgroundColor: background }}
+      >
+        <Text className="text-[18px] font-black leading-[18px]" style={{ color }}>
+          ›
+        </Text>
+      </View>
     </Pressable>
   );
 }
@@ -548,7 +956,10 @@ export default function AdminDashboardScreen({ user, onLogout }: Props) {
   const summary = data?.summary;
 
   const activeGroups = useMemo(
-    () => (data?.groups || []).filter((group) => group.memberCount > 0).slice(0, 2),
+    () =>
+      (data?.groups || [])
+        .filter((group) => group.memberCount > 0)
+        .slice(0, 2),
     [data?.groups],
   );
 
@@ -585,13 +996,21 @@ export default function AdminDashboardScreen({ user, onLogout }: Props) {
   const trainingById = useMemo(
     () =>
       new Map(
-        (data?.trainings || []).map((row) => [row.summary.id, row.summary.title]),
+        (data?.trainings || []).map((row) => [
+          row.summary.id,
+          row.summary.title,
+        ]),
       ),
     [data?.trainings],
   );
 
   const recentActivity = useMemo(
-    () => activityRows(data?.trainings || [], data?.alerts || [], data?.groups || []),
+    () =>
+      activityRows(
+        data?.trainings || [],
+        data?.alerts || [],
+        data?.groups || [],
+      ),
     [data?.alerts, data?.groups, data?.trainings],
   );
 
@@ -631,8 +1050,13 @@ export default function AdminDashboardScreen({ user, onLogout }: Props) {
   }
 
   return (
-    <ScreenContainer>
+    <ScreenContainer
+      edges={["left", "right"]}
+      style={{ padding: 0, backgroundColor: theme.colors.background }}
+    >
       <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ padding: 16, paddingBottom: 24 }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -640,146 +1064,166 @@ export default function AdminDashboardScreen({ user, onLogout }: Props) {
             tintColor={theme.colors.accent}
           />
         }
-        contentContainerStyle={styles.content}
       >
-        <View style={styles.page}>
-          <View
-            style={[
-              styles.hero,
-              {
-                backgroundColor: theme.colors.surface,
-                borderColor: theme.colors.border,
-                borderRadius: theme.shape.cardRadius,
-                borderWidth: theme.shape.borderWidth,
-              },
-            ]}
-          >
-            <View style={styles.heroIdentityRow}>
-              <SmartTrainingBrandMark size={52} />
-
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Ouvrir Mon compte"
-                hitSlop={8}
-                onPress={() =>
-                  router.push("/admin/profile" as Href)
-                }
-                style={({ pressed }) => ({
-                  opacity: pressed ? 0.72 : 1,
-                })}
-              >
-                {profile?.avatarDataUrl ? (
-                  <Image
-                    source={{ uri: profile.avatarDataUrl }}
-                    accessibilityLabel="Photo de profil"
-                    style={[
-                      styles.profileAvatar,
-                      {
-                        borderColor: theme.colors.border,
-                        borderWidth: theme.shape.borderWidth,
-                      },
-                    ]}
-                  />
-                ) : (
-                  <View
-                    accessible
-                    accessibilityLabel="Avatar du profil"
-                    style={[
-                      styles.profileAvatarFallback,
-                      {
-                        backgroundColor: theme.colors.surfaceSoft,
-                        borderColor: theme.colors.border,
-                        borderWidth: theme.shape.borderWidth,
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.profileAvatarText,
-                        { color: theme.colors.accent },
-                      ]}
-                    >
-                      {profileInitials(profile, user)}
-                    </Text>
-                  </View>
-                )}
-              </Pressable>
+        {/* HERO — même langage visuel que le Dashboard Formateur */}
+        <View
+          className="overflow-hidden rounded-[24px] border border-[#E6E0E8] bg-[#FFFDFC] p-4"
+          style={{
+                shadowColor: theme.colors.shadow,
+            shadowOpacity: 0.045,
+            shadowRadius: 12,
+            shadowOffset: { width: 0, height: 4 },
+            elevation: 2,
+          }}
+        >
+          <View className="flex-row items-center justify-between">
+            <View className="flex-row items-center">
+              <View className="rounded-[14px] bg-[#FAF8F5] p-1.5">
+                <SmartTrainingBrandMark size={34} />
+              </View>
+              <View className="ml-2.5 rounded-full bg-violet-50 px-2.5 py-1">
+                <Text className="text-[9px] font-black uppercase tracking-[1px] text-violet-700">
+                  Espace administrateur
+                </Text>
+              </View>
             </View>
 
-            <Text style={[styles.eyebrow, { color: theme.colors.accent }]}>
-              ESPACE ADMINISTRATEUR
-            </Text>
-            <Text style={[styles.heroTitle, { color: theme.colors.foreground }]}>
-              Bonjour, {displayName(user)}
-            </Text>
-            <Text style={[styles.heroText, { color: theme.colors.foregroundMuted }]}>
-              Supervisez la plateforme et repérez rapidement les éléments qui demandent votre attention.
-            </Text>
-            <View style={styles.heroActions}>
-              <AppButton title="Actualiser" onPress={() => void refresh()} style={styles.heroButton} />
-              <AppButton title="Se déconnecter" variant="secondary" onPress={onLogout} style={styles.heroButton} />
-            </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Ouvrir Mon compte"
+              hitSlop={8}
+              onPress={() => router.push("/admin/profile" as Href)}
+              android_ripple={{ color: "transparent" }}
+            >
+              {profile?.avatarDataUrl ? (
+                <Image
+                  source={{ uri: profile.avatarDataUrl }}
+                  className="h-12 w-12 rounded-[16px] border-2 border-violet-100"
+                  accessibilityLabel="Photo du profil administrateur"
+                />
+              ) : (
+                <View className="h-12 w-12 items-center justify-center rounded-[16px] border-2 border-violet-100 bg-violet-50">
+                  <Text className="text-[13px] font-black text-violet-700">
+                    {profileInitials(profile, user)}
+                  </Text>
+                </View>
+              )}
+            </Pressable>
           </View>
 
-          {error ? (
+          <Text
+            className="mt-3 text-[24px] font-black leading-[28px] tracking-[-0.7px]"
+            style={{ color: "#111827" }}
+          >
+            {dynamicGreeting()} {displayName(user)} {greetingEmoji()}
+          </Text>
+          <Text
+            className="mt-1.5 text-[12px] leading-[18px]"
+            style={{ color: "#6B7280" }}
+          >
+            Supervisez la plateforme et repérez rapidement les éléments qui
+            demandent votre attention.
+          </Text>
+
+        </View>
+
+        {error ? (
+          <View className="mt-4">
             <AppErrorState
               title="Actualisation incomplète"
               description={error}
               actionLabel="Réessayer"
               onAction={() => void refresh()}
             />
-          ) : null}
+          </View>
+        ) : null}
 
-          {data.degradedSections.length > 0 ? (
+        {data.degradedSections.length > 0 ? (
+          <View className="mt-4">
             <AppErrorState
               title="Certaines données sont indisponibles"
               description={`Sections concernées : ${data.degradedSections.join(", ")}. Les valeurs indisponibles ne sont pas remplacées par de faux zéros.`}
+              actionLabel="Actualiser"
+              onAction={() => void refresh()}
             />
-          ) : null}
+          </View>
+        ) : null}
 
+        {/* INDICATEURS */}
+        <View className="mt-7">
           <SectionHeading
-            title="Vue globale"
-            description="Les indicateurs clés. Touchez une carte pour ouvrir la zone correspondante."
+            title="Indicateurs clés"
+            subtitle="Une vue compacte de l’activité de la plateforme."
           />
 
           {summary ? (
-            <View style={styles.metricGrid}>
+            <View className="flex-row flex-wrap justify-between gap-y-3">
               <DashboardMetricCard
                 label="Utilisateurs"
                 value={summary.users}
                 icon={{ ios: "person.2.fill", android: "group", web: "group" }}
+                color="#7C3AED"
+                background="#F3EEFF"
                 onPress={() => router.push("/admin/users" as Href)}
               />
               <DashboardMetricCard
                 label="Utilisateurs actifs"
                 value={summary.activeUsers}
-                icon={{ ios: "person.crop.circle.badge.checkmark", android: "verified_user", web: "verified_user" }}
+                icon={{
+                  ios: "person.crop.circle.badge.checkmark",
+                  android: "verified_user",
+                  web: "verified_user",
+                }}
+                color="#2563EB"
+                background="#EFF6FF"
                 onPress={() => router.push("/admin/users" as Href)}
               />
               <DashboardMetricCard
                 label="Formations"
                 value={summary.trainings}
-                icon={{ ios: "books.vertical.fill", android: "library_books", web: "library_books" }}
+                icon={{
+                  ios: "books.vertical.fill",
+                  android: "library_books",
+                  web: "library_books",
+                }}
+                color="#7C3AED"
+                background="#F5F3FF"
                 onPress={() => router.push("/admin/trainings" as Href)}
               />
               <DashboardMetricCard
                 label="Formations publiées"
                 value={summary.publishedTrainings}
-                icon={{ ios: "checkmark.seal.fill", android: "task_alt", web: "task_alt" }}
+                icon={{
+                  ios: "checkmark.seal.fill",
+                  android: "task_alt",
+                  web: "task_alt",
+                }}
+                color="#16A36A"
+                background="#ECFDF3"
                 onPress={() => router.push("/admin/trainings" as Href)}
               />
               <DashboardMetricCard
                 label="Alertes ouvertes"
                 value={summary.openAlerts}
-                icon={{ ios: "exclamationmark.triangle.fill", android: "warning", web: "warning" }}
-                attention={summary.openAlerts > 0}
+                icon={{
+                  ios: "exclamationmark.triangle.fill",
+                  android: "warning",
+                  web: "warning",
+                }}
+                color="#DC2626"
+                background="#FEF2F2"
                 onPress={() => router.push("/admin/alerts" as Href)}
               />
               <DashboardMetricCard
                 label="Demandes formateur"
                 value={summary.pendingTrainerRequests}
-                icon={{ ios: "person.badge.plus", android: "person_add", web: "person_add" }}
-                attention={summary.pendingTrainerRequests > 0}
+                icon={{
+                  ios: "person.badge.plus",
+                  android: "person_add",
+                  web: "person_add",
+                }}
+                color="#D97706"
+                background="#FFF7ED"
                 onPress={() => router.push("/admin/trainer-requests" as Href)}
               />
             </View>
@@ -789,25 +1233,68 @@ export default function AdminDashboardScreen({ user, onLogout }: Props) {
               description="Les autres sections restent affichées lorsqu’elles ont pu être chargées."
             />
           )}
+        </View>
 
+        {/* PILOTAGE PRIORITAIRE */}
+        <View className="mt-7">
+          <SectionHeading
+            title="Pilotage prioritaire"
+            subtitle="Les signaux qui nécessitent votre attention maintenant."
+            onPress={() => router.push("/admin/alerts" as Href)}
+          />
+
+          {dataInsufficientCount > 0 ? (
+            <PriorityAlertCard
+              title="Données insuffisantes"
+              description={`${dataInsufficientCount} ${dataInsufficientCount > 1 ? "signaux" : "signal"} ${dataInsufficientCount > 1 ? "ne disposent" : "ne dispose"} pas encore d’assez de données pour conclure à un risque.`}
+              tone="info"
+              onPress={() => router.push("/admin/alerts" as Href)}
+            />
+          ) : null}
+
+          {priorityAlerts.length > 0 ? (
+            <>
+              {priorityAlerts.map((alert) => (
+                <PriorityAlertCard
+                  key={alert.id}
+                  title={alertLabel(alert)}
+                  description={alertDescription(alert, trainingById)}
+                  tone={alertSeverity(alert)}
+                  onPress={() => router.push("/admin/alerts" as Href)}
+                />
+              ))}
+              <AppButton
+                title="Ouvrir le pilotage"
+                onPress={() => router.push("/admin/alerts" as Href)}
+                style={{ width: "100%", marginTop: 2 }}
+              />
+            </>
+          ) : dataInsufficientCount === 0 ? (
+            <AppEmptyState
+              title="Aucune alerte ouverte"
+              description="Aucun signal de pilotage n’est actuellement remonté."
+              actionLabel="Ouvrir le pilotage"
+              onAction={() => router.push("/admin/alerts" as Href)}
+            />
+          ) : null}
+        </View>
+
+        {/* FORMATIONS */}
+        <View className="mt-7">
           <SectionHeading
             title="Formations à superviser"
-            description="Les formations à surveiller en priorité."
+            subtitle="Les contenus du catalogue à surveiller en priorité."
+            onPress={() => router.push("/admin/trainings" as Href)}
           />
 
           {data.trainings.length > 0 ? (
-            <View style={styles.stack}>
-              {data.trainings.map((row) => (
-                <TrainingTile
-                  key={row.summary.id}
-                  title={row.summary.title}
-                  description={row.full?.shortDescription || "Formation du catalogue SmartTraining"}
-                  coverUrl={resolveMediaUrl(row.full?.coverImageUrl || row.full?.coverImagePath)}
-                  meta={`${trainingStatusLabel(row.summary.status)} • ${row.summary.category || row.full?.category || "Sans catégorie"}`}
-                  onPress={() => router.push("/admin/trainings" as Href)}
-                />
-              ))}
-            </View>
+            data.trainings.map((row) => (
+              <AdminTrainingCard
+                key={row.summary.id}
+                item={row}
+                onPress={() => router.push("/admin/trainings" as Href)}
+              />
+            ))
           ) : (
             <AppEmptyState
               title="Aucune formation à afficher"
@@ -816,91 +1303,50 @@ export default function AdminDashboardScreen({ user, onLogout }: Props) {
               onAction={() => router.push("/admin/trainings" as Href)}
             />
           )}
+        </View>
 
-          <SectionHeading
-            title="Pilotage prioritaire"
-            description="Les signaux qui nécessitent votre attention."
-          />
-
-          {dataInsufficientCount > 0 ? (
-            <PriorityItem
-              title="Données insuffisantes"
-              description={`${dataInsufficientCount} ${dataInsufficientCount > 1 ? "signaux" : "signal"} ${dataInsufficientCount > 1 ? "ne disposent" : "ne dispose"} pas encore d’assez de données pour conclure à un risque.`}
-              severity="info"
-            />
-          ) : null}
-
-          {priorityAlerts.length > 0 ? (
-            <View style={styles.stack}>
-              {priorityAlerts.map((alert) => (
-                <PriorityItem
-                  key={alert.id}
-                  title={alertLabel(alert)}
-                  description={alertDescription(alert, trainingById)}
-                  severity={alertSeverity(alert)}
-                />
-              ))}
-              <AppButton
-                title="Ouvrir le pilotage"
-                onPress={() => router.push("/admin/alerts" as Href)}
-                style={styles.sectionAction}
-              />
-            </View>
-          ) : (
-            <AppEmptyState
-              title="Aucune alerte ouverte"
-              description="Aucun signal de pilotage n’est actuellement remonté."
-              actionLabel="Ouvrir le pilotage"
-              onAction={() => router.push("/admin/alerts" as Href)}
-            />
-          )}
-
+        {/* ACTIVITÉ */}
+        <View className="mt-7">
           <SectionHeading
             title="Activité récente"
-            description="Les derniers événements administratifs utiles."
+            subtitle="Les derniers événements administratifs utiles."
           />
 
           {recentActivity.length > 0 ? (
-            <View style={styles.stack}>
-              {recentActivity.map((item) => (
-                <ActivityItem
-                  key={item.key}
-                  title={item.title}
-                  description={item.description}
-                  timestamp={formatDateTime(item.at)}
-                />
-              ))}
-            </View>
+            recentActivity.map((item, index) => (
+              <ActivityCard
+                key={item.key}
+                item={item}
+                isLast={index === recentActivity.length - 1}
+              />
+            ))
           ) : (
             <AppEmptyState
               title="Pas encore d’activité récente"
               description="Aucun horodatage métier exploitable n’est disponible dans les données chargées."
             />
           )}
+        </View>
 
+        {/* GROUPES */}
+        <View className="mt-7">
           <SectionHeading
             title="Groupes actifs"
-            description="Les cohortes avec des membres actifs."
+            subtitle="Les cohortes avec des membres actifs."
+            onPress={() => router.push("/admin/groups" as Href)}
           />
 
           {activeGroups.length > 0 ? (
-            <View style={styles.stack}>
+            <>
               {activeGroups.map((group) => (
-                <GroupTile
+                <GroupCard
                   key={group.id}
-                  name={group.name}
-                  memberCount={group.memberCount}
-                  description={group.description || `Propriétaire : ${group.ownerRole}`}
+                  group={group}
                   onPress={() => router.push(`/admin/groups/${group.id}` as Href)}
                 />
               ))}
-              <AppButton
-                title="Voir tous les groupes"
-                variant="secondary"
-                onPress={() => router.push("/admin/groups" as Href)}
-                style={styles.sectionAction}
-              />
-            </View>
+
+            </>
           ) : (
             <AppEmptyState
               title="Aucun groupe actif"
@@ -909,149 +1355,83 @@ export default function AdminDashboardScreen({ user, onLogout }: Props) {
               onAction={() => router.push("/admin/groups" as Href)}
             />
           )}
+        </View>
 
-          <View style={styles.bottomActions}>
-            <AppButton
-              title="Gérer les utilisateurs"
-              onPress={() => router.push("/admin/users" as Href)}
-              style={styles.bottomButton}
+        {/* ACCÈS RAPIDES — mêmes routes, présentation plus compacte */}
+        <View className="mt-7">
+          <Text
+            className="text-[18px] font-black tracking-[-0.35px]"
+            style={{ color: theme.colors.foreground }}
+          >
+            Accès rapides
+          </Text>
+          <Text
+            className="mt-1 text-[11px] leading-[16px]"
+            style={{ color: theme.colors.foregroundMuted }}
+          >
+            Accédez directement aux principales zones d’administration.
+          </Text>
+
+          <View
+            className="mt-3 overflow-hidden rounded-[22px] border border-[#EAE5ED] bg-white"
+            style={{
+              shadowColor: theme.colors.shadow,
+              shadowOpacity: 0.03,
+              shadowRadius: 8,
+              shadowOffset: { width: 0, height: 3 },
+              elevation: 1,
+            }}
+          >
+            <QuickActionRow
+              title="Voir tous les groupes"
+              subtitle="Consulter les cohortes et leurs membres"
+              icon={{ ios: "person.3.fill", android: "groups", web: "groups" }}
+              color="#D97706"
+              background="#FFF7ED"
+              onPress={() => router.push("/admin/groups" as Href)}
             />
-            <AppButton
+            <QuickActionRow
+              title="Gérer les utilisateurs"
+              subtitle="Comptes, rôles et statuts des utilisateurs"
+              icon={{ ios: "person.2.fill", android: "group", web: "group" }}
+              color="#7C3AED"
+              background="#F3EEFF"
+              onPress={() => router.push("/admin/users" as Href)}
+            />
+            <QuickActionRow
               title="Superviser les formations"
-              variant="secondary"
+              subtitle="Catalogue, publication et suivi des contenus"
+              icon={{ ios: "books.vertical.fill", android: "library_books", web: "library_books" }}
+              color="#2563EB"
+              background="#EFF6FF"
               onPress={() => router.push("/admin/trainings" as Href)}
-              style={styles.bottomButton}
+              isLast
             />
           </View>
+        </View>
+
+        {/* Déconnexion séparée et conservée uniquement tout en bas du Dashboard. */}
+        <View className="mb-2 mt-7 border-t border-[#ECE9EF] pt-5">
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Se déconnecter"
+            onPress={onLogout}
+            android_ripple={{ color: "transparent" }}
+            className="flex-row items-center justify-center rounded-[16px] border border-[#F1E5E5] bg-white px-4 py-3"
+            style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+          >
+            <SymbolView
+              name={{ ios: "rectangle.portrait.and.arrow.right", android: "logout", web: "logout" }}
+              tintColor="#B45353"
+              size={17}
+              weight="semibold"
+            />
+            <Text className="ml-2 text-[12px] font-extrabold text-[#9F4B4B]">
+              Se déconnecter
+            </Text>
+          </Pressable>
         </View>
       </ScrollView>
     </ScreenContainer>
   );
 }
-
-const styles = StyleSheet.create({
-  content: {
-    paddingBottom: uxSpacing.xxl,
-  },
-  page: {
-    gap: uxSpacing.xl,
-  },
-  hero: {
-    padding: uxSpacing.lg,
-    gap: uxSpacing.md,
-  },
-  heroIdentityRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: uxSpacing.md,
-  },
-  profileAvatar: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-  },
-  profileAvatarFallback: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  profileAvatarText: {
-    fontSize: uxTypography.title,
-    fontWeight: "900",
-  },
-  eyebrow: {
-    fontSize: uxTypography.caption,
-    fontWeight: "800",
-    letterSpacing: 0.8,
-  },
-  heroTitle: {
-    fontSize: uxTypography.headline,
-    fontWeight: "900",
-  },
-  heroText: {
-    fontSize: uxTypography.body,
-    lineHeight: uxTypography.body * 1.5,
-  },
-  heroActions: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: uxSpacing.sm,
-    marginTop: uxSpacing.sm,
-  },
-  heroButton: {
-    flexGrow: 1,
-    minWidth: 120,
-  },
-  sectionHeading: {
-    gap: uxSpacing.xs,
-  },
-  sectionTitle: {
-    fontSize: uxTypography.headline,
-    fontWeight: "900",
-  },
-  sectionDescription: {
-    fontSize: uxTypography.body,
-    lineHeight: uxTypography.body * 1.45,
-  },
-  metricGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: uxSpacing.sm,
-  },
-  metricCard: {
-    flexGrow: 1,
-    flexBasis: "47%",
-    minWidth: 138,
-    minHeight: 112,
-    padding: uxSpacing.md,
-    position: "relative",
-  },
-  metricIcon: {
-    width: 38,
-    height: 38,
-    borderWidth: 1,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: uxSpacing.sm,
-  },
-  metricCopy: {
-    gap: 1,
-    paddingRight: 16,
-  },
-  metricValue: {
-    fontSize: 24,
-    lineHeight: 28,
-    fontWeight: "900",
-  },
-  metricLabel: {
-    fontSize: uxTypography.caption,
-    lineHeight: 16,
-    fontWeight: "700",
-  },
-  metricChevron: {
-    position: "absolute",
-    right: 11,
-    bottom: 10,
-    fontSize: 18,
-    fontWeight: "900",
-  },
-  stack: {
-    gap: uxSpacing.md,
-  },
-  sectionAction: {
-    marginTop: uxSpacing.xs,
-  },
-  bottomActions: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: uxSpacing.sm,
-  },
-  bottomButton: {
-    flexGrow: 1,
-    minWidth: 150,
-  },
-});

@@ -1,5 +1,7 @@
+import { SymbolView } from "expo-symbols";
 import { Href, router } from "expo-router";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import type { ComponentProps } from "react";
+import { Pressable, ScrollView, Text, View } from "react-native";
 
 import { useSmartTrainingTheme } from "../../theme/provider/SmartTrainingThemeProvider";
 
@@ -8,25 +10,47 @@ export type AdminUserManagementSection =
   | "trainer-requests"
   | "account-deletion";
 
+type SymbolName = ComponentProps<typeof SymbolView>["name"];
+
 const entries: {
   key: AdminUserManagementSection;
   label: string;
+  helper: string;
   route: Href;
+  icon: SymbolName;
 }[] = [
   {
     key: "users",
     label: "Utilisateurs",
+    helper: "Comptes & rôles",
     route: "/admin/users" as Href,
+    icon: {
+      ios: "person.2.fill",
+      android: "group",
+      web: "group",
+    },
   },
   {
     key: "trainer-requests",
     label: "Rôle formateur",
+    helper: "Demandes d’accès",
     route: "/admin/trainer-requests" as Href,
+    icon: {
+      ios: "person.badge.plus",
+      android: "badge",
+      web: "badge",
+    },
   },
   {
     key: "account-deletion",
-    label: "Suppressions de compte",
+    label: "Suppressions",
+    helper: "Demandes de compte",
     route: "/admin/account-deletion-requests" as Href,
+    icon: {
+      ios: "trash.fill",
+      android: "delete",
+      web: "delete",
+    },
   },
 ];
 
@@ -39,101 +63,103 @@ export default function AdminUserManagementNav({
 
   return (
     <View
-      style={[
-        styles.container,
-        {
-          backgroundColor: theme.colors.surfaceSoft,
-          borderColor: theme.colors.border,
-          borderRadius: theme.shape.cardRadius,
-          borderWidth: theme.shape.borderWidth,
-        },
-      ]}
+      className="mb-3 overflow-hidden rounded-[20px] border bg-white"
+      style={{ borderColor: "#E5DFE8" }}
     >
-      <Text
-        style={[
-          styles.eyebrow,
-          { color: theme.colors.foregroundSubtle },
-        ]}
-      >
-        GESTION DES UTILISATEURS
-      </Text>
+      <View className="h-[3px] bg-[#7C3AED]" />
 
-      <View style={styles.items}>
-        {entries.map((entry) => {
-          const selected = entry.key === active;
-
-          return (
-            <Pressable
-              key={entry.key}
-              accessibilityRole="button"
-              accessibilityState={{ selected }}
-              onPress={() => {
-                if (!selected) {
-                  router.push(entry.route);
-                }
+      <View className="px-3.5 pb-3.5 pt-3">
+        <View className="mb-2 flex-row items-center">
+          <View className="h-7 w-7 items-center justify-center rounded-[9px] bg-[#F1E9FF]">
+            <SymbolView
+              name={{
+                ios: "person.2.badge.gearshape.fill",
+                android: "manage_accounts",
+                web: "manage_accounts",
               }}
-              style={({ pressed }) => [
-                styles.item,
-                {
-                  backgroundColor: selected
-                    ? theme.colors.accent
-                    : theme.colors.surface,
-                  borderColor: selected
-                    ? theme.colors.accent
-                    : theme.colors.border,
-                  borderRadius: theme.shape.controlRadius,
-                  borderWidth: Math.max(1, theme.shape.borderWidth),
-                },
-                pressed && !selected ? styles.pressed : null,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.itemText,
-                  {
-                    color: selected
-                      ? theme.colors.accentForeground
-                      : theme.colors.foreground,
-                  },
-                ]}
+              tintColor="#7C3AED"
+              size={12}
+              weight="bold"
+            />
+          </View>
+
+          <Text
+            className="ml-2 text-[9px] font-black uppercase tracking-[0.65px]"
+            style={{ color: theme.colors.foregroundSubtle }}
+          >
+            Gestion des utilisateurs
+          </Text>
+        </View>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ gap: 7, paddingRight: 4 }}
+        >
+          {entries.map((entry) => {
+            const selected = entry.key === active;
+
+            return (
+              <Pressable
+                key={entry.key}
+                accessibilityRole="button"
+                accessibilityState={{ selected }}
+                accessibilityLabel={entry.label}
+                onPress={() => {
+                  if (!selected) router.push(entry.route);
+                }}
+                android_ripple={{ color: "transparent" }}
+                className="min-w-[136px] flex-row items-center rounded-[13px] border px-3 py-2.5"
+                style={{
+                  backgroundColor: selected ? "#7C3AED" : "#FFFFFF",
+                  borderColor: selected ? "#7C3AED" : "#E5DFE8",
+                }}
               >
-                {entry.label}
-              </Text>
-            </Pressable>
-          );
-        })}
+                <View
+                  className="h-7 w-7 shrink-0 items-center justify-center rounded-[9px]"
+                  style={{
+                    backgroundColor: selected
+                      ? "rgba(255,255,255,0.18)"
+                      : "#F3EEFF",
+                  }}
+                >
+                  <SymbolView
+                    name={entry.icon}
+                    tintColor={selected ? "#FFFFFF" : "#7C3AED"}
+                    size={11}
+                    weight="bold"
+                  />
+                </View>
+
+                <View className="ml-2 min-w-0 flex-1">
+                  <Text
+                    numberOfLines={1}
+                    className="text-[9px] font-black"
+                    style={{
+                      color: selected
+                        ? "#FFFFFF"
+                        : theme.colors.foreground,
+                    }}
+                  >
+                    {entry.label}
+                  </Text>
+                  <Text
+                    numberOfLines={1}
+                    className="mt-0.5 text-[7px]"
+                    style={{
+                      color: selected
+                        ? "rgba(255,255,255,0.78)"
+                        : theme.colors.foregroundMuted,
+                    }}
+                  >
+                    {entry.helper}
+                  </Text>
+                </View>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
       </View>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    padding: 12,
-    marginBottom: 18,
-  },
-  eyebrow: {
-    fontSize: 10,
-    fontWeight: "900",
-    letterSpacing: 1,
-    marginBottom: 10,
-  },
-  items: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  item: {
-    minHeight: 38,
-    justifyContent: "center",
-    paddingHorizontal: 13,
-    paddingVertical: 9,
-  },
-  itemText: {
-    fontSize: 12,
-    fontWeight: "900",
-  },
-  pressed: {
-    opacity: 0.78,
-  },
-});

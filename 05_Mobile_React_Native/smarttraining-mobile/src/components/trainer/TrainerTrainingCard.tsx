@@ -1,16 +1,19 @@
+import { SymbolView } from "expo-symbols";
+import type { ComponentProps } from "react";
 import {
+  Image,
   Pressable,
-  StyleSheet,
   Text,
   View,
 } from "react-native";
 
 import AppButton from "../AppButton";
-import { TrainingCover } from "../ux/RichPrimitives";
 import {
   useSmartTrainingTheme,
 } from "../../theme/provider/SmartTrainingThemeProvider";
-import { buildLearnerMediaUrl } from "../../features/trainings/learnerTrainingService";
+import {
+  buildLearnerMediaUrl,
+} from "../../features/trainings/learnerTrainingService";
 import {
   TrainerTrainingListItem,
 } from "../../types/trainerMobile";
@@ -21,20 +24,70 @@ type Props = {
   onEdit?: () => void;
 };
 
-function statusLabel(value?: string | null): string {
-  if (value === "PUBLISHED") return "Publiée";
-  if (value === "DRAFT") return "Brouillon";
-  if (value === "ARCHIVED") return "Archivée";
+function statusLabel(
+  value?: string | null,
+): string {
+  if (value === "PUBLISHED") {
+    return "Publiée";
+  }
+
+  if (value === "DRAFT") {
+    return "Brouillon";
+  }
+
+  if (value === "ARCHIVED") {
+    return "Archivée";
+  }
 
   return value || "Non renseigné";
 }
 
-function levelLabel(value?: string | null): string {
-  if (value === "DEBUTANT") return "Débutant";
-  if (value === "INTERMEDIAIRE") return "Intermédiaire";
-  if (value === "AVANCE") return "Avancé";
+function levelLabel(
+  value?: string | null,
+): string {
+  if (value === "DEBUTANT") {
+    return "Débutant";
+  }
+
+  if (value === "INTERMEDIAIRE") {
+    return "Intermédiaire";
+  }
+
+  if (value === "AVANCE") {
+    return "Avancé";
+  }
 
   return value || "Niveau non renseigné";
+}
+
+function statusAppearance(
+  value?: string | null,
+) {
+  if (value === "PUBLISHED") {
+    return {
+      background: "#ECFDF3",
+      foreground: "#027A48",
+    };
+  }
+
+  if (value === "DRAFT") {
+    return {
+      background: "#FFF7ED",
+      foreground: "#B54708",
+    };
+  }
+
+  if (value === "ARCHIVED") {
+    return {
+      background: "#F2F4F7",
+      foreground: "#475467",
+    };
+  }
+
+  return {
+    background: "#F3EEFF",
+    foreground: "#7C3AED",
+  };
 }
 
 export default function TrainerTrainingCard({
@@ -42,154 +95,332 @@ export default function TrainerTrainingCard({
   onOpen,
   onEdit,
 }: Props) {
-  const { theme } = useSmartTrainingTheme();
+  const { theme } =
+    useSmartTrainingTheme();
+
   const { training, metrics } = item;
+
+  const statusColors =
+    statusAppearance(training.status);
+
+  const progress = Math.max(
+    0,
+    Math.min(
+      100,
+      Number(metrics.averageProgress || 0),
+    ),
+  );
+
+  const resolvedCoverUrl =
+    buildLearnerMediaUrl(
+      training.coverImageUrl ||
+        training.coverImagePath,
+    );
 
   return (
     <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: theme.colors.surface,
-          borderColor: theme.colors.border,
-          borderRadius: theme.shape.cardRadius,
-          borderWidth: theme.shape.borderWidth,
-          padding: theme.shape.cardPadding,
+      className="overflow-hidden rounded-[24px] border bg-white"
+      style={{
+        borderColor: theme.colors.border,
+        shadowColor: theme.colors.shadow,
+        shadowOffset: {
+          width: 0,
+          height: 3,
         },
-      ]}
+        shadowOpacity: 0.06,
+        shadowRadius: 10,
+        elevation: 2,
+      }}
     >
+      {/* =====================================================
+          COUVERTURE
+          IMPORTANT :
+          - pleine largeur
+          - ratio 16:9 réel
+          - aucune grande zone violette vide
+          - contain pour afficher la totalité du visuel
+      ===================================================== */}
       <View
-        style={[
-          styles.coverFrame,
-          { borderRadius: theme.shape.controlRadius },
-        ]}
+        style={{
+          width: "100%",
+          aspectRatio: 16 / 9,
+          backgroundColor: "#F5F3FF",
+          overflow: "hidden",
+        }}
       >
-        <TrainingCover
-          title={training.title}
-          coverUrl={buildLearnerMediaUrl(
-            training.coverImageUrl || training.coverImagePath,
-          )}
-        />
+        {resolvedCoverUrl ? (
+          <Image
+            source={{
+              uri: resolvedCoverUrl,
+            }}
+            accessibilityLabel={`Couverture de ${training.title}`}
+            resizeMode="contain"
+            style={{
+              width: "100%",
+              height: "100%",
+            }}
+          />
+        ) : (
+          <View className="h-full w-full items-center justify-center bg-[#F3EEFF]">
+            <View className="h-12 w-12 items-center justify-center rounded-2xl bg-white">
+              <SymbolView
+                name={{
+                  ios: "photo",
+                  android: "image",
+                  web: "image",
+                }}
+                tintColor={
+                  theme.colors.accent
+                }
+                size={22}
+              />
+            </View>
+
+            <Text
+              className="mt-2 text-[11px] font-bold"
+              style={{
+                color:
+                  theme.colors
+                    .foregroundMuted,
+              }}
+            >
+              Couverture à ajouter
+            </Text>
+          </View>
+        )}
+
+        {/* badge catégorie superposé */}
+        <View className="absolute bottom-3 left-3 max-w-[70%] rounded-full bg-black/55 px-3 py-1.5">
+          <Text
+            numberOfLines={1}
+            className="text-[9px] font-black uppercase tracking-[0.4px] text-white"
+          >
+            {training.category ||
+              "Sans catégorie"}
+          </Text>
+        </View>
       </View>
 
-      <View style={styles.topRow}>
-        <View
-          style={[
-            styles.statusBadge,
-            {
-              backgroundColor: theme.colors.surfaceSoft,
-              borderColor: theme.colors.border,
-              borderWidth: theme.shape.borderWidth,
-            },
-          ]}
-        >
-          <Text
-            style={[
-              styles.statusText,
-              { color: theme.colors.accent },
-            ]}
+      {/* =====================================================
+          CONTENU
+      ===================================================== */}
+      <View className="p-4">
+        <View className="flex-row items-center justify-between gap-3">
+          <View
+            className="rounded-full px-2.5 py-1"
+            style={{
+              backgroundColor:
+                statusColors.background,
+            }}
           >
-            {statusLabel(training.status)}
-          </Text>
+            <Text
+              className="text-[9px] font-black uppercase tracking-[0.5px]"
+              style={{
+                color:
+                  statusColors.foreground,
+              }}
+            >
+              {statusLabel(
+                training.status,
+              )}
+            </Text>
+          </View>
+
+          <View className="flex-row items-center gap-1.5">
+            <MetaPill
+              icon={{
+                ios: "chart.bar.fill",
+                android: "bar_chart",
+                web: "bar_chart",
+              }}
+              label={levelLabel(
+                training.level,
+              )}
+            />
+
+            <MetaPill
+              icon={{
+                ios: "clock.fill",
+                android: "schedule",
+                web: "schedule",
+              }}
+              label={
+                training
+                  .estimatedDurationHours
+                  ? `${training.estimatedDurationHours} h`
+                  : "Durée -"
+              }
+            />
+          </View>
         </View>
 
         <Text
-          numberOfLines={1}
-          style={[
-            styles.category,
-            { color: theme.colors.foregroundMuted },
-          ]}
+          numberOfLines={2}
+          className="mt-3 text-[19px] font-black leading-[24px] tracking-[-0.4px]"
+          style={{
+            color:
+              theme.colors.foreground,
+          }}
         >
-          {training.category || "Sans catégorie"}
+          {training.title}
         </Text>
+
+        {training.shortDescription ? (
+          <Text
+            numberOfLines={2}
+            className="mt-1.5 text-[13px] leading-[19px]"
+            style={{
+              color:
+                theme.colors
+                  .foregroundMuted,
+            }}
+          >
+            {training.shortDescription}
+          </Text>
+        ) : null}
+
+        {/* Progression */}
+        <View className="mt-4">
+          <View className="mb-2 flex-row items-center justify-between">
+            <Text
+              className="text-[12px] font-bold"
+              style={{
+                color:
+                  theme.colors
+                    .foregroundMuted,
+              }}
+            >
+              Progression moyenne
+            </Text>
+
+            <Text
+              className="text-[13px] font-black"
+              style={{
+                color:
+                  theme.colors.accent,
+              }}
+            >
+              {progress} %
+            </Text>
+          </View>
+
+          <View className="h-2 overflow-hidden rounded-full bg-[#EEE9E4]">
+            <View
+              className="h-full rounded-full"
+              style={{
+                width: `${progress}%`,
+                backgroundColor:
+                  theme.colors.accent,
+              }}
+            />
+          </View>
+        </View>
+
+        {/* Métriques */}
+        <View
+          className="mt-4 flex-row rounded-2xl px-2 py-3"
+          style={{
+            backgroundColor:
+              theme.colors.surfaceSoft,
+          }}
+        >
+          <Metric
+            icon={{
+              ios: "person.2.fill",
+              android: "group",
+              web: "group",
+            }}
+            value={String(
+              metrics.learners,
+            )}
+            label="Apprenants"
+          />
+
+          <MetricDivider />
+
+          <Metric
+            icon={{
+              ios: "star.fill",
+              android: "star",
+              web: "star",
+            }}
+            value={
+              typeof training
+                .averageRating === "number"
+                ? training.averageRating.toFixed(
+                    1,
+                  )
+                : "-"
+            }
+            label="Note"
+          />
+
+          <MetricDivider />
+
+          <Metric
+            icon={{
+              ios: "chart.line.uptrend.xyaxis",
+              android: "trending_up",
+              web: "trending_up",
+            }}
+            value={`${progress}%`}
+            label="Progression"
+          />
+        </View>
       </View>
 
-      <Text
-        style={[
-          styles.title,
-          { color: theme.colors.foreground },
-        ]}
-      >
-        {training.title}
-      </Text>
-
-      {training.shortDescription ? (
-        <Text
-          style={[
-            styles.description,
-            { color: theme.colors.foregroundMuted },
-          ]}
-          numberOfLines={3}
-        >
-          {training.shortDescription}
-        </Text>
-      ) : null}
-
-      <View style={styles.metaRow}>
-        <Text
-          style={[
-            styles.meta,
-            { color: theme.colors.foregroundSubtle },
-          ]}
-        >
-          {levelLabel(training.level)}
-        </Text>
-        <Text
-          style={[
-            styles.meta,
-            { color: theme.colors.foregroundSubtle },
-          ]}
-        >
-          {training.estimatedDurationHours
-            ? `${training.estimatedDurationHours} h`
-            : "Durée non renseignée"}
-        </Text>
-      </View>
-
+      {/* =====================================================
+          ACTIONS
+      ===================================================== */}
       <View
-        style={[
-          styles.metrics,
-          {
-            backgroundColor: theme.colors.surfaceSoft,
-            borderRadius: theme.shape.controlRadius,
-          },
-        ]}
+        className="flex-row items-center justify-between border-t px-4 py-3"
+        style={{
+          borderTopColor:
+            theme.colors.border,
+        }}
       >
-        <Metric
-          value={String(metrics.learners)}
-          label="Apprenants"
-        />
-        <Metric
-          value={`${metrics.averageProgress} %`}
-          label="Progression"
-        />
-        <Metric
-          value={
-            typeof training.averageRating === "number"
-              ? training.averageRating.toFixed(1)
-              : "-"
-          }
-          label="Note"
-        />
-      </View>
-
-      <View style={styles.actions}>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`Ouvrir le suivi de ${training.title}`}
           onPress={onOpen}
-          style={({ pressed }) => [
-            styles.openAction,
-            { opacity: pressed ? 0.7 : 1 },
-          ]}
+          android_ripple={{
+            color: "transparent",
+          }}
+          className="min-h-[42px] flex-1 flex-row items-center"
         >
+          <View className="mr-2 h-9 w-9 items-center justify-center rounded-xl bg-[#F3EEFF]">
+            <SymbolView
+              name={{
+                ios: "chart.bar.xaxis",
+                android: "analytics",
+                web: "analytics",
+              }}
+              tintColor={
+                theme.colors.accent
+              }
+              size={17}
+              weight="bold"
+            />
+          </View>
+
           <Text
-            style={[
-              styles.openActionText,
-              { color: theme.colors.accent },
-            ]}
+            className="text-[12px] font-extrabold"
+            style={{
+              color:
+                theme.colors.accent,
+            }}
           >
-            Ouvrir le suivi ›
+            Ouvrir le suivi
+          </Text>
+
+          <Text
+            className="ml-1 text-[18px] font-bold"
+            style={{
+              color:
+                theme.colors.accent,
+            }}
+          >
+            ›
           </Text>
         </Pressable>
 
@@ -198,132 +429,109 @@ export default function TrainerTrainingCard({
             title="Modifier"
             onPress={onEdit}
             variant="secondary"
-            style={styles.editButton}
+            style={{
+              minWidth: 100,
+              minHeight: 40,
+            }}
           />
         ) : null}
       </View>
     </View>
   );
 
-  function Metric({
-    value,
+  function MetaPill({
+    icon,
     label,
   }: {
-    value: string;
+    icon: ComponentProps<
+      typeof SymbolView
+    >["name"];
     label: string;
   }) {
     return (
-      <View style={styles.metric}>
+      <View className="flex-row items-center rounded-full bg-[#F8F6F3] px-2 py-1">
+        <SymbolView
+          name={icon}
+          tintColor={
+            theme.colors
+              .foregroundSubtle
+          }
+          size={11}
+        />
+
         <Text
-          style={[
-            styles.metricValue,
-            { color: theme.colors.foreground },
-          ]}
-        >
-          {value}
-        </Text>
-        <Text
-          style={[
-            styles.metricLabel,
-            { color: theme.colors.foregroundMuted },
-          ]}
+          numberOfLines={1}
+          className="ml-1 max-w-[68px] text-[9px] font-bold"
+          style={{
+            color:
+              theme.colors
+                .foregroundMuted,
+          }}
         >
           {label}
         </Text>
       </View>
     );
   }
-}
 
-const styles = StyleSheet.create({
-  card: {
-    marginBottom: 12,
-  },
-  coverFrame: {
-    width: "100%",
-    height: 118,
-    overflow: "hidden",
-    marginBottom: 12,
-  },
-  topRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: 10,
-    marginBottom: 9,
-  },
-  statusBadge: {
-    borderRadius: 999,
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-  },
-  statusText: {
-    fontSize: 10,
-    fontWeight: "900",
-  },
-  category: {
-    flex: 1,
-    minWidth: 0,
-    textAlign: "right",
-    fontSize: 11,
-    fontWeight: "700",
-  },
-  title: {
-    fontSize: 18,
-    lineHeight: 23,
-    fontWeight: "900",
-  },
-  description: {
-    fontSize: 13,
-    lineHeight: 19,
-    marginTop: 6,
-  },
-  metaRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-    marginTop: 9,
-  },
-  meta: {
-    fontSize: 11,
-    fontWeight: "700",
-  },
-  metrics: {
-    flexDirection: "row",
-    gap: 8,
-    marginTop: 12,
-    padding: 10,
-  },
-  metric: {
-    flex: 1,
-    minWidth: 0,
-  },
-  metricValue: {
-    fontSize: 16,
-    fontWeight: "900",
-  },
-  metricLabel: {
-    fontSize: 10,
-    lineHeight: 14,
-    marginTop: 1,
-  },
-  actions: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 10,
-    marginTop: 10,
-  },
-  openAction: {
-    minHeight: 42,
-    justifyContent: "center",
-  },
-  openActionText: {
-    fontSize: 12,
-    fontWeight: "900",
-  },
-  editButton: {
-    minWidth: 108,
-  },
-});
+  function Metric({
+    icon,
+    value,
+    label,
+  }: {
+    icon: ComponentProps<
+      typeof SymbolView
+    >["name"];
+    value: string;
+    label: string;
+  }) {
+    return (
+      <View className="min-w-0 flex-1 items-center">
+        <View className="flex-row items-center">
+          <SymbolView
+            name={icon}
+            tintColor={
+              theme.colors.accent
+            }
+            size={13}
+          />
+
+          <Text
+            className="ml-1 text-[14px] font-black"
+            style={{
+              color:
+                theme.colors
+                  .foreground,
+            }}
+          >
+            {value}
+          </Text>
+        </View>
+
+        <Text
+          numberOfLines={1}
+          className="mt-0.5 text-[8px] font-bold"
+          style={{
+            color:
+              theme.colors
+                .foregroundMuted,
+          }}
+        >
+          {label}
+        </Text>
+      </View>
+    );
+  }
+
+  function MetricDivider() {
+    return (
+      <View
+        className="mx-1 w-px"
+        style={{
+          backgroundColor:
+            theme.colors.border,
+        }}
+      />
+    );
+  }
+}
